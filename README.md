@@ -7,6 +7,15 @@
 
 PDF-A-go-go is a super simple, embeddable PDF viewer project. It is designed to be lightweight and easy to integrate into your own applications.
 
+## Future plans
+
+This project is very fresh (rolled on 6 May 2025). I may yet publish to npm or change it completely.
+
+## Demo
+
+- [Default PDF-A-go-go Demo](https://github.com/khawkins98/PDF-A-go-go#demo)
+- [Double spread demo](https://github.com/khawkins98/PDF-A-go-go/double-spread.html#page=4)
+
 ## Features
 
 - 📖 Flipbook-style PDF viewing
@@ -25,10 +34,6 @@ PDF-A-go-go is a super simple, embeddable PDF viewer project. It is designed to 
 - ⬇️ Download PDF button
 - 🛠️ Based on [pdf.js](https://github.com/mozilla/pdf.js) and [flipbook-viewer](https://github.com/theproductiveprogrammer/flipbook-viewer)
 
-## Demo
-
-- [Default PDF-A-go-go Demo](https://github.com/khawkins98/PDF-A-go-go#demo)
-- [Double spread demo](https://github.com/khawkins98/PDF-A-go-go/double-spread.html#page=4)
 
 ## Usage
 
@@ -56,8 +61,7 @@ window.PDFaGoGoOptions = {
 
 ## Development
 
-=======
-PDF-A-go-go is a super simple, embeddable PDF viewer project. It is designed to be lightweight and easy to integrate into your own applications.
+PDF-A-go-go is a simple, embeddable PDF viewer project. It is designed to be lightweight and easy to integrate into your own applications.
 
 This project is heavily based on the following open-source projects:
 
@@ -79,47 +83,6 @@ We welcome contributions! To get started:
 - Please follow the code style and add comments where helpful.
 - Open a pull request with a clear description of your changes.
 
-## License
-
-This project is licensed under the [MIT License](LICENSE).
-
-### Open to a Specific Page
-
-You can open the viewer to a specific page by adding `#page=N` to the URL (e.g. `#page=5`).
-This will override the `defaultPage` option if both are present.
-
-### Set a Default Page in Embed Options
-
-Set `defaultPage` in `PDFaGoGoOptions` to specify which page to open by default (1-based). If the URL contains `#page=N`, that will take precedence.
-=======
-## Viewer options
-
-You can control which UI features are enabled in the PDF-A-go-go viewer by passing options. Set the global `window.PDFaGoGoOptions` before the viewer loads, for example:
-
-```js
-window.PDFaGoGoOptions = {
-  showPrevNext: true,      // Show previous/next page buttons (default: true)
-  showPageSelector: true,  // Show page selector input (default: true)
-  showCurrentPage: true,   // Show current page indicator (default: true)
-  showSearch: true,        // Show search controls (default: true)
-  showDownload: true,      // Show a Download PDF button
-  spreadMode: true,        // or false, or omit for autodetect
-  pdfUrl: "https://example.com/your.pdf" // PDF URL to load (default: sample PDF)
-};
-```
-
-All options default to `true` (except `pdfUrl`, which defaults to a sample PDF). Set any to `false` to hide that feature from the UI, or set `pdfUrl` to your own PDF file.
-
-Example: To load a custom PDF and hide search and page selector:
-
-```js
-window.PDFaGoGoOptions = {
-  pdfUrl: "https://example.com/your.pdf",
-  showSearch: false,
-  showPageSelector: false
-};
-```
-
 ## Page spread (Two-page/single-spread) support
 
 PDF-A-go-go supports both traditional single-page and two-page spread ("spread mode") PDFs, including those where each PDF page is already a two-page spread image.
@@ -136,3 +99,12 @@ PDF-A-go-go supports both traditional single-page and two-page spread ("spread m
   - A "Spread Mode" checkbox is available in the viewer controls, allowing users to switch between normal and spread mode at any time. The viewer will attempt to keep you on the same logical page when toggling.
 - **First/Last Page Handling:**
   - In spread mode, if the first or last page is a single (not double) spread, it will be centered and shown at its natural aspect ratio, not stretched.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
+### Open to a Specific Page
+
+You can open the viewer to a specific page by adding `#page=N` to the URL (e.g. `#page=5`).
+This will override the `defaultPage` option if both are present.
