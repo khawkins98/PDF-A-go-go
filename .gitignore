@@ -10,4 +10,7 @@ yarn-error.log*
 # Editor
 .idea/
 .vscode/
-*.swp 
+*.swp
+
+# Build
+dist/

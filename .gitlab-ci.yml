@@ -1,0 +1,20 @@
+stages:
+  - deploy
+
+deploy-pages:
+  stage: deploy
+  image: node:18
+  script:
+    - yarn install --frozen-lockfile
+    - yarn build
+    - cd dist
+    - git init
+    - git config user.email "ci-bot@example.com"
+    - git config user.name "CI Bot"
+    - git remote add origin https://$GH_TOKEN@github.com/<your-username>/<your-repo>.git
+    - git checkout -b gh-pages
+    - git add .
+    - git commit -m "Deploy to gh-pages [ci skip]"
+    - git push --force origin gh-pages
+  only:
+    - main 

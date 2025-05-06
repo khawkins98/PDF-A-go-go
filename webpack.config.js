@@ -17,9 +17,7 @@ const base = {
   output: {
     filename: '[name].js',
     path: path.resolve(__dirname, 'dist'),
-    clean: {
-      keep: (asset) => asset === 'index.html' || asset === 'pdf-a-go-go.css',
-    },
+    clean: true,
   },
   module: {
     rules: [
@@ -32,7 +30,8 @@ const base = {
   plugins: [
     new CopyPlugin({
       patterns: [
-        { from: 'src/pdf-a-go-go.css', to: 'pdf-a-go-go.css' }
+        { from: 'src/pdf-a-go-go.css', to: 'pdf-a-go-go.css' },
+        { from: 'src/index.html', to: 'index.html' }
       ]
     })
   ]
@@ -46,13 +45,15 @@ const dev = Object.assign({}, base, {
   mode: "development",
   devServer: {
     static: {
-      directory: path.join(__dirname, '/'),
+      directory: path.join(__dirname, 'dist'),
     },
-    watchFiles: ['index.html', 'src/**/*'],
+    compress: true,
+    port: 9000,
     open: true,
     hot: true,
+    watchFiles: ['src/**/*'],
   },
-});
+})
 
 module.exports = (env, argv) => {
   if (argv.mode === 'development') {
