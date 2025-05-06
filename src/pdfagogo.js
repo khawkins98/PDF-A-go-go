@@ -106,7 +106,7 @@ function init(book, id, opts, cb) {
   const featureOptions = Object.assign({}, defaultOptions, userOptions);
 
   // Dynamically create and insert controls based on options
-  const flipbookContainer = document.querySelector(".pdfagogo-container");
+  const pdfagogoContainer = document.querySelector(".pdfagogo-container");
   // Remove any existing controls
   [
     "pdfagogo-search-controls",
@@ -127,9 +127,9 @@ function init(book, id, opts, cb) {
       <button class="pdfagogo-search-btn">Search</button>
       <span class="pdfagogo-search-result"></span>
     `;
-    flipbookContainer.parentNode.insertBefore(
+    pdfagogoContainer.parentNode.insertBefore(
       searchControls,
-      flipbookContainer
+      pdfagogoContainer
     );
   }
 
@@ -155,9 +155,9 @@ function init(book, id, opts, cb) {
       '<span class="pdfagogo-page-indicator" aria-live="polite"></span>';
   }
   controls.innerHTML = controlsHTML;
-  flipbookContainer.parentNode.insertBefore(
+  pdfagogoContainer.parentNode.insertBefore(
     controls,
-    flipbookContainer.nextSibling
+    pdfagogoContainer.nextSibling
   );
 
   // Page announcement for screen readers
@@ -172,7 +172,7 @@ function init(book, id, opts, cb) {
     pageAnnouncement.style.height = "1px";
     pageAnnouncement.style.overflow = "hidden";
     pageAnnouncement.setAttribute("aria-live", "polite");
-    flipbookContainer.parentNode.insertBefore(
+    pdfagogoContainer.parentNode.insertBefore(
       pageAnnouncement,
       controls.nextSibling
     );
@@ -185,15 +185,15 @@ function init(book, id, opts, cb) {
     a11yInstructions.className = "pdfagogo-a11y-instructions";
     a11yInstructions.setAttribute("aria-live", "polite");
     a11yInstructions.innerHTML = `
-      <strong>Flipbook Accessibility:</strong><br>
-      - Use <kbd>Tab</kbd> to focus the flipbook.<br>
+      <strong>Accessibility:</strong><br>
+      - Use <kbd>Tab</kbd> to focus the reader.<br>
       - Use <kbd>Left Arrow</kbd> or click/tap the left side to go to the previous page.<br>
       - Use <kbd>Right Arrow</kbd> or click/tap the right side to go to the next page.<br>
       - Use <kbd>+</kbd> or <kbd>-</kbd> to zoom in/out.<br>
       - Use the buttons below for navigation, sharing, and searching.<br>
       - The current page is announced for screen readers.
     `;
-    flipbookContainer.parentNode.insertBefore(
+    pdfagogoContainer.parentNode.insertBefore(
       a11yInstructions,
       pageAnnouncement.nextSibling
     );
