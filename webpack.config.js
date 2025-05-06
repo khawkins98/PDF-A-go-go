@@ -17,7 +17,7 @@ const base = {
     filename: '[name].js',
     path: path.resolve(__dirname, 'dist'),
     clean: {
-      keep: ['index.html', 'pdf-a-go-go.css'],
+      keep: (asset) => asset === 'index.html' || asset === 'pdf-a-go-go.css',
     },
   },
   module: {

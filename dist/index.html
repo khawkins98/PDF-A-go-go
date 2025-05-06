@@ -18,42 +18,20 @@
   <script>
     // Example: Hide search and page selector controls
     window.PDFaGoGoOptions = {
-      pdfUrl: "https://www.undrr.org/media/106199/download",
+      // pdfUrl: "https://www.undrr.org/media/106199/download",
       showSearch: false,
       showPrevNext: false,
       showPageSelector: false
     };
   </script>
-  <script src="pdf-a-go-go.js"></script>
-  <div id="search-controls">
-    <input id="search-box" type="text" placeholder="Search text..." aria-label="Search text" />
-    <button id="search-btn">Search</button>
-    <span id="search-result"></span>
-  </div>
-  <div id="flipbook-container"
+  <script defer="defer" src="pdf-a-go-go.js"></script>
+  <div class="pdfagogo-container" id="pdfagogo-container"
        tabindex="0"
        role="region"
-       aria-label="PDF Flipbook Viewer"
+       aria-label="PDF Viewer"
        aria-live="polite"
        aria-atomic="true"></div>
-  <div id="controls">
-    <button id="prev" aria-label="Previous page">Previous</button>
-    <button id="next" aria-label="Next page">Next</button>
-    <button id="share" aria-label="Share current page">Share</button>
-    <input id="goto-page" type="number" min="1" style="width:60px;" placeholder="Page #" aria-label="Go to page" />
-    <button id="goto-btn">Go</button>
-    <span id="page-indicator" aria-live="polite"></span>
-  </div>
-  <div id="page-announcement" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;" aria-live="polite"></div>
-  <div id="a11y-instructions" aria-live="polite">
-    <strong>Flipbook Accessibility:</strong><br>
-    - Use <kbd>Tab</kbd> to focus the flipbook.<br>
-    - Use <kbd>Left Arrow</kbd> or click/tap the left side to go to the previous page.<br>
-    - Use <kbd>Right Arrow</kbd> or click/tap the right side to go to the next page.<br>
-    - Use <kbd>+</kbd> or <kbd>-</kbd> to zoom in/out.<br>
-    - Use the buttons below for navigation, sharing, and searching.<br>
-    - The current page is announced for screen readers.
-  </div>
+  <div class="page-announcement" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;" aria-live="polite"></div>
 
   <style>
     /* Note: This is just for the demo page */

@@ -54,6 +54,23 @@ function init(book, id, opts, cb) {
 
 // Main PDF loading and viewer logic
 (function() {
+  // Ensure loading indicator exists
+  if (!document.querySelector('.pdfagogo-loading')) {
+    const loadingDiv = document.createElement('div');
+    loadingDiv.id = 'pdfagogo-loading';
+    loadingDiv.style.width = '800px';
+    loadingDiv.style.margin = '2rem auto';
+    loadingDiv.style.textAlign = 'center';
+    loadingDiv.innerHTML = '<span>Loading PDF...</span>';
+    // Always insert immediately before the pdfagogo-container if possible
+    const flipbook = document.querySelector('.pdfagogo-container');
+    if (flipbook && flipbook.parentNode) {
+      flipbook.parentNode.insertBefore(loadingDiv, flipbook);
+    } else {
+      document.body.insertBefore(loadingDiv, document.body.firstChild);
+    }
+  }
+
   // --- BEGIN: Option defaults ---
   const defaultOptions = {
     showPrevNext: true,
@@ -76,10 +93,90 @@ function init(book, id, opts, cb) {
   // Merge feature toggles
   const featureOptions = Object.assign({}, defaultOptions, userOptions);
 
+  // Dynamically create and insert controls based on options
+  const flipbookContainer = document.querySelector('.pdfagogo-container');
+  // Remove any existing controls
+  [
+    'pdfagogo-search-controls',
+    'pdfagogo-controls',
+    'pdfagogo-page-announcement',
+    'pdfagogo-a11y-instructions'
+  ].forEach(cls => {
+    const el = document.querySelector('.' + cls);
+    if (el && el.parentNode) el.parentNode.removeChild(el);
+  });
+
+  // Search controls
+  if (featureOptions.showSearch) {
+    const searchControls = document.createElement('div');
+    searchControls.className = 'pdfagogo-search-controls';
+    searchControls.innerHTML = `
+      <input class="pdfagogo-search-box" type="text" placeholder="Search text..." aria-label="Search text" />
+      <button class="pdfagogo-search-btn">Search</button>
+      <span class="pdfagogo-search-result"></span>
+    `;
+    flipbookContainer.parentNode.insertBefore(searchControls, flipbookContainer);
+  }
+
+  // Main controls
+  const controls = document.createElement('div');
+  controls.className = 'pdfagogo-controls';
+  let controlsHTML = '';
+  if (featureOptions.showPrevNext) {
+    controlsHTML += '<button class="pdfagogo-prev" aria-label="Previous page">Previous</button>';
+    controlsHTML += '<button class="pdfagogo-next" aria-label="Next page">Next</button>';
+  }
+  controlsHTML += '<button class="pdfagogo-share" aria-label="Share current page">Share</button>';
+  if (featureOptions.showPageSelector) {
+    controlsHTML += '<input class="pdfagogo-goto-page" type="number" min="1" style="width:60px;" placeholder="Page #" aria-label="Go to page" />';
+    controlsHTML += '<button class="pdfagogo-goto-btn">Go</button>';
+  }
+  if (featureOptions.showCurrentPage) {
+    controlsHTML += '<span class="pdfagogo-page-indicator" aria-live="polite"></span>';
+  }
+  controls.innerHTML = controlsHTML;
+  flipbookContainer.parentNode.insertBefore(controls, flipbookContainer.nextSibling);
+
+  // Page announcement for screen readers
+  let pageAnnouncement = document.querySelector('.pdfagogo-page-announcement');
+  if (!pageAnnouncement) {
+    pageAnnouncement = document.createElement('div');
+    pageAnnouncement.className = 'pdfagogo-page-announcement';
+    pageAnnouncement.style.position = 'absolute';
+    pageAnnouncement.style.left = '-9999px';
+    pageAnnouncement.style.top = 'auto';
+    pageAnnouncement.style.width = '1px';
+    pageAnnouncement.style.height = '1px';
+    pageAnnouncement.style.overflow = 'hidden';
+    pageAnnouncement.setAttribute('aria-live', 'polite');
+    flipbookContainer.parentNode.insertBefore(pageAnnouncement, controls.nextSibling);
+  }
+
+  // Accessibility instructions
+  let a11yInstructions = document.querySelector('.pdfagogo-a11y-instructions');
+  if (!a11yInstructions) {
+    a11yInstructions = document.createElement('div');
+    a11yInstructions.className = 'pdfagogo-a11y-instructions';
+    a11yInstructions.setAttribute('aria-live', 'polite');
+    a11yInstructions.innerHTML = `
+      <strong>Flipbook Accessibility:</strong><br>
+      - Use <kbd>Tab</kbd> to focus the flipbook.<br>
+      - Use <kbd>Left Arrow</kbd> or click/tap the left side to go to the previous page.<br>
+      - Use <kbd>Right Arrow</kbd> or click/tap the right side to go to the next page.<br>
+      - Use <kbd>+</kbd> or <kbd>-</kbd> to zoom in/out.<br>
+      - Use the buttons below for navigation, sharing, and searching.<br>
+      - The current page is announced for screen readers.
+    `;
+    flipbookContainer.parentNode.insertBefore(a11yInstructions, pageAnnouncement.nextSibling);
+  }
+
   // Use the pdfUrl from options
   const pdfUrl = featureOptions.pdfUrl;
 
   pdfjsLib.getDocument(pdfUrl).promise.then(function(loadedPdf) {
+    // Hide loading indicator
+    const loadingDiv = document.querySelector('.pdfagogo-loading');
+    if (loadingDiv) loadingDiv.style.display = 'none';
     pdf = loadedPdf;
     console.log("PDF total pages:", pdf.numPages);
     const book = {
@@ -107,7 +204,7 @@ function init(book, id, opts, cb) {
 
     init(
       book,
-      "flipbook-container",
+      "pdfagogo-container",
       featureOptions,
       function(err, v) {
         if (err) {
@@ -115,7 +212,7 @@ function init(book, id, opts, cb) {
           return;
         }
         viewer = v;
-        const container = document.getElementById('flipbook-container');
+        const container = document.querySelector('.pdfagogo-container');
         // Wait for the canvas to be added to the DOM
         const waitForCanvas = setInterval(() => {
           const canvas = container.querySelector('canvas');
@@ -182,13 +279,16 @@ function init(book, id, opts, cb) {
         });
 
         // Buttons for navigation and sharing
+        const prevBtn = document.querySelector('.pdfagogo-prev');
+        const nextBtn = document.querySelector('.pdfagogo-next');
+        const shareBtn = document.querySelector('.pdfagogo-share');
         if (!featureOptions.showPrevNext) {
-          document.getElementById('prev').style.display = 'none';
-          document.getElementById('next').style.display = 'none';
+          if (prevBtn) prevBtn.style.display = 'none';
+          if (nextBtn) nextBtn.style.display = 'none';
         }
-        document.getElementById('next').onclick = () => viewer.flip_forward();
-        document.getElementById('prev').onclick = () => viewer.flip_back();
-        document.getElementById('share').onclick = () => {
+        if (nextBtn) nextBtn.onclick = () => viewer.flip_forward();
+        if (prevBtn) prevBtn.onclick = () => viewer.flip_back();
+        if (shareBtn) shareBtn.onclick = () => {
           const page = viewer.showNdx ? viewer.showNdx + 1 : 1;
           const shareUrl = `${window.location.origin}${window.location.pathname}#page=${page}`;
           navigator.clipboard.writeText(shareUrl);
@@ -196,32 +296,35 @@ function init(book, id, opts, cb) {
         };
 
         // Page indicator and screen reader announcement
-        const pageIndicator = document.getElementById('page-indicator');
-        const pageAnnouncement = document.getElementById('page-announcement');
+        const pageIndicator = document.querySelector('.pdfagogo-page-indicator');
+        const pageAnnouncement = document.querySelector('.pdfagogo-page-announcement');
         function updatePage(n) {
           const totalPages = pdf.numPages;
           const leftPage = parseInt(n);
           const rightPage = Math.min(leftPage + 1, totalPages);
-          pageIndicator.textContent = `Page: ${leftPage}-${rightPage} / ${totalPages}`;
-          pageAnnouncement.textContent = `Pages ${leftPage} to ${rightPage} of ${totalPages}`;
+          if (pageIndicator) pageIndicator.textContent = `Page: ${leftPage}-${rightPage} / ${totalPages}`;
+          if (pageAnnouncement) pageAnnouncement.textContent = `Pages ${leftPage} to ${rightPage} of ${totalPages}`;
         }
         viewer.on('seen', updatePage);
         updatePage(0);
 
         // SEARCH FUNCTIONALITY
-        const searchBox = document.getElementById('search-box');
-        const searchBtn = document.getElementById('search-btn');
-        const searchResult = document.getElementById('search-result');
+        const searchBox = document.querySelector('.pdfagogo-search-box');
+        const searchBtn = document.querySelector('.pdfagogo-search-btn');
+        const searchResult = document.querySelector('.pdfagogo-search-result');
         // Add next/prev match buttons
-        const searchControls = document.getElementById('search-controls');
-        const nextMatchBtn = document.createElement('button');
-        nextMatchBtn.textContent = 'Next Match';
-        nextMatchBtn.id = 'next-match-btn';
-        const prevMatchBtn = document.createElement('button');
-        prevMatchBtn.textContent = 'Prev Match';
-        prevMatchBtn.id = 'prev-match-btn';
-        searchControls.appendChild(prevMatchBtn);
-        searchControls.appendChild(nextMatchBtn);
+        const searchControls = document.querySelector('.pdfagogo-search-controls');
+        let nextMatchBtn, prevMatchBtn;
+        if (searchControls) {
+          nextMatchBtn = document.createElement('button');
+          nextMatchBtn.textContent = 'Next Match';
+          nextMatchBtn.className = 'pdfagogo-next-match-btn';
+          prevMatchBtn = document.createElement('button');
+          prevMatchBtn.textContent = 'Prev Match';
+          prevMatchBtn.className = 'pdfagogo-prev-match-btn';
+          searchControls.appendChild(prevMatchBtn);
+          searchControls.appendChild(nextMatchBtn);
+        }
 
         let matchPages = [];
         let currentMatchIdx = 0;
@@ -275,62 +378,64 @@ function init(book, id, opts, cb) {
           currentMatchIdx = ((idx % matchPages.length) + matchPages.length) % matchPages.length; // wrap around
           const pageNum = matchPages[currentMatchIdx] + 1; // 1-based
           setPageByNumber(pageNum);
-          searchResult.textContent = `Match ${currentMatchIdx + 1} of ${matchPages.length} (page ${pageNum})`;
+          if (searchResult) searchResult.textContent = `Match ${currentMatchIdx + 1} of ${matchPages.length} (page ${pageNum})`;
         }
 
-        searchBtn.onclick = async function() {
-          const query = searchBox.value.trim().toLowerCase();
+        if (searchBtn) searchBtn.onclick = async function() {
+          const query = searchBox ? searchBox.value.trim().toLowerCase() : '';
           if (!query) return;
-          searchResult.textContent = "Searching...";
+          if (searchResult) searchResult.textContent = "Searching...";
           await searchPdf(query);
           if (matchPages.length > 0) {
             showMatch(0);
           } else {
-            searchResult.textContent = "Not found";
+            if (searchResult) searchResult.textContent = "Not found";
           }
         };
 
-        nextMatchBtn.onclick = function() {
+        if (nextMatchBtn) nextMatchBtn.onclick = function() {
           if (matchPages.length > 0) {
             showMatch(currentMatchIdx + 1);
           }
         };
-        prevMatchBtn.onclick = function() {
+        if (prevMatchBtn) prevMatchBtn.onclick = function() {
           if (matchPages.length > 0) {
             showMatch(currentMatchIdx - 1);
           }
         };
 
-        searchBox.addEventListener('keydown', function(e) {
-          if (e.key === "Enter") searchBtn.click();
+        if (searchBox) searchBox.addEventListener('keydown', function(e) {
+          if (e.key === "Enter" && searchBtn) searchBtn.click();
         });
 
         // Go to Page functionality
-        const gotoPageInput = document.getElementById('goto-page');
-        const gotoBtn = document.getElementById('goto-btn');
-        gotoBtn.onclick = function() {
-          const val = parseInt(gotoPageInput.value, 10);
+        const gotoPageInput = document.querySelector('.pdfagogo-goto-page');
+        const gotoBtn = document.querySelector('.pdfagogo-goto-btn');
+        if (gotoBtn) gotoBtn.onclick = function() {
+          const val = gotoPageInput ? parseInt(gotoPageInput.value, 10) : NaN;
           setPageByNumber(val);
         };
 
         // Page selector
         if (!featureOptions.showPageSelector) {
-          document.getElementById('goto-page').style.display = 'none';
-          document.getElementById('goto-btn').style.display = 'none';
+          if (gotoPageInput) gotoPageInput.style.display = 'none';
+          if (gotoBtn) gotoBtn.style.display = 'none';
         }
 
         // Current page indicator
         if (!featureOptions.showCurrentPage) {
-          document.getElementById('page-indicator').style.display = 'none';
+          if (pageIndicator) pageIndicator.style.display = 'none';
         }
 
         // Search controls
         if (!featureOptions.showSearch) {
-          document.getElementById('search-controls').style.display = 'none';
+          if (searchControls) searchControls.style.display = 'none';
         }
       }
     );
   }).catch(function(err) {
+    const loadingDiv = document.querySelector('.pdfagogo-loading');
+    if (loadingDiv) loadingDiv.textContent = "Failed to load PDF: " + err;
     alert("Failed to load PDF: " + err);
   });
 })();
