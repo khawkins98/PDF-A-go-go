@@ -1,0 +1,11 @@
+{
+  "name": "pdf-a-go-go",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "serve dist"
+  },
+  "devDependencies": {
+    "serve": "^14.2.0"
+  }
+} 
