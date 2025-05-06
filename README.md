@@ -19,6 +19,6 @@ To set up a local development environment:
    ```
 2. Start the local server:
    ```sh
-   yarn start
+   yarn dev
    ```
 3. Open your browser and navigate to the address shown in the terminal (usually http://localhost:5000) to view `dist/index.html`.

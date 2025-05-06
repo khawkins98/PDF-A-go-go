@@ -26,4 +26,21 @@ const prod = Object.assign({}, base, {
   mode: "production",
 })
 
-module.exports = prod;
+const dev = Object.assign({}, base, {
+  mode: "development",
+  devServer: {
+    static: {
+      directory: path.join(__dirname, 'dist'),
+    },
+    watchFiles: ['dist/index.html', 'src/**/*'],
+    open: true,
+    hot: true,
+  },
+});
+
+module.exports = (env, argv) => {
+  if (argv.mode === 'development') {
+    return dev;
+  }
+  return prod;
+};
