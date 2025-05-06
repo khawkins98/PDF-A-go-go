@@ -31,7 +31,8 @@ const base = {
     new CopyPlugin({
       patterns: [
         { from: 'src/pdf-a-go-go.css', to: 'pdf-a-go-go.css' },
-        { from: 'src/index.html', to: 'index.html' }
+        { from: 'src/index.html', to: 'index.html' },
+        { from: 'src/double-spread.html', to: 'double-spread.html' }
       ]
     })
   ]

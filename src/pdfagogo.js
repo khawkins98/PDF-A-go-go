@@ -92,7 +92,7 @@ function init(book, id, opts, cb) {
     showPageSelector: true,
     showCurrentPage: true,
     showSearch: true,
-    pdfUrl: "https://api.printnode.com/static/test/pdf/multipage.pdf",
+    pdfUrl: "https://texdoc.org/serve/pdfpages.pdf/0",
     showDownload: true,
   };
   // --- END: Option defaults ---

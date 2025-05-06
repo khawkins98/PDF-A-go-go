@@ -11,6 +11,9 @@
   <strong>PDF-A-go-go:</strong> A lightweight embeddable PDF viewer. View the project or contribute on
     <a href="https://github.com/khawkins98/PDF-A-go-go" target="_blank" rel="noopener noreferrer">GitHub</a>.
   </div>
+  <p style="text-align: center;">
+    This is an example of a large double spread PDF.
+  </p>
   <!--
     UI controls (search, prev/next, page selector, etc) can be enabled/disabled via window.PDFaGoGoOptions.
     See README.md for details.
@@ -18,12 +21,10 @@
   <script>
     // Example: Hide search and page selector controls
     window.PDFaGoGoOptions = {
-      // defaultPage: 3,
-      // pdfUrl: "https://texdoc.org/serve/pdfpages.pdf/0",
-      // pdfUrl: "https://www.princexml.com/samples/catalog/PrinceCatalogue.pdf",
-      // pdfUrl: "https://www.undrr.org/sites/default/files/2022-12/11_Traditional%20Knowledges_2022_2.pdf?startDownload=true",
+      defaultPage: 3,
+      pdfUrl: "https://www.undrr.org/sites/default/files/2022-12/11_Traditional%20Knowledges_2022_2.pdf?startDownload=true",
       // showSearch: false,
-      // showPrevNext: false,
+      showPrevNext: false,
       // showPageSelector: false
     };
   </script>

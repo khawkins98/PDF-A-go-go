@@ -27,8 +27,8 @@ PDF-A-go-go is a super simple, embeddable PDF viewer project. It is designed to 
 
 ## Demo
 
-See [`dist/index.html`](dist/index.html) for a live demo, or try it online:
-[PDF-A-go-go Demo](https://github.com/khawkins98/PDF-A-go-go#demo)
+- [Default PDF-A-go-go Demo](https://github.com/khawkins98/PDF-A-go-go#demo)
+- [Double spread demo](https://github.com/khawkins98/PDF-A-go-go/double-spread.html#page=4)
 
 ## Usage
 
