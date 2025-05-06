@@ -35,7 +35,7 @@ This project is very fresh (rolled on 6 May 2025). I may yet publish to npm or c
 - 🛠️ Based on [pdf.js](https://github.com/mozilla/pdf.js) and [flipbook-viewer](https://github.com/theproductiveprogrammer/flipbook-viewer)
 
 
-## Usage
+## Usage and features
 
 Include the JS and CSS in your HTML, and add a container:
 
@@ -59,10 +59,6 @@ window.PDFaGoGoOptions = {
 };
 ```
 
-## Page spread (Two-page/single-spread) support
-
-PDF-A-go-go supports both traditional single-page and two-page spread ("spread mode") PDFs, including those where each PDF page is already a two-page spread image.
-
 ### Features
 
 - **Autodetection:**
@@ -76,6 +72,17 @@ PDF-A-go-go supports both traditional single-page and two-page spread ("spread m
   - A "Spread Mode" checkbox is available in the viewer controls, allowing users to switch between normal and spread mode at any time. The viewer will attempt to keep you on the same logical page when toggling.
 - **First/Last Page Handling:**
   - In spread mode, if the first or last page is a single (not double) spread, it will be centered and shown at its natural aspect ratio, not stretched.
+
+### Specifically notable features
+
+#### Open to a Specific Page
+
+You can open the viewer to a specific page by adding `#page=N` to the URL (e.g. `#page=5`).
+This will override the `defaultPage` option if both are present.
+
+#### Page spread (Two-page/single-spread) support
+
+PDF-A-go-go supports both traditional single-page and two-page spread ("spread mode") PDFs, including those where each PDF page is already a two-page spread image.
 
 ## Development
 
@@ -98,8 +105,3 @@ To set up a local development environment:
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
-
-### Open to a Specific Page
-
-You can open the viewer to a specific page by adding `#page=N` to the URL (e.g. `#page=5`).
-This will override the `defaultPage` option if both are present.
