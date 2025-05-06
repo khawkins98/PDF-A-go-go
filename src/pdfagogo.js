@@ -69,7 +69,7 @@ function init(book, id, opts, cb) {
   // Ensure loading indicator exists
   if (!document.querySelector(".pdfagogo-loading")) {
     const loadingDiv = document.createElement("div");
-    loadingDiv.id = "pdfagogo-loading";
+    loadingDiv.className = "pdfagogo-loading";
     loadingDiv.style.width = "800px";
     loadingDiv.style.margin = "2rem auto";
     loadingDiv.style.textAlign = "center";
@@ -536,6 +536,7 @@ function init(book, id, opts, cb) {
           }
         }
         // --- END: Hash-based page navigation ---
+        document.querySelector(".pdfagogo-loading").remove();
       });
     })
     .catch(function (err) {

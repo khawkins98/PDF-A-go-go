@@ -38,9 +38,9 @@ const dev = Object.assign({}, base, {
   mode: "development",
   devServer: {
     static: {
-      directory: path.join(__dirname, 'dist'),
+      directory: path.join(__dirname, '/'),
     },
-    watchFiles: ['dist/index.html', 'src/**/*'],
+    watchFiles: ['index.html', 'src/**/*'],
     open: true,
     hot: true,
   },
