@@ -38,7 +38,7 @@ export function flipbookViewer(ctx, cb) {
   // --- End page image cache ---
 
   // Always use ctx.spreadMode (now always set by caller)
-  console.log('[FlipbookViewer] spreadMode:', ctx.spreadMode);
+  // console.log('[FlipbookViewer] spreadMode:', ctx.spreadMode);
 
   setupCanvas(ctx, (err) => {
     if (err) return cb(err);
@@ -156,7 +156,7 @@ function setupControls(ctx, viewer) {
     pageNum = Math.floor(Number(pageNum));
     if (isNaN(pageNum) || pageNum < 0 || pageNum >= ctx.book.numPages()) return;
     if (ctx.spreadMode) {
-      console.log('go_to_page:' , ctx.spreadMode, pageNum);
+      // console.log('go_to_page:' , ctx.spreadMode, pageNum);
       ctx.showNdx = pageNum;
     } else {
       ctx.showNdx = Math.floor(pageNum / 2);

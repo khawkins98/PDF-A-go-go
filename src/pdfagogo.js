@@ -230,18 +230,14 @@ function init(book, id, opts, cb) {
       let spreadMode = false;
       if (typeof featureOptions.spreadMode === 'boolean') {
         spreadMode = featureOptions.spreadMode;
-        console.log('[PDF-A-go-go] Spread mode (from options):', spreadMode);
       } else {
         // Try to auto-detect: check first page aspect ratio
         try {
           const firstPage = await pdf.getPage(2);
           const vp = firstPage.getViewport({ scale: 1 });
-          console.log('[PDF-A-go-go] Spread mode autodetect:', vp.width, vp.height);
           if (vp.width / vp.height > 1.3) spreadMode = true;
-          console.log('[PDF-A-go-go] Spread mode autodetect:', spreadMode, 'aspect ratio:', (vp.width / vp.height).toFixed(2));
         } catch (e) { console.warn('[PDF-A-go-go] Spread mode detection error:', e); }
       }
-      // console.log("PDF total pages:", pdf.numPages);
       const book = {
         numPages: () => pdf.numPages,
         getPage: (num, cb) => {
@@ -276,7 +272,6 @@ function init(book, id, opts, cb) {
 
       // Pass spreadMode to options
       featureOptions.spreadMode = spreadMode;
-      console.log('[PDF-A-go-go] Initializing viewer with spreadMode:', spreadMode);
       init(book, "pdfagogo-container", featureOptions, function (err, v) {
         if (err) {
           alert("Failed to load PDF: " + err);
@@ -391,7 +386,6 @@ function init(book, id, opts, cb) {
 
         // Hide/show navigation arrows on first/last page
         function updateNavArrows() {
-          // console.log('updateNavArrows called:',prevBtn, nextBtn, viewer.showNdx, pdf.numPages, featureOptions.spreadMode);
           if (!prevBtn || !nextBtn) return;
           let isFirst, isLast;
           if (featureOptions.spreadMode) {
@@ -639,14 +633,12 @@ function init(book, id, opts, cb) {
               }
             }
             featureOptions.spreadMode = spreadToggle.checked;
-            console.log('[PDF-A-go-go] Spread mode toggle changed:', featureOptions.spreadMode, 'Current page:', currentPage);
             // Re-initialize viewer with new mode
             init(book, "pdfagogo-container", featureOptions, function (err, v) {
               if (!err && v) {
                 viewer = v;
                 // Try to go to the same logical page
                 if (typeof viewer.go_to_page === 'function') {
-                  console.log('[PDF-A-go-go] After toggle, going to page:', currentPage, 'Spread mode:', featureOptions.spreadMode);
                   viewer.go_to_page(currentPage - 1);
                 }
               }
