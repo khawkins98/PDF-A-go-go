@@ -43,8 +43,8 @@ function init(book, id, opts, cb) {
       },
       sz: {
         bx_border: opts.boxBorder || 0,
-        boxw: opts.width || 800,
-        boxh: opts.height || 600,
+        boxw: opts.width || 1200,
+        boxh: opts.height || 800,
       },
       app,
       book,
@@ -72,7 +72,7 @@ function init(book, id, opts, cb) {
   if (!document.querySelector(".pdfagogo-loading")) {
     const loadingDiv = document.createElement("div");
     loadingDiv.className = "pdfagogo-loading";
-    loadingDiv.style.width = "800px";
+    loadingDiv.style.maxWidth = "1200px";
     loadingDiv.style.margin = "2rem auto";
     loadingDiv.style.textAlign = "center";
     loadingDiv.innerHTML = "<span>Loading PDF...</span>";
@@ -97,8 +97,8 @@ function init(book, id, opts, cb) {
 
   // Merge options from user (if any)
   const userOptions = {
-    width: 800,
-    height: 600,
+    width: 1200,
+    height: 800,
     backgroundColor: "#353535",
   };
   if (window.PDFaGoGoOptions) {
@@ -149,7 +149,7 @@ function init(book, id, opts, cb) {
     '<button class="pdfagogo-share" aria-label="Share current page">Share</button>';
   if (featureOptions.showPageSelector) {
     controlsHTML +=
-      '<input class="pdfagogo-goto-page" type="number" min="1" style="width:60px;" placeholder="Page #" aria-label="Go to page" />';
+      '<input class="pdfagogo-goto-page" type="number" min="0" max="999" style="width:60px;" placeholder="Page #" aria-label="Go to page" />';
     controlsHTML += '<button class="pdfagogo-goto-btn">Go</button>';
   }
   if (featureOptions.showCurrentPage) {
@@ -544,6 +544,14 @@ function init(book, id, opts, cb) {
             const val = gotoPageInput ? parseInt(gotoPageInput.value, 10) : NaN;
             setPageByNumber(val);
           };
+        // Fix: Add Enter/Return key handler in JS
+        if (gotoPageInput && gotoBtn) {
+          gotoPageInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.keyCode === 13) {
+              gotoBtn.click();
+            }
+          });
+        }
 
         // Page selector
         if (!featureOptions.showPageSelector) {
