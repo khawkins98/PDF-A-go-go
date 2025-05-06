@@ -1,0 +1,94 @@
+.pdfagogo-container {
+  width: 100%;
+  height: 600px;
+  margin: 40px auto 10px auto;
+  border: 1px solid #ccc;
+  padding: 2rem 0;
+  background: #353535;
+  text-align: center;
+  position: relative;
+}
+.pdfagogo-container:focus {
+  outline: 3px solid #1976d2;
+}
+.pdfagogo-controls {
+  width: 800px;
+  margin: 0 auto 20px auto;
+  text-align: center;
+}
+.pdfagogo-controls button {
+  margin: 0 10px;
+  padding: 8px 16px;
+  font-size: 16px;
+}
+.pdfagogo-page-indicator {
+  margin-left: 20px;
+  font-size: 16px;
+  color: #333;
+}
+.pdfagogo-a11y-instructions {
+  width: 800px;
+  margin: 0 auto 20px auto;
+  font-size: 1rem;
+  color: #333;
+  background: #f5f5f5;
+  padding: 10px;
+  border-radius: 6px;
+}
+.pdfagogo-search-controls {
+  width: 800px;
+  margin: 0 auto 10px auto;
+  text-align: center;
+}
+.pdfagogo-search-controls input {
+  padding: 6px 10px;
+  font-size: 16px;
+  width: 220px;
+}
+.pdfagogo-search-controls button {
+  padding: 6px 16px;
+  font-size: 16px;
+  margin-left: 5px;
+}
+.pdfagogo-search-result {
+  margin-left: 10px;
+  color: #1976d2;
+  font-size: 15px;
+}
+.flipbook-hint-zone {
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  z-index: 10;
+  pointer-events: auto;
+}
+.flipbook-hint-left {
+  left: 0;
+  cursor: pointer;
+}
+.flipbook-hint-right {
+  right: 0;
+  cursor: pointer;
+}
+.flipbook-hint-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  font-size: 60px;
+  color: rgba(255,255,255,0.7);
+  text-shadow: 0 0 8px #222;
+  user-select: none;
+}
+.flipbook-hint-left .flipbook-hint-arrow {
+  left: 30px;
+}
+.flipbook-hint-right .flipbook-hint-arrow {
+  right: 30px;
+}
+.flipbook-hint-zone.active .flipbook-hint-arrow {
+  opacity: 1;
+}
