@@ -49,15 +49,19 @@ window.PDFaGoGoOptions = {
 
 ## Development
 
-1. Install dependencies:
-   ```sh
-   yarn install
-   ```
-2. Start the local server:
-   ```sh
-   yarn dev
-   ```
-3. Open your browser and navigate to the address shown in the terminal (usually http://localhost:5000) to view `dist/index.html`.
+=======
+PDF-A-go-go is a super simple, embeddable PDF viewer project. It is designed to be lightweight and easy to integrate into your own applications.
+
+This project is heavily based on the following open-source projects:
+
+- [flipbook-viewer](https://github.com/theproductiveprogrammer/flipbook-viewer/)
+- [pdf.js](https://github.com/mozilla/pdf.js)
+
+> Note: The flipbook-viewer has been forked in this project to support navigating directly to specific pages and searching within the PDF.
+
+## Development
+
+To set up a local development environment:
 
 ## How to Contribute
 
@@ -80,3 +84,29 @@ This will override the `defaultPage` option if both are present.
 ### Set a Default Page in Embed Options
 
 Set `defaultPage` in `PDFaGoGoOptions` to specify which page to open by default (1-based). If the URL contains `#page=N`, that will take precedence.
+=======
+## Viewer options
+
+You can control which UI features are enabled in the PDF-A-go-go viewer by passing options. Set the global `window.PDFaGoGoOptions` before the viewer loads, for example:
+
+```js
+window.PDFaGoGoOptions = {
+  showPrevNext: true,      // Show previous/next page buttons (default: true)
+  showPageSelector: true,  // Show page selector input (default: true)
+  showCurrentPage: true,   // Show current page indicator (default: true)
+  showSearch: true,        // Show search controls (default: true)
+  pdfUrl: "https://example.com/your.pdf" // PDF URL to load (default: sample PDF)
+};
+```
+
+All options default to `true` (except `pdfUrl`, which defaults to a sample PDF). Set any to `false` to hide that feature from the UI, or set `pdfUrl` to your own PDF file.
+
+Example: To load a custom PDF and hide search and page selector:
+
+```js
+window.PDFaGoGoOptions = {
+  pdfUrl: "https://example.com/your.pdf",
+  showSearch: false,
+  showPageSelector: false
+};
+```
