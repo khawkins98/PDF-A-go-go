@@ -70,21 +70,24 @@ function init(book, id, opts, cb) {
 // Main PDF loading and viewer logic
 (function () {
   // Ensure loading indicator exists
-  if (!document.querySelector(".pdfagogo-loading")) {
-    const loadingDiv = document.createElement("div");
+  const pdfagogoContainer = document.querySelector(".pdfagogo-container");
+  let loadingDiv = document.querySelector(".pdfagogo-loading");
+  if (!loadingDiv) {
+    loadingDiv = document.createElement("div");
     loadingDiv.className = "pdfagogo-loading";
-    loadingDiv.style.maxWidth = "1200px";
+    loadingDiv.style.maxWidth = "600px";
     loadingDiv.style.margin = "2rem auto";
     loadingDiv.style.textAlign = "center";
-    loadingDiv.innerHTML = "<span>Loading PDF...</span>";
-    // Always insert immediately before the pdfagogo-container if possible
-    const flipbook = document.querySelector(".pdfagogo-container");
-    if (flipbook && flipbook.parentNode) {
-      flipbook.parentNode.insertBefore(loadingDiv, flipbook);
-    } else {
-      document.body.insertBefore(loadingDiv, document.body.firstChild);
+    loadingDiv.style.padding = "1.5rem 0";
+    loadingDiv.innerHTML = `
+      <span style="display:block;margin-bottom:0.5rem;">Loading PDF...</span>
+      <progress class="pdfagogo-progress-bar" value="0" max="1" style="width:80%;height:1.2em;"></progress>
+    `;
+    if (pdfagogoContainer) {
+      pdfagogoContainer.appendChild(loadingDiv);
     }
   }
+  const progressBar = loadingDiv.querySelector(".pdfagogo-progress-bar");
 
   // --- BEGIN: Option defaults ---
   const defaultOptions = {
@@ -110,7 +113,6 @@ function init(book, id, opts, cb) {
   const featureOptions = Object.assign({}, defaultOptions, userOptions);
 
   // Dynamically create and insert controls based on options
-  const pdfagogoContainer = document.querySelector(".pdfagogo-container");
   // Make container responsive
   pdfagogoContainer.style.width = '100vw';
   pdfagogoContainer.style.maxWidth = '100%';
@@ -221,439 +223,448 @@ function init(book, id, opts, cb) {
   // Use the pdfUrl from options
   const pdfUrl = featureOptions.pdfUrl;
 
-  pdfjsLib
-    .getDocument(pdfUrl)
-    .promise.then(async function (loadedPdf) {
-      // Hide loading indicator
-      pdf = loadedPdf;
-      // --- SPREAD MODE DETECTION ---
-      let spreadMode = false;
-      if (typeof featureOptions.spreadMode === 'boolean') {
-        spreadMode = featureOptions.spreadMode;
+  // Start loading PDF and update progress bar
+  const loadingTask = pdfjsLib.getDocument(pdfUrl);
+  if (progressBar && loadingTask && loadingTask.onProgress !== undefined) {
+    loadingTask.onProgress = function (progressData) {
+      if (progressData && progressData.loaded && progressData.total) {
+        progressBar.value = progressData.loaded / progressData.total;
       } else {
-        // Try to auto-detect: check first page aspect ratio
-        try {
-          const firstPage = await pdf.getPage(2);
-          const vp = firstPage.getViewport({ scale: 1 });
-          if (vp.width / vp.height > 1.3) spreadMode = true;
-        } catch (e) { console.warn('[PDF-A-go-go] Spread mode detection error:', e); }
+        progressBar.removeAttribute('value'); // Indeterminate
       }
-      const book = {
-        numPages: () => pdf.numPages,
-        getPage: (num, cb) => {
-          const pageNum = num + 1;
-          if (pageNum < 1 || pageNum > pdf.numPages) {
-            cb(new Error("Page out of range"));
-            return;
-          }
-          pdf
-            .getPage(pageNum)
-            .then(function (page) {
-              const viewport = page.getViewport({ scale: typeof outputScale !== 'undefined' ? outputScale : 2 });
-              const canvas = document.createElement("canvas");
-              const context = canvas.getContext("2d");
-              canvas.width = viewport.width;
-              canvas.height = viewport.height;
-              page
-                .render({ canvasContext: context, viewport: viewport })
-                .promise.then(function () {
-                  cb(null, {
-                    img: canvas,
-                    width: viewport.width,
-                    height: viewport.height,
-                  });
-                });
-            })
-            .catch(function (err) {
-              cb(err);
-            });
-        },
-      };
-
-      // Pass spreadMode to options
-      featureOptions.spreadMode = spreadMode;
-      init(book, "pdfagogo-container", featureOptions, function (err, v) {
-        if (err) {
-          alert("Failed to load PDF: " + err);
+    };
+  }
+  loadingTask.promise.then(async function (loadedPdf) {
+    // Hide loading indicator
+    pdf = loadedPdf;
+    // --- SPREAD MODE DETECTION ---
+    let spreadMode = false;
+    if (typeof featureOptions.spreadMode === 'boolean') {
+      spreadMode = featureOptions.spreadMode;
+    } else {
+      // Try to auto-detect: check first page aspect ratio
+      try {
+        const firstPage = await pdf.getPage(2);
+        const vp = firstPage.getViewport({ scale: 1 });
+        if (vp.width / vp.height > 1.3) spreadMode = true;
+      } catch (e) { console.warn('[PDF-A-go-go] Spread mode detection error:', e); }
+    }
+    const book = {
+      numPages: () => pdf.numPages,
+      getPage: (num, cb) => {
+        const pageNum = num + 1;
+        if (pageNum < 1 || pageNum > pdf.numPages) {
+          cb(new Error("Page out of range"));
           return;
         }
-        viewer = v;
-        const container = document.querySelector(".pdfagogo-container");
-        // Wait for the canvas to be added to the DOM
-        const waitForCanvas = setInterval(() => {
-          const canvas = container.querySelector("canvas");
-          if (canvas) {
-            clearInterval(waitForCanvas);
-            canvas.style.cursor = "pointer";
-            canvas.setAttribute("aria-label", "Flipbook page display");
-            canvas.setAttribute("role", "img");
-            canvas.setAttribute("tabindex", "-1");
-            canvas.addEventListener("click", function (event) {
-              const rect = canvas.getBoundingClientRect();
-              const x = event.clientX - rect.left;
-              if (x < rect.width / 2) {
-                viewer.flip_back();
-              } else {
-                viewer.flip_forward();
-              }
-            });
+        pdf
+          .getPage(pageNum)
+          .then(function (page) {
+            const viewport = page.getViewport({ scale: typeof outputScale !== 'undefined' ? outputScale : 2 });
+            const canvas = document.createElement("canvas");
+            const context = canvas.getContext("2d");
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            page
+              .render({ canvasContext: context, viewport: viewport })
+              .promise.then(function () {
+                cb(null, {
+                  img: canvas,
+                  width: viewport.width,
+                  height: viewport.height,
+                });
+              });
+          })
+          .catch(function (err) {
+            cb(err);
+          });
+      },
+    };
 
-            // Dynamically add overlay hint zones
-            const leftZone = document.createElement("div");
-            leftZone.className = "pdfagogo-hint-zone pdfagogo-hint-left";
-            const leftArrow = document.createElement("span");
-            leftArrow.className = "pdfagogo-hint-arrow";
-            leftArrow.setAttribute("aria-hidden", "true");
-            leftArrow.innerHTML = "&#8592;";
-            leftZone.appendChild(leftArrow);
+    // Pass spreadMode to options
+    featureOptions.spreadMode = spreadMode;
+    init(book, "pdfagogo-container", featureOptions, function (err, v) {
+      if (err) {
+        alert("Failed to load PDF: " + err);
+        return;
+      }
+      viewer = v;
+      const container = document.querySelector(".pdfagogo-container");
+      // Wait for the canvas to be added to the DOM
+      const waitForCanvas = setInterval(() => {
+        const canvas = container.querySelector("canvas");
+        if (canvas) {
+          clearInterval(waitForCanvas);
+          canvas.style.cursor = "pointer";
+          canvas.setAttribute("aria-label", "Flipbook page display");
+          canvas.setAttribute("role", "img");
+          canvas.setAttribute("tabindex", "-1");
+          canvas.addEventListener("click", function (event) {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            if (x < rect.width / 2) {
+              viewer.flip_back();
+            } else {
+              viewer.flip_forward();
+            }
+          });
 
-            const rightZone = document.createElement("div");
-            rightZone.className = "pdfagogo-hint-zone pdfagogo-hint-right";
-            const rightArrow = document.createElement("span");
-            rightArrow.className = "pdfagogo-hint-arrow";
-            rightArrow.setAttribute("aria-hidden", "true");
-            rightArrow.innerHTML = "&#8594;";
-            rightZone.appendChild(rightArrow);
+          // Dynamically add overlay hint zones
+          const leftZone = document.createElement("div");
+          leftZone.className = "pdfagogo-hint-zone pdfagogo-hint-left";
+          const leftArrow = document.createElement("span");
+          leftArrow.className = "pdfagogo-hint-arrow";
+          leftArrow.setAttribute("aria-hidden", "true");
+          leftArrow.innerHTML = "&#8592;";
+          leftZone.appendChild(leftArrow);
 
-            container.appendChild(leftZone);
-            container.appendChild(rightZone);
+          const rightZone = document.createElement("div");
+          rightZone.className = "pdfagogo-hint-zone pdfagogo-hint-right";
+          const rightArrow = document.createElement("span");
+          rightArrow.className = "pdfagogo-hint-arrow";
+          rightArrow.setAttribute("aria-hidden", "true");
+          rightArrow.innerHTML = "&#8594;";
+          rightZone.appendChild(rightArrow);
 
-            leftZone.addEventListener("mouseenter", () =>
-              leftZone.classList.add("active")
-            );
-            leftZone.addEventListener("mouseleave", () =>
-              leftZone.classList.remove("active")
-            );
-            rightZone.addEventListener("mouseenter", () =>
-              rightZone.classList.add("active")
-            );
-            rightZone.addEventListener("mouseleave", () =>
-              rightZone.classList.remove("active")
-            );
-            leftZone.addEventListener("click", () => viewer.flip_back());
-            rightZone.addEventListener("click", () => viewer.flip_forward());
+          container.appendChild(leftZone);
+          container.appendChild(rightZone);
 
-            // updateNavArrows();
+          leftZone.addEventListener("mouseenter", () =>
+            leftZone.classList.add("active")
+          );
+          leftZone.addEventListener("mouseleave", () =>
+            leftZone.classList.remove("active")
+          );
+          rightZone.addEventListener("mouseenter", () =>
+            rightZone.classList.add("active")
+          );
+          rightZone.addEventListener("mouseleave", () =>
+            rightZone.classList.remove("active")
+          );
+          leftZone.addEventListener("click", () => viewer.flip_back());
+          rightZone.addEventListener("click", () => viewer.flip_forward());
 
-          }
+          // updateNavArrows();
+
+        }
+      }, 100);
+
+      // Keyboard navigation for accessibility
+      container.addEventListener("keydown", function (event) {
+        if (event.key === "ArrowLeft") {
+          viewer.flip_back();
+          event.preventDefault();
+        } else if (event.key === "ArrowRight") {
+          viewer.flip_forward();
+          event.preventDefault();
+        } else if (event.key === "+" || event.key === "=") {
+          viewer.zoom(viewer.zoomLevel ? viewer.zoomLevel + 1 : 1);
+          event.preventDefault();
+        } else if (event.key === "-") {
+          viewer.zoom(viewer.zoomLevel ? viewer.zoomLevel - 1 : -1);
+          event.preventDefault();
+        }
+      });
+
+      // Buttons for navigation and sharing
+      const prevBtn = document.querySelector(".pdfagogo-prev");
+      const nextBtn = document.querySelector(".pdfagogo-next");
+      const shareBtn = document.querySelector(".pdfagogo-share");
+      const downloadBtn = document.querySelector(".pdfagogo-download");
+      if (!featureOptions.showPrevNext) {
+        if (prevBtn) prevBtn.style.display = "none";
+        if (nextBtn) nextBtn.style.display = "none";
+      }
+      if (nextBtn) nextBtn.onclick = () => viewer.flip_forward();
+      if (prevBtn) prevBtn.onclick = () => viewer.flip_back();
+      if (shareBtn)
+        shareBtn.onclick = () => {
+          const page = viewer.showNdx ? viewer.showNdx + 1 : 1;
+          const shareUrl = `${window.location.origin}${window.location.pathname}#page=${page}`;
+          navigator.clipboard.writeText(shareUrl);
+          alert("Share link copied to clipboard:\n" + shareUrl);
+        };
+      if (downloadBtn) {
+        downloadBtn.onclick = () => {
+          const link = document.createElement('a');
+          link.href = featureOptions.pdfUrl;
+          link.target = '_blank';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        };
+      }
+
+      // Hide/show navigation arrows on first/last page
+      function updateNavArrows() {
+        if (!prevBtn || !nextBtn) return;
+        let isFirst, isLast;
+        if (featureOptions.spreadMode) {
+          isFirst = viewer.showNdx === 0;
+          isLast = viewer.showNdx === (pdf.numPages - 1);
+        } else {
+          isFirst = viewer.showNdx === 0;
+          isLast = (viewer.showNdx * 2 + 1) >= pdf.numPages;
+        }
+        prevBtn.style.visibility = isFirst ? 'hidden' : '';
+        nextBtn.style.visibility = isLast ? 'hidden' : '';
+        // Also hide/show pdfagogo-hint zones
+        // delay to ensure DOM is updated
+        setTimeout(() => {
+          const leftHint = document.querySelector('.pdfagogo-hint-left');
+          const rightHint = document.querySelector('.pdfagogo-hint-right');
+          if (leftHint) leftHint.style.display = isFirst ? 'none' : '';
+          if (rightHint) rightHint.style.display = isLast ? 'none' : '';
         }, 100);
+      }
+      viewer.on("seen", updateNavArrows);
+      updateNavArrows();
 
-        // Keyboard navigation for accessibility
-        container.addEventListener("keydown", function (event) {
-          if (event.key === "ArrowLeft") {
-            viewer.flip_back();
-            event.preventDefault();
-          } else if (event.key === "ArrowRight") {
-            viewer.flip_forward();
-            event.preventDefault();
-          } else if (event.key === "+" || event.key === "=") {
-            viewer.zoom(viewer.zoomLevel ? viewer.zoomLevel + 1 : 1);
-            event.preventDefault();
-          } else if (event.key === "-") {
-            viewer.zoom(viewer.zoomLevel ? viewer.zoomLevel - 1 : -1);
-            event.preventDefault();
+      // Page indicator and screen reader announcement
+      const pageIndicator = document.querySelector(
+        ".pdfagogo-page-indicator"
+      );
+      const pageAnnouncement = document.querySelector(
+        ".pdfagogo-page-announcement"
+      );
+      function updatePage(n) {
+        const totalPages = pdf.numPages;
+        const leftPage = parseInt(n);
+        const rightPage = Math.min(leftPage + 1, totalPages);
+        if (pageIndicator)
+          pageIndicator.textContent = `Page: ${leftPage}-${rightPage} / ${totalPages}`;
+        if (pageAnnouncement)
+          pageAnnouncement.textContent = `Pages ${leftPage} to ${rightPage} of ${totalPages}`;
+      }
+      viewer.on("seen", updatePage);
+      updatePage(0);
+
+      // SEARCH FUNCTIONALITY
+      const searchBox = document.querySelector(".pdfagogo-search-box");
+      const searchBtn = document.querySelector(".pdfagogo-search-btn");
+      const searchResult = document.querySelector(".pdfagogo-search-result");
+      // Add next/prev match buttons
+      const searchControls = document.querySelector(
+        ".pdfagogo-search-controls"
+      );
+      let nextMatchBtn, prevMatchBtn;
+      if (searchControls) {
+        nextMatchBtn = document.createElement("button");
+        nextMatchBtn.textContent = "Next Match";
+        nextMatchBtn.className = "pdfagogo-next-match-btn";
+        prevMatchBtn = document.createElement("button");
+        prevMatchBtn.textContent = "Prev Match";
+        prevMatchBtn.className = "pdfagogo-prev-match-btn";
+        searchControls.appendChild(prevMatchBtn);
+        searchControls.appendChild(nextMatchBtn);
+      }
+
+      let matchPages = [];
+      let currentMatchIdx = 0;
+
+      async function searchPdf(query) {
+        matchPages = [];
+        currentMatchIdx = 0;
+        for (let i = 0; i < pdf.numPages; i++) {
+          const page = await pdf.getPage(i + 1);
+          const textContent = await page.getTextContent();
+          const text = textContent.items
+            .map((item) => item.str)
+            .join(" ")
+            .toLowerCase();
+          if (text.includes(query)) {
+            matchPages.push(i);
           }
+        }
+      }
+
+      // Central function to set and track the current page (1-based)
+      function setPageByNumber(pageNum) {
+        if (!viewer || !pdf) return;
+        if (
+          typeof pageNum !== "number" ||
+          isNaN(pageNum / 2) ||
+          pageNum < 1 ||
+          pageNum / 2 > pdf.numPages
+        ) {
+          alert("Invalid page number");
+          return;
+        }
+        // Use the new go_to_page method if available
+        if (typeof viewer.go_to_page === "function") {
+          viewer.go_to_page(pageNum - 1); // zero-based
+          return;
+        }
+        const targetShowNdx = Math.floor(pageNum / 2);
+
+        // Reset any ongoing animation
+        if (viewer.flipNdx !== undefined && viewer.flipNdx !== null) {
+          viewer.flipNdx = null;
+        }
+
+        viewer.flipNdx = targetShowNdx;
+
+        if (viewer.showNdx !== targetShowNdx) {
+          viewer.showNdx = targetShowNdx;
+          viewer.emit("seen", targetShowNdx * 2);
+          if (targetShowNdx < viewer.page_count - 1) {
+            viewer.flip_forward();
+            viewer.flip_back();
+          } else if (targetShowNdx > 0) {
+            viewer.flip_back();
+            viewer.flip_forward();
+          }
+        } else {
+          viewer.emit("seen", targetShowNdx * 2);
+        }
+      }
+
+      function showMatch(idx) {
+        if (matchPages.length === 0) return;
+        currentMatchIdx =
+          ((idx % matchPages.length) + matchPages.length) % matchPages.length; // wrap around
+        const pageNum = matchPages[currentMatchIdx] + 1; // 1-based
+        setPageByNumber(pageNum);
+        if (searchResult)
+          searchResult.textContent = `Match ${currentMatchIdx + 1} of ${
+            matchPages.length
+          } (page ${pageNum})`;
+      }
+
+      if (searchBtn)
+        searchBtn.onclick = async function () {
+          const query = searchBox ? searchBox.value.trim().toLowerCase() : "";
+          if (!query) return;
+          if (searchResult) searchResult.textContent = "Searching...";
+          await searchPdf(query);
+          if (matchPages.length > 0) {
+            showMatch(0);
+          } else {
+            if (searchResult) searchResult.textContent = "Not found";
+          }
+        };
+
+      if (nextMatchBtn)
+        nextMatchBtn.onclick = function () {
+          if (matchPages.length > 0) {
+            showMatch(currentMatchIdx + 1);
+          }
+        };
+      if (prevMatchBtn)
+        prevMatchBtn.onclick = function () {
+          if (matchPages.length > 0) {
+            showMatch(currentMatchIdx - 1);
+          }
+        };
+
+      if (searchBox)
+        searchBox.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" && searchBtn) searchBtn.click();
         });
 
-        // Buttons for navigation and sharing
-        const prevBtn = document.querySelector(".pdfagogo-prev");
-        const nextBtn = document.querySelector(".pdfagogo-next");
-        const shareBtn = document.querySelector(".pdfagogo-share");
-        const downloadBtn = document.querySelector(".pdfagogo-download");
-        if (!featureOptions.showPrevNext) {
-          if (prevBtn) prevBtn.style.display = "none";
-          if (nextBtn) nextBtn.style.display = "none";
-        }
-        if (nextBtn) nextBtn.onclick = () => viewer.flip_forward();
-        if (prevBtn) prevBtn.onclick = () => viewer.flip_back();
-        if (shareBtn)
-          shareBtn.onclick = () => {
-            const page = viewer.showNdx ? viewer.showNdx + 1 : 1;
-            const shareUrl = `${window.location.origin}${window.location.pathname}#page=${page}`;
-            navigator.clipboard.writeText(shareUrl);
-            alert("Share link copied to clipboard:\n" + shareUrl);
-          };
-        if (downloadBtn) {
-          downloadBtn.onclick = () => {
-            const link = document.createElement('a');
-            link.href = featureOptions.pdfUrl;
-            link.target = '_blank';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          };
-        }
-
-        // Hide/show navigation arrows on first/last page
-        function updateNavArrows() {
-          if (!prevBtn || !nextBtn) return;
-          let isFirst, isLast;
-          if (featureOptions.spreadMode) {
-            isFirst = viewer.showNdx === 0;
-            isLast = viewer.showNdx === (pdf.numPages - 1);
-          } else {
-            isFirst = viewer.showNdx === 0;
-            isLast = (viewer.showNdx * 2 + 1) >= pdf.numPages;
+      // Go to Page functionality
+      const gotoPageInput = document.querySelector(".pdfagogo-goto-page");
+      const gotoBtn = document.querySelector(".pdfagogo-goto-btn");
+      if (gotoBtn)
+        gotoBtn.onclick = function () {
+          const val = gotoPageInput ? parseInt(gotoPageInput.value, 10) : NaN;
+          setPageByNumber(val);
+        };
+      // Fix: Add Enter/Return key handler in JS
+      if (gotoPageInput && gotoBtn) {
+        gotoPageInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' || e.keyCode === 13) {
+            gotoBtn.click();
           }
-          prevBtn.style.visibility = isFirst ? 'hidden' : '';
-          nextBtn.style.visibility = isLast ? 'hidden' : '';
-          // Also hide/show pdfagogo-hint zones
-          // delay to ensure DOM is updated
-          setTimeout(() => {
-            const leftHint = document.querySelector('.pdfagogo-hint-left');
-            const rightHint = document.querySelector('.pdfagogo-hint-right');
-            if (leftHint) leftHint.style.display = isFirst ? 'none' : '';
-            if (rightHint) rightHint.style.display = isLast ? 'none' : '';
-          }, 100);
-        }
-        viewer.on("seen", updateNavArrows);
-        updateNavArrows();
+        });
+      }
 
-        // Page indicator and screen reader announcement
-        const pageIndicator = document.querySelector(
-          ".pdfagogo-page-indicator"
-        );
-        const pageAnnouncement = document.querySelector(
-          ".pdfagogo-page-announcement"
-        );
-        function updatePage(n) {
-          const totalPages = pdf.numPages;
-          const leftPage = parseInt(n);
-          const rightPage = Math.min(leftPage + 1, totalPages);
-          if (pageIndicator)
-            pageIndicator.textContent = `Page: ${leftPage}-${rightPage} / ${totalPages}`;
-          if (pageAnnouncement)
-            pageAnnouncement.textContent = `Pages ${leftPage} to ${rightPage} of ${totalPages}`;
-        }
-        viewer.on("seen", updatePage);
-        updatePage(0);
+      // Page selector
+      if (!featureOptions.showPageSelector) {
+        if (gotoPageInput) gotoPageInput.style.display = "none";
+        if (gotoBtn) gotoBtn.style.display = "none";
+      }
 
-        // SEARCH FUNCTIONALITY
-        const searchBox = document.querySelector(".pdfagogo-search-box");
-        const searchBtn = document.querySelector(".pdfagogo-search-btn");
-        const searchResult = document.querySelector(".pdfagogo-search-result");
-        // Add next/prev match buttons
-        const searchControls = document.querySelector(
-          ".pdfagogo-search-controls"
-        );
-        let nextMatchBtn, prevMatchBtn;
-        if (searchControls) {
-          nextMatchBtn = document.createElement("button");
-          nextMatchBtn.textContent = "Next Match";
-          nextMatchBtn.className = "pdfagogo-next-match-btn";
-          prevMatchBtn = document.createElement("button");
-          prevMatchBtn.textContent = "Prev Match";
-          prevMatchBtn.className = "pdfagogo-prev-match-btn";
-          searchControls.appendChild(prevMatchBtn);
-          searchControls.appendChild(nextMatchBtn);
-        }
+      // Current page indicator
+      if (!featureOptions.showCurrentPage) {
+        if (pageIndicator) pageIndicator.style.display = "none";
+      }
 
-        let matchPages = [];
-        let currentMatchIdx = 0;
+      // Search controls
+      if (!featureOptions.showSearch) {
+        if (searchControls) searchControls.style.display = "none";
+      }
 
-        async function searchPdf(query) {
-          matchPages = [];
-          currentMatchIdx = 0;
-          for (let i = 0; i < pdf.numPages; i++) {
-            const page = await pdf.getPage(i + 1);
-            const textContent = await page.getTextContent();
-            const text = textContent.items
-              .map((item) => item.str)
-              .join(" ")
-              .toLowerCase();
-            if (text.includes(query)) {
-              matchPages.push(i);
-            }
+      // --- BEGIN: Hash-based page navigation ---
+      function getPageFromHash() {
+        const match = window.location.hash.match(/page=(\d+)/);
+        if (match) {
+          const pageNum = parseInt(match[1], 10);
+          if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= pdf.numPages) {
+            return pageNum;
           }
         }
-
-        // Central function to set and track the current page (1-based)
-        function setPageByNumber(pageNum) {
-          if (!viewer || !pdf) return;
-          if (
-            typeof pageNum !== "number" ||
-            isNaN(pageNum / 2) ||
-            pageNum < 1 ||
-            pageNum / 2 > pdf.numPages
-          ) {
-            alert("Invalid page number");
-            return;
-          }
-          // Use the new go_to_page method if available
-          if (typeof viewer.go_to_page === "function") {
-            viewer.go_to_page(pageNum - 1); // zero-based
-            return;
-          }
-          const targetShowNdx = Math.floor(pageNum / 2);
-
-          // Reset any ongoing animation
-          if (viewer.flipNdx !== undefined && viewer.flipNdx !== null) {
-            viewer.flipNdx = null;
-          }
-
-          viewer.flipNdx = targetShowNdx;
-
-          if (viewer.showNdx !== targetShowNdx) {
-            viewer.showNdx = targetShowNdx;
-            viewer.emit("seen", targetShowNdx * 2);
-            if (targetShowNdx < viewer.page_count - 1) {
-              viewer.flip_forward();
-              viewer.flip_back();
-            } else if (targetShowNdx > 0) {
-              viewer.flip_back();
-              viewer.flip_forward();
-            }
-          } else {
-            viewer.emit("seen", targetShowNdx * 2);
-          }
-        }
-
-        function showMatch(idx) {
-          if (matchPages.length === 0) return;
-          currentMatchIdx =
-            ((idx % matchPages.length) + matchPages.length) % matchPages.length; // wrap around
-          const pageNum = matchPages[currentMatchIdx] + 1; // 1-based
+        return null;
+      }
+      function goToHashPage() {
+        const pageNum = getPageFromHash();
+        if (pageNum) {
           setPageByNumber(pageNum);
-          if (searchResult)
-            searchResult.textContent = `Match ${currentMatchIdx + 1} of ${
-              matchPages.length
-            } (page ${pageNum})`;
+          window.__pdfagogo__pageSetBy = 'hash';
         }
+      }
+      // Go to page on load if hash is present
+      goToHashPage();
+      // Listen for hash changes
+      window.addEventListener("hashchange", goToHashPage);
+      // If no hash, use defaultPage from options
+      if (!getPageFromHash() && featureOptions.defaultPage) {
+        const defPage = parseInt(featureOptions.defaultPage, 10);
+        if (!isNaN(defPage) && defPage >= 1 && defPage <= pdf.numPages) {
+          setPageByNumber(defPage);
+          window.__pdfagogo__pageSetBy = 'defaultPage';
+        }
+      }
+      // --- END: Hash-based page navigation ---
 
-        if (searchBtn)
-          searchBtn.onclick = async function () {
-            const query = searchBox ? searchBox.value.trim().toLowerCase() : "";
-            if (!query) return;
-            if (searchResult) searchResult.textContent = "Searching...";
-            await searchPdf(query);
-            if (matchPages.length > 0) {
-              showMatch(0);
+      // Spread Mode toggle
+      const spreadToggle = document.querySelector('.pdfagogo-spread-toggle');
+      if (spreadToggle) {
+        spreadToggle.checked = !!featureOptions.spreadMode;
+        spreadToggle.onchange = function () {
+          // Try to preserve current logical page
+          let currentPage = 1;
+          if (viewer && typeof viewer.showNdx === 'number') {
+            if (featureOptions.spreadMode) {
+              // Was in spread mode, so showNdx is 1-based
+              currentPage = viewer.showNdx + 1;
             } else {
-              if (searchResult) searchResult.textContent = "Not found";
-            }
-          };
-
-        if (nextMatchBtn)
-          nextMatchBtn.onclick = function () {
-            if (matchPages.length > 0) {
-              showMatch(currentMatchIdx + 1);
-            }
-          };
-        if (prevMatchBtn)
-          prevMatchBtn.onclick = function () {
-            if (matchPages.length > 0) {
-              showMatch(currentMatchIdx - 1);
-            }
-          };
-
-        if (searchBox)
-          searchBox.addEventListener("keydown", function (e) {
-            if (e.key === "Enter" && searchBtn) searchBtn.click();
-          });
-
-        // Go to Page functionality
-        const gotoPageInput = document.querySelector(".pdfagogo-goto-page");
-        const gotoBtn = document.querySelector(".pdfagogo-goto-btn");
-        if (gotoBtn)
-          gotoBtn.onclick = function () {
-            const val = gotoPageInput ? parseInt(gotoPageInput.value, 10) : NaN;
-            setPageByNumber(val);
-          };
-        // Fix: Add Enter/Return key handler in JS
-        if (gotoPageInput && gotoBtn) {
-          gotoPageInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' || e.keyCode === 13) {
-              gotoBtn.click();
-            }
-          });
-        }
-
-        // Page selector
-        if (!featureOptions.showPageSelector) {
-          if (gotoPageInput) gotoPageInput.style.display = "none";
-          if (gotoBtn) gotoBtn.style.display = "none";
-        }
-
-        // Current page indicator
-        if (!featureOptions.showCurrentPage) {
-          if (pageIndicator) pageIndicator.style.display = "none";
-        }
-
-        // Search controls
-        if (!featureOptions.showSearch) {
-          if (searchControls) searchControls.style.display = "none";
-        }
-
-        // --- BEGIN: Hash-based page navigation ---
-        function getPageFromHash() {
-          const match = window.location.hash.match(/page=(\d+)/);
-          if (match) {
-            const pageNum = parseInt(match[1], 10);
-            if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= pdf.numPages) {
-              return pageNum;
+              // Was in normal mode, so showNdx is 0-based spread index
+              currentPage = viewer.showNdx * 2 + 1;
             }
           }
-          return null;
-        }
-        function goToHashPage() {
-          const pageNum = getPageFromHash();
-          if (pageNum) {
-            setPageByNumber(pageNum);
-            window.__pdfagogo__pageSetBy = 'hash';
-          }
-        }
-        // Go to page on load if hash is present
-        goToHashPage();
-        // Listen for hash changes
-        window.addEventListener("hashchange", goToHashPage);
-        // If no hash, use defaultPage from options
-        if (!getPageFromHash() && featureOptions.defaultPage) {
-          const defPage = parseInt(featureOptions.defaultPage, 10);
-          if (!isNaN(defPage) && defPage >= 1 && defPage <= pdf.numPages) {
-            setPageByNumber(defPage);
-            window.__pdfagogo__pageSetBy = 'defaultPage';
-          }
-        }
-        // --- END: Hash-based page navigation ---
-
-        // Spread Mode toggle
-        const spreadToggle = document.querySelector('.pdfagogo-spread-toggle');
-        if (spreadToggle) {
-          spreadToggle.checked = !!featureOptions.spreadMode;
-          spreadToggle.onchange = function () {
-            // Try to preserve current logical page
-            let currentPage = 1;
-            if (viewer && typeof viewer.showNdx === 'number') {
-              if (featureOptions.spreadMode) {
-                // Was in spread mode, so showNdx is 1-based
-                currentPage = viewer.showNdx + 1;
-              } else {
-                // Was in normal mode, so showNdx is 0-based spread index
-                currentPage = viewer.showNdx * 2 + 1;
+          featureOptions.spreadMode = spreadToggle.checked;
+          // Re-initialize viewer with new mode
+          init(book, "pdfagogo-container", featureOptions, function (err, v) {
+            if (!err && v) {
+              viewer = v;
+              // Try to go to the same logical page
+              if (typeof viewer.go_to_page === 'function') {
+                viewer.go_to_page(currentPage - 1);
               }
             }
-            featureOptions.spreadMode = spreadToggle.checked;
-            // Re-initialize viewer with new mode
-            init(book, "pdfagogo-container", featureOptions, function (err, v) {
-              if (!err && v) {
-                viewer = v;
-                // Try to go to the same logical page
-                if (typeof viewer.go_to_page === 'function') {
-                  viewer.go_to_page(currentPage - 1);
-                }
-              }
-            });
-          };
-        }
+          });
+        };
+      }
 
-        document.querySelector(".pdfagogo-loading").remove();
-      });
-    })
-    .catch(function (err) {
-      const loadingDiv = document.querySelector(".pdfagogo-loading");
-      if (loadingDiv) loadingDiv.textContent = "Failed to load PDF: " + err;
-      alert("Failed to load PDF: " + err);
+      document.querySelector(".pdfagogo-loading")?.remove();
     });
+  })
+  .catch(function (err) {
+    const loadingDiv = document.querySelector(".pdfagogo-loading");
+    if (loadingDiv) loadingDiv.innerHTML = "Failed to load PDF: " + err;
+    alert("Failed to load PDF: " + err);
+  });
 })();
 
 // Expose flipbook.init globally
