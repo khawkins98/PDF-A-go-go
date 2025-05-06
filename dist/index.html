@@ -12,6 +12,7 @@
       padding: 2rem 0;
       background: #353535;
       text-align: center;
+      position: relative;
     }
     #flipbook-container:focus {
       outline: 3px solid #1976d2;
@@ -59,6 +60,43 @@
       margin-left: 10px;
       color: #1976d2;
       font-size: 15px;
+    }
+    .flipbook-hint-zone {
+      position: absolute;
+      top: 0;
+      width: 50%;
+      height: 100%;
+      z-index: 10;
+      pointer-events: auto;
+    }
+    .flipbook-hint-left {
+      left: 0;
+      cursor: pointer;
+    }
+    .flipbook-hint-right {
+      right: 0;
+      cursor: pointer;
+    }
+    .flipbook-hint-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+      font-size: 60px;
+      color: rgba(255,255,255,0.7);
+      text-shadow: 0 0 8px #222;
+      user-select: none;
+    }
+    .flipbook-hint-left .flipbook-hint-arrow {
+      left: 30px;
+    }
+    .flipbook-hint-right .flipbook-hint-arrow {
+      right: 30px;
+    }
+    .flipbook-hint-zone.active .flipbook-hint-arrow {
+      opacity: 1;
     }
   </style>
   <!-- <script src="https://cdn.jsdelivr.net/npm/flipbook-viewer@1.6.1/dist/flipbook-viewer.min.js"></script> -->
@@ -166,6 +204,33 @@
                   viewer.flip_forward();
                 }
               });
+
+              // Dynamically add overlay hint zones
+              const leftZone = document.createElement('div');
+              leftZone.className = 'flipbook-hint-zone flipbook-hint-left';
+              const leftArrow = document.createElement('span');
+              leftArrow.className = 'flipbook-hint-arrow';
+              leftArrow.setAttribute('aria-hidden', 'true');
+              leftArrow.innerHTML = '&#8592;';
+              leftZone.appendChild(leftArrow);
+
+              const rightZone = document.createElement('div');
+              rightZone.className = 'flipbook-hint-zone flipbook-hint-right';
+              const rightArrow = document.createElement('span');
+              rightArrow.className = 'flipbook-hint-arrow';
+              rightArrow.setAttribute('aria-hidden', 'true');
+              rightArrow.innerHTML = '&#8594;';
+              rightZone.appendChild(rightArrow);
+
+              container.appendChild(leftZone);
+              container.appendChild(rightZone);
+
+              leftZone.addEventListener('mouseenter', () => leftZone.classList.add('active'));
+              leftZone.addEventListener('mouseleave', () => leftZone.classList.remove('active'));
+              rightZone.addEventListener('mouseenter', () => rightZone.classList.add('active'));
+              rightZone.addEventListener('mouseleave', () => rightZone.classList.remove('active'));
+              leftZone.addEventListener('click', () => viewer.flip_back());
+              rightZone.addEventListener('click', () => viewer.flip_forward());
             }
           }, 100);
 
