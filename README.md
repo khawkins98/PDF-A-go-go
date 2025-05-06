@@ -13,8 +13,8 @@ This project is very fresh (rolled on 6 May 2025). I may yet publish to npm or c
 
 ## Demo
 
-- [Default PDF-A-go-go Demo](https://github.com/khawkins98/PDF-A-go-go#demo)
-- [Double spread demo](https://github.com/khawkins98/PDF-A-go-go/double-spread.html#page=4)
+- [Basic demo](https://khawkins98.github.io/PDF-A-go-go/)
+- [Double spread demo](https://khawkins98.github.io/PDF-A-go-go/double-spread.html#page=4)
 
 ## Features
 
