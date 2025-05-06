@@ -206,8 +206,6 @@ function init(book, id, opts, cb) {
     .getDocument(pdfUrl)
     .promise.then(function (loadedPdf) {
       // Hide loading indicator
-      const loadingDiv = document.querySelector(".pdfagogo-loading");
-      if (loadingDiv) loadingDiv.style.display = "none";
       pdf = loadedPdf;
       console.log("PDF total pages:", pdf.numPages);
       const book = {
@@ -548,4 +546,4 @@ function init(book, id, opts, cb) {
 })();
 
 // Expose flipbook.init globally
-window.flipbook = { init };
+export default { init };
