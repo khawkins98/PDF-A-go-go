@@ -307,13 +307,13 @@ function showPages(ctx, viewer) {
   const left_ = ctx.showNdx * 2;
   const right_ = left_ + 1;
   canvas.ctx.save();
-  show_bg_1();
   ctx.book.getPage(left_, (err, left) => {
     if(err) return console.error(err);
     if(!ctx.flipNdx && ctx.flipNdx !== 0 && left) viewer.emit('seen', left_);
     ctx.book.getPage(right_, (err, right) => {
       if(err) return console.error(err);
       if(!ctx.flipNdx && ctx.flipNdx !== 0 && right) viewer.emit('seen', right_);
+      show_bg_1();
       show_pgs_1(left, right, () => canvas.ctx.restore());
     })
   })
@@ -349,7 +349,6 @@ function showPages(ctx, viewer) {
   }
 
   function show_bg_1() {
-
     canvas.ctx.fillStyle = ctx.color.bg;
     canvas.ctx.fillRect(0, 0, ctx.sz.boxw*outputScale, ctx.sz.boxh*outputScale);
   }
