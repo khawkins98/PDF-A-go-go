@@ -92,13 +92,14 @@ function init(book, id, opts, cb) {
     showCurrentPage: true,
     showSearch: true,
     pdfUrl: "https://api.printnode.com/static/test/pdf/multipage.pdf",
+    showDownload: true,
   };
   // --- END: Option defaults ---
 
   // Merge options from user (if any)
   const userOptions = {
-    width: 1200,
-    height: 800,
+    width: Math.min(window.innerWidth, 1200),
+    height: window.innerWidth < 700 ? window.innerHeight * 0.7 : 800,
     backgroundColor: "#353535",
   };
   if (window.PDFaGoGoOptions) {
@@ -109,6 +110,11 @@ function init(book, id, opts, cb) {
 
   // Dynamically create and insert controls based on options
   const pdfagogoContainer = document.querySelector(".pdfagogo-container");
+  // Make container responsive
+  pdfagogoContainer.style.width = '100vw';
+  pdfagogoContainer.style.maxWidth = '100%';
+  pdfagogoContainer.style.boxSizing = 'border-box';
+  pdfagogoContainer.style.overflowX = 'hidden';
   // Remove any existing controls
   [
     "pdfagogo-search-controls",
@@ -147,6 +153,9 @@ function init(book, id, opts, cb) {
   }
   controlsHTML +=
     '<button class="pdfagogo-share" aria-label="Share current page">Share</button>';
+  if (featureOptions.showDownload) {
+    controlsHTML += '<button class="pdfagogo-download" aria-label="Download PDF">Download PDF</button>';
+  }
   if (featureOptions.showPageSelector) {
     controlsHTML +=
       '<input class="pdfagogo-goto-page" type="number" min="0" max="999" style="width:60px;" placeholder="Page #" aria-label="Go to page" />';
@@ -354,6 +363,7 @@ function init(book, id, opts, cb) {
         const prevBtn = document.querySelector(".pdfagogo-prev");
         const nextBtn = document.querySelector(".pdfagogo-next");
         const shareBtn = document.querySelector(".pdfagogo-share");
+        const downloadBtn = document.querySelector(".pdfagogo-download");
         if (!featureOptions.showPrevNext) {
           if (prevBtn) prevBtn.style.display = "none";
           if (nextBtn) nextBtn.style.display = "none";
@@ -367,6 +377,16 @@ function init(book, id, opts, cb) {
             navigator.clipboard.writeText(shareUrl);
             alert("Share link copied to clipboard:\n" + shareUrl);
           };
+        if (downloadBtn) {
+          downloadBtn.onclick = () => {
+            const link = document.createElement('a');
+            link.href = featureOptions.pdfUrl;
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          };
+        }
 
         // Hide/show navigation arrows on first/last page
         function updateNavArrows() {

@@ -36,6 +36,50 @@ export function flipbookViewer(ctx, cb) {
 
       setupMouseHandler(ctx, viewer);
 
+      // This may not be helpful for mobile devices
+      // // --- Touch event support for mobile ---
+      // if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+      //   let touchStartX = 0, touchStartY = 0, touchStartDist = 0, pinchZooming = false;
+      //   ctx.canvas.e.addEventListener('touchstart', function(e) {
+      //     if (e.touches.length === 1) {
+      //       touchStartX = e.touches[0].clientX;
+      //       touchStartY = e.touches[0].clientY;
+      //       pinchZooming = false;
+      //     } else if (e.touches.length === 2) {
+      //       pinchZooming = true;
+      //       const dx = e.touches[0].clientX - e.touches[1].clientX;
+      //       const dy = e.touches[0].clientY - e.touches[1].clientY;
+      //       touchStartDist = Math.sqrt(dx*dx + dy*dy);
+      //     }
+      //   }, { passive: true });
+      //   ctx.canvas.e.addEventListener('touchmove', function(e) {
+      //     if (pinchZooming && e.touches.length === 2) {
+      //       const dx = e.touches[0].clientX - e.touches[1].clientX;
+      //       const dy = e.touches[0].clientY - e.touches[1].clientY;
+      //       const dist = Math.sqrt(dx*dx + dy*dy);
+      //       if (Math.abs(dist - touchStartDist) > 20) {
+      //         if (dist > touchStartDist) {
+      //           viewer.zoom((ctx.zoom || 1) + 1);
+      //         } else {
+      //           viewer.zoom((ctx.zoom || 1) - 1);
+      //         }
+      //         touchStartDist = dist;
+      //       }
+      //     }
+      //   }, { passive: true });
+      //   ctx.canvas.e.addEventListener('touchend', function(e) {
+      //     if (!pinchZooming && e.changedTouches.length === 1) {
+      //       const dx = e.changedTouches[0].clientX - touchStartX;
+      //       const dy = e.changedTouches[0].clientY - touchStartY;
+      //       if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+      //         if (dx < 0) viewer.flip_forward();
+      //         else viewer.flip_back();
+      //       }
+      //     }
+      //   }, { passive: true });
+      // }
+      // // --- End touch event support ---
+
       ctx.zoom = 0;
       ctx.showNdx = 0;
 
