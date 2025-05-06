@@ -178,9 +178,11 @@ pdfjsLib.getDocument(pdfUrl).promise.then(function(loadedPdf) {
       const pageIndicator = document.getElementById('page-indicator');
       const pageAnnouncement = document.getElementById('page-announcement');
       function updatePage(n) {
-        const pageNum = parseInt(n) + 1;
-        pageIndicator.textContent = `Page: ${pageNum} / ${viewer.page_count * 2}`;
-        pageAnnouncement.textContent = `Page ${pageNum} of ${viewer.page_count * 2}`;
+        const totalPages = pdf.numPages;
+        const leftPage = parseInt(n);
+        const rightPage = Math.min(leftPage + 1, totalPages);
+        pageIndicator.textContent = `Page: ${leftPage}-${rightPage} / ${totalPages}`;
+        pageAnnouncement.textContent = `Pages ${leftPage} to ${rightPage} of ${totalPages}`;
       }
       viewer.on('seen', updatePage);
       updatePage(0);
