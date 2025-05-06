@@ -32,16 +32,18 @@ window.PDFaGoGoOptions = {
   showPrevNext: true,      // Show previous/next page buttons (default: true)
   showPageSelector: true,  // Show page selector input (default: true)
   showCurrentPage: true,   // Show current page indicator (default: true)
-  showSearch: true         // Show search controls (default: true)
+  showSearch: true,        // Show search controls (default: true)
+  pdfUrl: "https://example.com/your.pdf" // PDF URL to load (default: sample PDF)
 };
 ```
 
-All options default to `true`. Set any to `false` to hide that feature from the UI.
+All options default to `true` (except `pdfUrl`, which defaults to a sample PDF). Set any to `false` to hide that feature from the UI, or set `pdfUrl` to your own PDF file.
 
-Example: To hide search and page selector:
+Example: To load a custom PDF and hide search and page selector:
 
 ```js
 window.PDFaGoGoOptions = {
+  pdfUrl: "https://example.com/your.pdf",
   showSearch: false,
   showPageSelector: false
 };
