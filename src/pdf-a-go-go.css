@@ -55,7 +55,7 @@
   color: #1976d2;
   font-size: 15px;
 }
-.flipbook-hint-zone {
+.pdfagogo-hint-zone {
   position: absolute;
   top: 0;
   width: 50%;
@@ -63,15 +63,15 @@
   z-index: 10;
   pointer-events: auto;
 }
-.flipbook-hint-left {
+.pdfagogo-hint-left {
   left: 0;
   cursor: pointer;
 }
-.flipbook-hint-right {
+.pdfagogo-hint-right {
   right: 0;
   cursor: pointer;
 }
-.flipbook-hint-arrow {
+.pdfagogo-hint-arrow {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
@@ -83,12 +83,12 @@
   text-shadow: 0 0 8px #222;
   user-select: none;
 }
-.flipbook-hint-left .flipbook-hint-arrow {
+.pdfagogo-hint-left .pdfagogo-hint-arrow {
   left: 30px;
 }
-.flipbook-hint-right .flipbook-hint-arrow {
+.pdfagogo-hint-right .pdfagogo-hint-arrow {
   right: 30px;
 }
-.flipbook-hint-zone.active .flipbook-hint-arrow {
+.pdfagogo-hint-zone.active .pdfagogo-hint-arrow {
   opacity: 1;
 }

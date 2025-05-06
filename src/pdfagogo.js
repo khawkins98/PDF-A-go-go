@@ -295,17 +295,17 @@ function init(book, id, opts, cb) {
 
             // Dynamically add overlay hint zones
             const leftZone = document.createElement("div");
-            leftZone.className = "flipbook-hint-zone flipbook-hint-left";
+            leftZone.className = "pdfagogo-hint-zone pdfagogo-hint-left";
             const leftArrow = document.createElement("span");
-            leftArrow.className = "flipbook-hint-arrow";
+            leftArrow.className = "pdfagogo-hint-arrow";
             leftArrow.setAttribute("aria-hidden", "true");
             leftArrow.innerHTML = "&#8592;";
             leftZone.appendChild(leftArrow);
 
             const rightZone = document.createElement("div");
-            rightZone.className = "flipbook-hint-zone flipbook-hint-right";
+            rightZone.className = "pdfagogo-hint-zone pdfagogo-hint-right";
             const rightArrow = document.createElement("span");
-            rightArrow.className = "flipbook-hint-arrow";
+            rightArrow.className = "pdfagogo-hint-arrow";
             rightArrow.setAttribute("aria-hidden", "true");
             rightArrow.innerHTML = "&#8594;";
             rightZone.appendChild(rightArrow);
@@ -327,6 +327,9 @@ function init(book, id, opts, cb) {
             );
             leftZone.addEventListener("click", () => viewer.flip_back());
             rightZone.addEventListener("click", () => viewer.flip_forward());
+
+            // updateNavArrows();
+
           }
         }, 100);
 
@@ -364,6 +367,32 @@ function init(book, id, opts, cb) {
             navigator.clipboard.writeText(shareUrl);
             alert("Share link copied to clipboard:\n" + shareUrl);
           };
+
+        // Hide/show navigation arrows on first/last page
+        function updateNavArrows() {
+          // console.log('updateNavArrows called:',prevBtn, nextBtn, viewer.showNdx, pdf.numPages, featureOptions.spreadMode);
+          if (!prevBtn || !nextBtn) return;
+          let isFirst, isLast;
+          if (featureOptions.spreadMode) {
+            isFirst = viewer.showNdx === 0;
+            isLast = viewer.showNdx === (pdf.numPages - 1);
+          } else {
+            isFirst = viewer.showNdx === 0;
+            isLast = (viewer.showNdx * 2 + 1) >= pdf.numPages;
+          }
+          prevBtn.style.visibility = isFirst ? 'hidden' : '';
+          nextBtn.style.visibility = isLast ? 'hidden' : '';
+          // Also hide/show pdfagogo-hint zones
+          // delay to ensure DOM is updated
+          setTimeout(() => {
+            const leftHint = document.querySelector('.pdfagogo-hint-left');
+            const rightHint = document.querySelector('.pdfagogo-hint-right');
+            if (leftHint) leftHint.style.display = isFirst ? 'none' : '';
+            if (rightHint) rightHint.style.display = isLast ? 'none' : '';
+          }, 100);
+        }
+        viewer.on("seen", updateNavArrows);
+        updateNavArrows();
 
         // Page indicator and screen reader announcement
         const pageIndicator = document.querySelector(

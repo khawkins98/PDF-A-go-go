@@ -389,6 +389,7 @@ function calcLayout(ctx) {
  * show the background and the pages on the viewer
  */
 function showPages(ctx, viewer) {
+  viewer.showNdx = ctx.showNdx;
   const canvas = ctx.canvas;
   let left_, right_;
   let isSingleSpread = false;
