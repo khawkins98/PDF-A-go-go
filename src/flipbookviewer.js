@@ -25,15 +25,15 @@ export function flipbookViewer(ctx, cb) {
 
   // --- Add page image cache ---
   const pageImageCache = new Map();
-  ctx.getCachedPage = function(pageNum, cb) {
-    if (pageImageCache.has(pageNum)) {
+  ctx.getCachedPage = function(pageNum, cb, highlights) {
+    if (!highlights && pageImageCache.has(pageNum)) {
       cb(null, pageImageCache.get(pageNum));
       return;
     }
     ctx.book.getPage(pageNum, (err, pg) => {
-      if (!err && pg) pageImageCache.set(pageNum, pg);
+      if (!err && pg && !highlights) pageImageCache.set(pageNum, pg);
       cb(err, pg);
-    });
+    }, highlights);
   };
   // --- End page image cache ---
 
@@ -462,6 +462,7 @@ function showPages(ctx, viewer) {
     right_ = left_ + 1;
   }
   canvas.ctx.save();
+  const globalHighlights = (window.__pdfagogo__highlights || {});
   ctx.getCachedPage(left_, (err, left) => {
     if (err) return console.error(err);
     if (!ctx.flipNdx && ctx.flipNdx !== 0 && left) viewer.emit("seen", left_);
@@ -475,9 +476,9 @@ function showPages(ctx, viewer) {
           viewer.emit("seen", right_);
         show_bg_1();
         show_pgs_1(left, right, () => canvas.ctx.restore(), false);
-      });
+      }, globalHighlights[right_] || []);
     }
-  });
+  }, globalHighlights[left_] || []);
 
   /*    way/
    * get the current layout and, if no zoom, show the
