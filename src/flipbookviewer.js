@@ -1,3 +1,6 @@
+// This is a modified version of the flipbook.js file from the PDF-A-go-go project
+// https://github.com/theproductiveprogrammer/flipbook-viewer
+
 'use strict'
 import { h } from '@tpp/htm-x';
 import * as EventEmitter from 'events';
