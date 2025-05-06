@@ -1,6 +1,18 @@
 {
   "name": "pdf-a-go-go",
   "version": "0.1.0",
+  "description": "A lightweight, accessible, embeddable PDF flipbook viewer based on pdf.js and flipbook-viewer.",
+  "keywords": ["pdf", "viewer", "flipbook", "accessible", "javascript", "web", "pdf.js", "opensource"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/khawkins98/PDF-A-go-go.git"
+  },
+  "author": "Ken Hawkins",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/khawkins98/PDF-A-go-go/issues"
+  },
+  "homepage": "https://github.com/khawkins98/PDF-A-go-go#readme",
   "private": true,
   "scripts": {
     "dev": "webpack serve --mode development",
