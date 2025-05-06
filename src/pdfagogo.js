@@ -506,6 +506,38 @@ function init(book, id, opts, cb) {
         if (!featureOptions.showSearch) {
           if (searchControls) searchControls.style.display = "none";
         }
+
+        // --- BEGIN: Hash-based page navigation ---
+        function getPageFromHash() {
+          const match = window.location.hash.match(/page=(\d+)/);
+          if (match) {
+            const pageNum = parseInt(match[1], 10);
+            if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= pdf.numPages) {
+              return pageNum;
+            }
+          }
+          return null;
+        }
+        function goToHashPage() {
+          const pageNum = getPageFromHash();
+          if (pageNum) {
+            setPageByNumber(pageNum);
+            window.__pdfagogo__pageSetBy = 'hash';
+          }
+        }
+        // Go to page on load if hash is present
+        goToHashPage();
+        // Listen for hash changes
+        window.addEventListener("hashchange", goToHashPage);
+        // If no hash, use defaultPage from options
+        if (!getPageFromHash() && featureOptions.defaultPage) {
+          const defPage = parseInt(featureOptions.defaultPage, 10);
+          if (!isNaN(defPage) && defPage >= 1 && defPage <= pdf.numPages) {
+            setPageByNumber(defPage);
+            window.__pdfagogo__pageSetBy = 'defaultPage';
+          }
+        }
+        // --- END: Hash-based page navigation ---
       });
     })
     .catch(function (err) {

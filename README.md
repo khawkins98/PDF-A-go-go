@@ -16,6 +16,8 @@ PDF-A-go-go is a super simple, embeddable PDF viewer project. It is designed to 
 - 🎨 Customizable UI (show/hide controls)
 - 📱 Responsive and embeddable
 - 🛠️ Based on [pdf.js](https://github.com/mozilla/pdf.js) and [flipbook-viewer](https://github.com/theproductiveprogrammer/flipbook-viewer)
+- 🔗 Open to a specific page via URL hash (e.g. #page=5)
+- Set a default page to open via embed options
 
 ## Demo
 
@@ -40,9 +42,11 @@ window.PDFaGoGoOptions = {
   showPageSelector: true,  // Show page selector input (default: true)
   showCurrentPage: true,   // Show current page indicator (default: true)
   showSearch: true,        // Show search controls (default: true)
-  pdfUrl: "https://example.com/your.pdf" // PDF URL to load (default: sample PDF)
+  pdfUrl: "https://example.com/your.pdf", // PDF URL to load (default: sample PDF)
+  defaultPage: 3,              // (NEW) Default page to open if no #page=N in URL (1-based)
 };
 ```
+
 ## Development
 
 1. Install dependencies:
@@ -67,3 +71,12 @@ We welcome contributions! To get started:
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
+
+### Open to a Specific Page
+
+You can open the viewer to a specific page by adding `#page=N` to the URL (e.g. `#page=5`).
+This will override the `defaultPage` option if both are present.
+
+### Set a Default Page in Embed Options
+
+Set `defaultPage` in `PDFaGoGoOptions` to specify which page to open by default (1-based). If the URL contains `#page=N`, that will take precedence.
