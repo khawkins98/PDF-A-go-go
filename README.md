@@ -59,6 +59,24 @@ window.PDFaGoGoOptions = {
 };
 ```
 
+## Page spread (Two-page/single-spread) support
+
+PDF-A-go-go supports both traditional single-page and two-page spread ("spread mode") PDFs, including those where each PDF page is already a two-page spread image.
+
+### Features
+
+- **Autodetection:**
+  - The viewer will automatically detect if a PDF is in spread mode by checking the aspect ratio of the first (or second) page. If the page is much wider than it is tall, spread mode is enabled.
+- **Manual Override:**
+  - You can force spread mode on or off by passing the `spreadMode` option:
+    ```js
+    PDFaGoGoOptions = { spreadMode: true };
+    ```
+- **UI Toggle:**
+  - A "Spread Mode" checkbox is available in the viewer controls, allowing users to switch between normal and spread mode at any time. The viewer will attempt to keep you on the same logical page when toggling.
+- **First/Last Page Handling:**
+  - In spread mode, if the first or last page is a single (not double) spread, it will be centered and shown at its natural aspect ratio, not stretched.
+
 ## Development
 
 This project is heavily based on the following open-source projects:
@@ -72,31 +90,10 @@ This project is heavily based on the following open-source projects:
 
 To set up a local development environment:
 
-## How to Contribute
-
-We welcome contributions! To get started:
-
 - Fork the repository and create your branch from `main`.
 - Run `yarn install` and `yarn dev` to set up your environment.
 - Please follow the code style and add comments where helpful.
 - Open a pull request with a clear description of your changes.
-
-## Page spread (Two-page/single-spread) support
-
-PDF-A-go-go supports both traditional single-page and two-page spread ("spread mode") PDFs, including those where each PDF page is already a two-page spread image.
-
-### Features
-- **Autodetection:**
-  - The viewer will automatically detect if a PDF is in spread mode by checking the aspect ratio of the first (or second) page. If the page is much wider than it is tall, spread mode is enabled.
-- **Manual Override:**
-  - You can force spread mode on or off by passing the `spreadMode` option:
-    ```js
-    PDFaGoGoOptions = { spreadMode: true };
-    ```
-- **UI Toggle:**
-  - A "Spread Mode" checkbox is available in the viewer controls, allowing users to switch between normal and spread mode at any time. The viewer will attempt to keep you on the same logical page when toggling.
-- **First/Last Page Handling:**
-  - In spread mode, if the first or last page is a single (not double) spread, it will be centered and shown at its natural aspect ratio, not stretched.
 
 ## License
 
