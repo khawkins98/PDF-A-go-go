@@ -296,4 +296,4 @@ pdfjsLib.getDocument(pdfUrl).promise.then(function(loadedPdf) {
 });
 
 // Expose flipbook.init globally
-window.flipbook = { init }; 
+window.flipbook = { init };
