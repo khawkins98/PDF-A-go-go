@@ -82,22 +82,37 @@ pdfjsLib.getDocument(pdfUrl).promise.then(function(loadedPdf) {
   };
 
   // Use the merged init function
+  // --- BEGIN: Option defaults ---
+  const defaultOptions = {
+    showPrevNext: true,
+    showPageSelector: true,
+    showCurrentPage: true,
+    showSearch: true,
+  };
+  // --- END: Option defaults ---
+
+  // Merge options from user (if any)
+  const userOptions = {
+    width: 800,
+    height: 600,
+    backgroundColor: "#353535"
+  };
+  if (window.PDFaGoGoOptions) {
+    Object.assign(userOptions, window.PDFaGoGoOptions);
+  }
+  // Merge feature toggles
+  const featureOptions = Object.assign({}, defaultOptions, userOptions);
+
   init(
     book,
     "flipbook-container",
-    {
-      width: 800,
-      height: 600,
-      backgroundColor: "#353535"
-    },
+    featureOptions,
     function(err, v) {
       if (err) {
         alert("Failed to load PDF: " + err);
         return;
       }
       viewer = v;
-
-      // Add click-to-turn-page functionality
       const container = document.getElementById('flipbook-container');
       // Wait for the canvas to be added to the DOM
       const waitForCanvas = setInterval(() => {
@@ -165,6 +180,10 @@ pdfjsLib.getDocument(pdfUrl).promise.then(function(loadedPdf) {
       });
 
       // Buttons for navigation and sharing
+      if (!featureOptions.showPrevNext) {
+        document.getElementById('prev').style.display = 'none';
+        document.getElementById('next').style.display = 'none';
+      }
       document.getElementById('next').onclick = () => viewer.flip_forward();
       document.getElementById('prev').onclick = () => viewer.flip_back();
       document.getElementById('share').onclick = () => {
@@ -291,6 +310,22 @@ pdfjsLib.getDocument(pdfUrl).promise.then(function(loadedPdf) {
         const val = parseInt(gotoPageInput.value, 10);
         setPageByNumber(val);
       };
+
+      // Page selector
+      if (!featureOptions.showPageSelector) {
+        document.getElementById('goto-page').style.display = 'none';
+        document.getElementById('goto-btn').style.display = 'none';
+      }
+
+      // Current page indicator
+      if (!featureOptions.showCurrentPage) {
+        document.getElementById('page-indicator').style.display = 'none';
+      }
+
+      // Search controls
+      if (!featureOptions.showSearch) {
+        document.getElementById('search-controls').style.display = 'none';
+      }
     }
   );
 }).catch(function(err) {

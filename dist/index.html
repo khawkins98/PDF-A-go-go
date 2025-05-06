@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Accessible Flipbook Viewer with Search</title>
+  <title>Accessible PDF-A-go-go Viewer with Search</title>
   <link rel="stylesheet" href="pdf-a-go-go.css">
   <!-- <script src="https://cdn.jsdelivr.net/npm/flipbook-viewer@1.6.1/dist/flipbook-viewer.min.js"></script> -->
   <script src="pdf-a-go-go.js"></script>
@@ -12,8 +12,19 @@
   <strong>PDF-A-go-go:</strong> A lightweight embeddable PDF viewer. View the project or contribute on
     <a href="https://github.com/khawkins98/PDF-A-go-go" target="_blank" rel="noopener noreferrer">GitHub</a>.
   </div>
+  <!--
+    UI controls (search, prev/next, page selector, etc) can be enabled/disabled via window.PDFaGoGoOptions.
+    See README.md for details.
+  -->
+  <script>
+    // Example: Hide search and page selector controls
+    window.PDFaGoGoOptions = {
+      showSearch: true,
+      showPageSelector: true
+    };
+  </script>
   <div id="search-controls">
-    <input id="search-box" type="text" placeholder="Search text..." aria-label="Search text in flipbook" />
+    <input id="search-box" type="text" placeholder="Search text..." aria-label="Search text" />
     <button id="search-btn">Search</button>
     <span id="search-result"></span>
   </div>

@@ -22,3 +22,27 @@ To set up a local development environment:
    yarn dev
    ```
 3. Open your browser and navigate to the address shown in the terminal (usually http://localhost:5000) to view `dist/index.html`.
+
+## Viewer Options
+
+You can control which UI features are enabled in the PDF-A-go-go viewer by passing options. Set the global `window.PDFaGoGoOptions` before the viewer loads, for example:
+
+```js
+window.PDFaGoGoOptions = {
+  showPrevNext: true,      // Show previous/next page buttons (default: true)
+  showPageSelector: true,  // Show page selector input (default: true)
+  showCurrentPage: true,   // Show current page indicator (default: true)
+  showSearch: true         // Show search controls (default: true)
+};
+```
+
+All options default to `true`. Set any to `false` to hide that feature from the UI.
+
+Example: To hide search and page selector:
+
+```js
+window.PDFaGoGoOptions = {
+  showSearch: false,
+  showPageSelector: false
+};
+```
