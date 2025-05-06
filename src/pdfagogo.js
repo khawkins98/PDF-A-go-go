@@ -207,7 +207,7 @@ function init(book, id, opts, cb) {
     .promise.then(function (loadedPdf) {
       // Hide loading indicator
       pdf = loadedPdf;
-      console.log("PDF total pages:", pdf.numPages);
+      // console.log("PDF total pages:", pdf.numPages);
       const book = {
         numPages: () => pdf.numPages,
         getPage: (num, cb) => {
