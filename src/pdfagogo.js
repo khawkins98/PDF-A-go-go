@@ -2,6 +2,7 @@ import * as pdfjsLib from "pdfjs-dist/build/pdf.mjs";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs";
 import { getH } from "@tpp/htm-x";
 import { flipbookViewer } from "./flipbookviewer.js";
+import { outputScale } from "./flipbookviewer.js";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -252,7 +253,7 @@ function init(book, id, opts, cb) {
           pdf
             .getPage(pageNum)
             .then(function (page) {
-              const viewport = page.getViewport({ scale: 1 });
+              const viewport = page.getViewport({ scale: typeof outputScale !== 'undefined' ? outputScale : 2 });
               const canvas = document.createElement("canvas");
               const context = canvas.getContext("2d");
               canvas.width = viewport.width;

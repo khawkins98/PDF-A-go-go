@@ -11,7 +11,7 @@ import * as EventEmitter from "events";
  */
 class FlipbookViewer extends EventEmitter {}
 
-const outputScale = window.devicePixelRatio || 1; // Support HiDPI-screens
+export const outputScale = Math.min((window.devicePixelRatio || 1) * 2, 3); // HiDPI, but clamp to 3x for perf
 
 /**
  * Main entry point for the flipbook viewer.
@@ -22,6 +22,20 @@ const outputScale = window.devicePixelRatio || 1; // Support HiDPI-screens
 export function flipbookViewer(ctx, cb) {
   const viewer = new FlipbookViewer();
   viewer.page_count = ctx.book.numPages();
+
+  // --- Add page image cache ---
+  const pageImageCache = new Map();
+  ctx.getCachedPage = function(pageNum, cb) {
+    if (pageImageCache.has(pageNum)) {
+      cb(null, pageImageCache.get(pageNum));
+      return;
+    }
+    ctx.book.getPage(pageNum, (err, pg) => {
+      if (!err && pg) pageImageCache.set(pageNum, pg);
+      cb(err, pg);
+    });
+  };
+  // --- End page image cache ---
 
   // Always use ctx.spreadMode (now always set by caller)
   console.log('[FlipbookViewer] spreadMode:', ctx.spreadMode);
@@ -161,10 +175,10 @@ function setupControls(ctx, viewer) {
       const start = Date.now();
       const canvas = ctx.canvas;
       let fromPage, toPage;
-      ctx.book.getPage(fromNdx, (err, fromPg) => {
+      ctx.getCachedPage(fromNdx, (err, fromPg) => {
         if (err) return;
         fromPage = fromPg;
-        ctx.book.getPage(toNdx, (err, toPg) => {
+        ctx.getCachedPage(toNdx, (err, toPg) => {
           if (err) return;
           toPage = toPg;
           animateSlide();
@@ -440,7 +454,6 @@ function showPages(ctx, viewer) {
   if (ctx.spreadMode) {
     left_ = ctx.showNdx;
     right_ = null;
-    // If first or last page in spreadMode, treat as single spread
     if (ctx.showNdx === 0 || ctx.showNdx === ctx.book.numPages() - 1) {
       isSingleSpread = true;
     }
@@ -449,14 +462,14 @@ function showPages(ctx, viewer) {
     right_ = left_ + 1;
   }
   canvas.ctx.save();
-  ctx.book.getPage(left_, (err, left) => {
+  ctx.getCachedPage(left_, (err, left) => {
     if (err) return console.error(err);
     if (!ctx.flipNdx && ctx.flipNdx !== 0 && left) viewer.emit("seen", left_);
     if (ctx.spreadMode || right_ === null) {
       show_bg_1();
       show_pgs_1(left, null, () => canvas.ctx.restore(), isSingleSpread);
     } else {
-      ctx.book.getPage(right_, (err, right) => {
+      ctx.getCachedPage(right_, (err, right) => {
         if (err) return console.error(err);
         if (!ctx.flipNdx && ctx.flipNdx !== 0 && right)
           viewer.emit("seen", right_);
@@ -556,11 +569,11 @@ function showFlip(ctx, viewer) {
   const strength = 0.5 - Math.abs(0.5 - ctx.flipFrac);
   canvas.ctx.save();
 
-  ctx.book.getPage(left, (err, left) => {
+  ctx.getCachedPage(left, (err, leftPage) => {
     if (err) return console.error(err);
-    ctx.book.getPage(right, (err, right) => {
+    ctx.getCachedPage(right, (err, rightPage) => {
       if (err) return console.error(err);
-      show_flip_1(left, right, ctx.flipFrac, () => canvas.ctx.restore());
+      show_flip_1(leftPage, rightPage, ctx.flipFrac, () => canvas.ctx.restore());
     });
   });
 

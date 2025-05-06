@@ -16,16 +16,14 @@ PDF-A-go-go is a super simple, embeddable PDF viewer project. It is designed to 
 - ⚡ Fast, lightweight, and dependency-minimal
 - 🎨 Customizable UI (show/hide controls)
 - 📱 Responsive and embeddable
+- 🎯 Set a default page to open via embed options
+- 🔗 Shareable page links
+- 🪶 Lightweight, embeddable PDF viewer
+- ⌨️ Keyboard and accessible navigation
+- 🔍 Search with next/prev match
+- 📑 Page selector and navigation controls
+- ⬇️ Download PDF button
 - 🛠️ Based on [pdf.js](https://github.com/mozilla/pdf.js) and [flipbook-viewer](https://github.com/theproductiveprogrammer/flipbook-viewer)
-- 🔗 Open to a specific page via URL hash (e.g. #page=5)
-- Set a default page to open via embed options
-- Lightweight, embeddable PDF viewer
-- Keyboard and accessible navigation
-- Search with next/prev match
-- Page selector and navigation controls
-- Shareable page links
-- **Download PDF button (optional)**
-- Mobile/touch support (swipe, pinch-to-zoom)
 
 ## Demo
 
