@@ -5,7 +5,7 @@
 [![npm version](https://img.shields.io/npm/v/pdf-a-go-go.svg?style=flat)](https://www.npmjs.com/package/pdf-a-go-go)
 [![Open Issues](https://img.shields.io/github/issues/khawkins98/PDF-A-go-go.svg)](https://github.com/khawkins98/PDF-A-go-go/issues)
 
-PDF-A-go-go is a super simple, embeddable PDF viewer project. It is designed to be lightweight and easy to integrate into your own applications.
+PDF-A-go-go is a simple, embeddable PDF viewer project. It is designed to be lightweight and easy to integrate into your own applications.
 
 ## Future plans
 
@@ -60,8 +60,6 @@ window.PDFaGoGoOptions = {
 ```
 
 ## Development
-
-PDF-A-go-go is a simple, embeddable PDF viewer project. It is designed to be lightweight and easy to integrate into your own applications.
 
 This project is heavily based on the following open-source projects:
 
