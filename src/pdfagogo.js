@@ -349,6 +349,11 @@ function init(book, id, opts, cb) {
             alert('Invalid page number');
             return;
           }
+          // Use the new go_to_page method if available
+          if (typeof viewer.go_to_page === 'function') {
+            viewer.go_to_page(pageNum - 1); // zero-based
+            return;
+          }
           const targetShowNdx = Math.floor((pageNum) / 2);
 
           // Reset any ongoing animation

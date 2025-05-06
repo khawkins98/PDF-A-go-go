@@ -81,6 +81,15 @@ function setupControls(ctx, viewer) {
     flip_1(ctx);
   }
 
+  // this is a new function in PDF-A-go-go that allows you to go to a specific page
+  viewer.go_to_page = (pageNum) => {
+    pageNum = Math.floor(Number(pageNum));
+    if (isNaN(pageNum) || pageNum < 0 || pageNum >= ctx.book.numPages()) return;
+    ctx.showNdx = Math.floor(pageNum / 2);
+    ctx.flipNdx = null;
+    showPages(ctx, viewer);
+  };
+
   function flip_1(ctx) {
     animate({
       draw: curr => {

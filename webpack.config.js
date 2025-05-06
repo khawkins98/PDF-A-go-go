@@ -4,7 +4,7 @@ const path = require('path')
 const base = {
   entry: {
     'pdf-a-go-go': {
-      import: './src/flipbook.js',
+      import: './src/pdfagogo.js',
       library: {
         name: 'flipbook',
         type: 'umd',
