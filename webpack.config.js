@@ -1,5 +1,6 @@
 'use strict'
 const path = require('path')
+const CopyPlugin = require('copy-webpack-plugin')
 
 const base = {
   entry: {
@@ -28,6 +29,13 @@ const base = {
       },
     ],
   },
+  plugins: [
+    new CopyPlugin({
+      patterns: [
+        { from: 'src/pdf-a-go-go.css', to: 'pdf-a-go-go.css' }
+      ]
+    })
+  ]
 }
 
 const prod = Object.assign({}, base, {

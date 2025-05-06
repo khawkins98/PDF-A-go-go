@@ -2,7 +2,16 @@
   "name": "pdf-a-go-go",
   "version": "0.1.0",
   "description": "A lightweight, accessible, embeddable PDF flipbook viewer based on pdf.js and flipbook-viewer.",
-  "keywords": ["pdf", "viewer", "flipbook", "accessible", "javascript", "web", "pdf.js", "opensource"],
+  "keywords": [
+    "pdf",
+    "viewer",
+    "flipbook",
+    "accessible",
+    "javascript",
+    "web",
+    "pdf.js",
+    "opensource"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/khawkins98/PDF-A-go-go.git"
@@ -19,6 +28,7 @@
     "build": "webpack --mode production"
   },
   "devDependencies": {
+    "copy-webpack-plugin": "^13.0.0",
     "serve": "^14.2.0",
     "webpack": "^5.91.0",
     "webpack-cli": "^5.1.4",
