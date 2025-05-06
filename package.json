@@ -3,9 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "start": "serve dist"
+    "dev": "webpack --watch --mode development & serve dist",
+    "start": "webpack --watch --mode production & serve dist",
+    "build": "webpack --mode production"
   },
   "devDependencies": {
-    "serve": "^14.2.0"
+    "serve": "^14.2.0",
+    "webpack": "^5.91.0",
+    "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "@tpp/htm-x": "^5.8.0"
   }
-} 
+}

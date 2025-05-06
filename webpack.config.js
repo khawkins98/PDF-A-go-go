@@ -1,0 +1,29 @@
+'use strict'
+const path = require('path')
+
+const base = {
+  entry: {
+    'pdf-a-go-go': {
+      import: './src/index.js',
+      library: {
+        name: 'flipbook',
+        type: 'umd',
+        umdNamedDefine: true,
+      },
+    },
+    // 'pdf.worker': 'pdfjs-dist/build/pdf.worker.entry',
+  },
+  output: {
+    filename: '[name].js',
+    path: path.resolve(__dirname, 'dist'),
+    clean: {
+      keep: 'index.html',
+    },
+  },
+}
+
+const prod = Object.assign({}, base, {
+  mode: "production",
+})
+
+module.exports = prod;

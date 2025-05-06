@@ -2,11 +2,321 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDF-A-go-go</title>
+  <title>Accessible Flipbook Viewer with Search</title>
+  <style>
+    #flipbook-container {
+      width: 800px;
+      height: 600px;
+      margin: 40px auto 10px auto;
+      border: 1px solid #ccc;
+      background: #353535;
+    }
+    #flipbook-container:focus {
+      outline: 3px solid #1976d2;
+    }
+    #controls {
+      width: 800px;
+      margin: 0 auto 20px auto;
+      text-align: center;
+    }
+    #controls button {
+      margin: 0 10px;
+      padding: 8px 16px;
+      font-size: 16px;
+    }
+    #page-indicator {
+      margin-left: 20px;
+      font-size: 16px;
+      color: #333;
+    }
+    #a11y-instructions {
+      width: 800px;
+      margin: 0 auto 20px auto;
+      font-size: 1rem;
+      color: #333;
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 6px;
+    }
+    #search-controls {
+      width: 800px;
+      margin: 0 auto 10px auto;
+      text-align: center;
+    }
+    #search-controls input {
+      padding: 6px 10px;
+      font-size: 16px;
+      width: 220px;
+    }
+    #search-controls button {
+      padding: 6px 16px;
+      font-size: 16px;
+      margin-left: 5px;
+    }
+    #search-result {
+      margin-left: 10px;
+      color: #1976d2;
+      font-size: 15px;
+    }
+  </style>
+  <!-- <script src="https://cdn.jsdelivr.net/npm/flipbook-viewer@1.6.1/dist/flipbook-viewer.min.js"></script> -->
+  <script src="pdf-a-go-go.js"></script>
 </head>
 <body>
-  <h1>Welcome to PDF-A-go-go</h1>
-  <p>This is a super simple embeddable PDF viewer.</p>
+  uses https://github.com/theproductiveprogrammer/flipbook-viewer/tree/master
+  Note: Search and go to page do not correctly work yet. May need to be forked so flip_1 can be directly controlled.
+  <div id="a11y-instructions" aria-live="polite">
+    <strong>Flipbook Accessibility:</strong><br>
+    - Use <kbd>Tab</kbd> to focus the flipbook.<br>
+    - Use <kbd>Left Arrow</kbd> or click/tap the left side to go to the previous page.<br>
+    - Use <kbd>Right Arrow</kbd> or click/tap the right side to go to the next page.<br>
+    - Use <kbd>+</kbd> or <kbd>-</kbd> to zoom in/out.<br>
+    - Use the buttons below for navigation, sharing, and searching.<br>
+    - The current page is announced for screen readers.
+  </div>
+  <div id="search-controls">
+    <input id="search-box" type="text" placeholder="Search text..." aria-label="Search text in flipbook" />
+    <button id="search-btn">Search</button>
+    <span id="search-result"></span>
+  </div>
+  <div id="flipbook-container"
+       tabindex="0"
+       role="region"
+       aria-label="PDF Flipbook Viewer"
+       aria-live="polite"
+       aria-atomic="true"></div>
+  <div id="controls">
+    <button id="prev" aria-label="Previous page">Previous</button>
+    <button id="next" aria-label="Next page">Next</button>
+    <button id="share" aria-label="Share current page">Share</button>
+    <input id="goto-page" type="number" min="1" style="width:60px;" placeholder="Page #" aria-label="Go to page" />
+    <button id="goto-btn">Go</button>
+    <span id="page-indicator" aria-live="polite"></span>
+  </div>
+  <div id="page-announcement" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;" aria-live="polite"></div>
+  <script type="module">
+    import 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.0.375/pdf.min.mjs';
+    const pdfjsLib = window.pdfjsLib;
+    const pdfUrl = "https://api.printnode.com/static/test/pdf/multipage.pdf";
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.0.375/pdf.worker.min.mjs";
+
+    let pdf = null;
+    let viewer = null;
+
+    pdfjsLib.getDocument(pdfUrl).promise.then(function(loadedPdf) {
+      pdf = loadedPdf;
+      console.log("PDF total pages:", pdf.numPages);
+      const book = {
+        numPages: () => pdf.numPages,
+        getPage: (num, cb) => {
+          const pageNum = num + 1;
+          if (pageNum < 1 || pageNum > pdf.numPages) {
+            cb(new Error("Page out of range"));
+            return;
+          }
+          pdf.getPage(pageNum).then(function(page) {
+            const viewport = page.getViewport({ scale: 1 });
+            const canvas = document.createElement("canvas");
+            const context = canvas.getContext("2d");
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            page.render({ canvasContext: context, viewport: viewport }).promise.then(function() {
+              cb(null, { img: canvas, width: viewport.width, height: viewport.height });
+            });
+          }).catch(function(err) {
+            cb(err);
+          });
+        }
+      };
+
+      flipbook.init(
+        book,
+        "flipbook-container",
+        {
+          width: 800,
+          height: 600,
+          backgroundColor: "#353535"
+        },
+        function(err, v) {
+          if (err) {
+            alert("Failed to load PDF: " + err);
+            return;
+          }
+          viewer = v;
+
+          // Add click-to-turn-page functionality
+          const container = document.getElementById('flipbook-container');
+          // Wait for the canvas to be added to the DOM
+          const waitForCanvas = setInterval(() => {
+            const canvas = container.querySelector('canvas');
+            if (canvas) {
+              clearInterval(waitForCanvas);
+              canvas.style.cursor = "pointer";
+              canvas.setAttribute('aria-label', 'Flipbook page display');
+              canvas.setAttribute('role', 'img');
+              canvas.setAttribute('tabindex', '-1');
+              canvas.addEventListener('click', function(event) {
+                const rect = canvas.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                if (x < rect.width / 2) {
+                  viewer.flip_back();
+                } else {
+                  viewer.flip_forward();
+                }
+              });
+            }
+          }, 100);
+
+          // Keyboard navigation for accessibility
+          container.addEventListener('keydown', function(event) {
+            if (event.key === "ArrowLeft") {
+              viewer.flip_back();
+              event.preventDefault();
+            } else if (event.key === "ArrowRight") {
+              viewer.flip_forward();
+              event.preventDefault();
+            } else if (event.key === "+" || event.key === "=") {
+              viewer.zoom(viewer.zoomLevel ? viewer.zoomLevel + 1 : 1);
+              event.preventDefault();
+            } else if (event.key === "-") {
+              viewer.zoom(viewer.zoomLevel ? viewer.zoomLevel - 1 : -1);
+              event.preventDefault();
+            }
+          });
+
+          // Buttons for navigation and sharing
+          document.getElementById('next').onclick = () => viewer.flip_forward();
+          document.getElementById('prev').onclick = () => viewer.flip_back();
+          document.getElementById('share').onclick = () => {
+            const page = viewer.showNdx ? viewer.showNdx + 1 : 1;
+            const shareUrl = `${window.location.origin}${window.location.pathname}#page=${page}`;
+            navigator.clipboard.writeText(shareUrl);
+            alert("Share link copied to clipboard:\n" + shareUrl);
+          };
+
+          // Page indicator and screen reader announcement
+          const pageIndicator = document.getElementById('page-indicator');
+          const pageAnnouncement = document.getElementById('page-announcement');
+          function updatePage(n) {
+            const pageNum = parseInt(n) + 1;
+            pageIndicator.textContent = `Page: ${pageNum} / ${viewer.page_count * 2}`;
+            pageAnnouncement.textContent = `Page ${pageNum} of ${viewer.page_count * 2}`;
+          }
+          viewer.on('seen', updatePage);
+          updatePage(0);
+
+          // SEARCH FUNCTIONALITY
+          const searchBox = document.getElementById('search-box');
+          const searchBtn = document.getElementById('search-btn');
+          const searchResult = document.getElementById('search-result');
+          // Add next/prev match buttons
+          const searchControls = document.getElementById('search-controls');
+          const nextMatchBtn = document.createElement('button');
+          nextMatchBtn.textContent = 'Next Match';
+          nextMatchBtn.id = 'next-match-btn';
+          const prevMatchBtn = document.createElement('button');
+          prevMatchBtn.textContent = 'Prev Match';
+          prevMatchBtn.id = 'prev-match-btn';
+          searchControls.appendChild(prevMatchBtn);
+          searchControls.appendChild(nextMatchBtn);
+
+          let matchPages = [];
+          let currentMatchIdx = 0;
+
+          async function searchPdf(query) {
+            matchPages = [];
+            currentMatchIdx = 0;
+            for (let i = 0; i < pdf.numPages; i++) {
+              const page = await pdf.getPage(i + 1);
+              const textContent = await page.getTextContent();
+              const text = textContent.items.map(item => item.str).join(" ").toLowerCase();
+              if (text.includes(query)) {
+                matchPages.push(i);
+              }
+            }
+          }
+
+          // Central function to set and track the current page (1-based)
+          function setPageByNumber(pageNum) {
+            if (!viewer || !pdf) return;
+            if (typeof pageNum !== 'number' || isNaN(pageNum / 2) || pageNum < 1 || (pageNum / 2) > pdf.numPages) {
+              alert('Invalid page number');
+              return;
+            }
+            const targetShowNdx = Math.floor((pageNum) / 2);
+
+            // Reset any ongoing animation
+            if (viewer.flipNdx !== undefined && viewer.flipNdx !== null) {
+              viewer.flipNdx = null;
+            }
+
+            viewer.flipNdx = targetShowNdx;
+
+            if (viewer.showNdx !== targetShowNdx) {
+              viewer.showNdx = targetShowNdx;
+              viewer.emit('seen', targetShowNdx * 2);
+              // Only try to force a redraw if not at the first or last spread
+            //   if (typeof viewer.flip_forward === 'function' && viewer.page_count > 1) {
+                if (targetShowNdx < viewer.page_count - 1) {
+                  viewer.flip_forward();
+                  viewer.flip_back();
+                } else if (targetShowNdx > 0) {
+                  viewer.flip_back();
+                  viewer.flip_forward();
+                }
+            //   }
+            } else {
+              viewer.emit('seen', targetShowNdx * 2);
+            }
+          }
+
+          function showMatch(idx) {
+            if (matchPages.length === 0) return;
+            currentMatchIdx = ((idx % matchPages.length) + matchPages.length) % matchPages.length; // wrap around
+            const pageNum = matchPages[currentMatchIdx] + 1; // 1-based
+            setPageByNumber(pageNum);
+            searchResult.textContent = `Match ${currentMatchIdx + 1} of ${matchPages.length} (page ${pageNum})`;
+          }
+
+          searchBtn.onclick = async function() {
+            const query = searchBox.value.trim().toLowerCase();
+            if (!query) return;
+            searchResult.textContent = "Searching...";
+            await searchPdf(query);
+            if (matchPages.length > 0) {
+              showMatch(0);
+            } else {
+              searchResult.textContent = "Not found";
+            }
+          };
+
+          nextMatchBtn.onclick = function() {
+            if (matchPages.length > 0) {
+              showMatch(currentMatchIdx + 1);
+            }
+          };
+          prevMatchBtn.onclick = function() {
+            if (matchPages.length > 0) {
+              showMatch(currentMatchIdx - 1);
+            }
+          };
+
+          searchBox.addEventListener('keydown', function(e) {
+            if (e.key === "Enter") searchBtn.click();
+          });
+
+          // Go to Page functionality
+          const gotoPageInput = document.getElementById('goto-page');
+          const gotoBtn = document.getElementById('goto-btn');
+          gotoBtn.onclick = function() {
+            const val = parseInt(gotoPageInput.value, 10);
+            setPageByNumber(val);
+          };
+        }
+      );
+    }).catch(function(err) {
+      alert("Failed to load PDF: " + err);
+    });
+  </script>
 </body>
-</html> 
+</html>
