@@ -48,6 +48,8 @@ function init(book, id, opts, cb) {
       },
       app,
       book,
+      spreadMode: opts.spreadMode,
+      options: opts,
     };
     const margin = opts.margin || 1;
     if (opts.marginTop || opts.marginTop === 0)
@@ -154,6 +156,13 @@ function init(book, id, opts, cb) {
     controlsHTML +=
       '<span class="pdfagogo-page-indicator" aria-live="polite"></span>';
   }
+  // Add Spread Mode toggle
+  // Only for debugging
+  // controlsHTML +=
+  //   '<label style="margin-left:20px;font-size:15px;cursor:pointer;user-select:none;">'
+  //   + '<input type="checkbox" class="pdfagogo-spread-toggle" style="vertical-align:middle;margin-right:4px;"'
+  //   + (featureOptions.spreadMode ? ' checked' : '')
+  //   + '>Spread Mode</label>';
   controls.innerHTML = controlsHTML;
   pdfagogoContainer.parentNode.insertBefore(
     controls,
@@ -204,9 +213,24 @@ function init(book, id, opts, cb) {
 
   pdfjsLib
     .getDocument(pdfUrl)
-    .promise.then(function (loadedPdf) {
+    .promise.then(async function (loadedPdf) {
       // Hide loading indicator
       pdf = loadedPdf;
+      // --- SPREAD MODE DETECTION ---
+      let spreadMode = false;
+      if (typeof featureOptions.spreadMode === 'boolean') {
+        spreadMode = featureOptions.spreadMode;
+        console.log('[PDF-A-go-go] Spread mode (from options):', spreadMode);
+      } else {
+        // Try to auto-detect: check first page aspect ratio
+        try {
+          const firstPage = await pdf.getPage(2);
+          const vp = firstPage.getViewport({ scale: 1 });
+          console.log('[PDF-A-go-go] Spread mode autodetect:', vp.width, vp.height);
+          if (vp.width / vp.height > 1.3) spreadMode = true;
+          console.log('[PDF-A-go-go] Spread mode autodetect:', spreadMode, 'aspect ratio:', (vp.width / vp.height).toFixed(2));
+        } catch (e) { console.warn('[PDF-A-go-go] Spread mode detection error:', e); }
+      }
       // console.log("PDF total pages:", pdf.numPages);
       const book = {
         numPages: () => pdf.numPages,
@@ -240,6 +264,9 @@ function init(book, id, opts, cb) {
         },
       };
 
+      // Pass spreadMode to options
+      featureOptions.spreadMode = spreadMode;
+      console.log('[PDF-A-go-go] Initializing viewer with spreadMode:', spreadMode);
       init(book, "pdfagogo-container", featureOptions, function (err, v) {
         if (err) {
           alert("Failed to load PDF: " + err);
@@ -536,6 +563,39 @@ function init(book, id, opts, cb) {
           }
         }
         // --- END: Hash-based page navigation ---
+
+        // Spread Mode toggle
+        const spreadToggle = document.querySelector('.pdfagogo-spread-toggle');
+        if (spreadToggle) {
+          spreadToggle.checked = !!featureOptions.spreadMode;
+          spreadToggle.onchange = function () {
+            // Try to preserve current logical page
+            let currentPage = 1;
+            if (viewer && typeof viewer.showNdx === 'number') {
+              if (featureOptions.spreadMode) {
+                // Was in spread mode, so showNdx is 1-based
+                currentPage = viewer.showNdx + 1;
+              } else {
+                // Was in normal mode, so showNdx is 0-based spread index
+                currentPage = viewer.showNdx * 2 + 1;
+              }
+            }
+            featureOptions.spreadMode = spreadToggle.checked;
+            console.log('[PDF-A-go-go] Spread mode toggle changed:', featureOptions.spreadMode, 'Current page:', currentPage);
+            // Re-initialize viewer with new mode
+            init(book, "pdfagogo-container", featureOptions, function (err, v) {
+              if (!err && v) {
+                viewer = v;
+                // Try to go to the same logical page
+                if (typeof viewer.go_to_page === 'function') {
+                  console.log('[PDF-A-go-go] After toggle, going to page:', currentPage, 'Spread mode:', featureOptions.spreadMode);
+                  viewer.go_to_page(currentPage - 1);
+                }
+              }
+            });
+          };
+        }
+
         document.querySelector(".pdfagogo-loading").remove();
       });
     })

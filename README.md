@@ -10,6 +10,7 @@ PDF-A-go-go is a super simple, embeddable PDF viewer project. It is designed to 
 ## Features
 
 - 📖 Flipbook-style PDF viewing
+- 📄📄 Dual-spread PDF viewing (auto-detects PDFs with 2 page layout, see notes below)
 - 🔍 Text search within PDFs
 - 🦾 Accessible (keyboard navigation, ARIA labels, screen reader support)
 - ⚡ Fast, lightweight, and dependency-minimal
@@ -95,6 +96,7 @@ window.PDFaGoGoOptions = {
   showPageSelector: true,  // Show page selector input (default: true)
   showCurrentPage: true,   // Show current page indicator (default: true)
   showSearch: true,        // Show search controls (default: true)
+  spreadMode: true,        // or false, or omit for autodetect
   pdfUrl: "https://example.com/your.pdf" // PDF URL to load (default: sample PDF)
 };
 ```
@@ -110,3 +112,20 @@ window.PDFaGoGoOptions = {
   showPageSelector: false
 };
 ```
+
+## Page spread (Two-page/single-spread) support
+
+PDF-A-go-go supports both traditional single-page and two-page spread ("spread mode") PDFs, including those where each PDF page is already a two-page spread image.
+
+### Features
+- **Autodetection:**
+  - The viewer will automatically detect if a PDF is in spread mode by checking the aspect ratio of the first (or second) page. If the page is much wider than it is tall, spread mode is enabled.
+- **Manual Override:**
+  - You can force spread mode on or off by passing the `spreadMode` option:
+    ```js
+    PDFaGoGoOptions = { spreadMode: true };
+    ```
+- **UI Toggle:**
+  - A "Spread Mode" checkbox is available in the viewer controls, allowing users to switch between normal and spread mode at any time. The viewer will attempt to keep you on the same logical page when toggling.
+- **First/Last Page Handling:**
+  - In spread mode, if the first or last page is a single (not double) spread, it will be centered and shown at its natural aspect ratio, not stretched.

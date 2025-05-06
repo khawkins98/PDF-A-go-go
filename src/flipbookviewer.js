@@ -23,6 +23,9 @@ export function flipbookViewer(ctx, cb) {
   const viewer = new FlipbookViewer();
   viewer.page_count = ctx.book.numPages();
 
+  // Always use ctx.spreadMode (now always set by caller)
+  console.log('[FlipbookViewer] spreadMode:', ctx.spreadMode);
+
   setupCanvas(ctx, (err) => {
     if (err) return cb(err);
 
@@ -73,8 +76,13 @@ function setupControls(ctx, viewer) {
   viewer.flip_forward = () => {
     if (ctx.flipNdx || ctx.flipNdx === 0) return;
     if (ctx.book.numPages() <= 1) return;
-    if (ctx.showNdx * 2 + 1 >= ctx.book.numPages()) return;
-    ctx.flipNdx = ctx.showNdx + 1;
+    if (ctx.spreadMode) {
+      if (ctx.showNdx + 1 >= ctx.book.numPages()) return;
+      ctx.flipNdx = ctx.showNdx + 1;
+    } else {
+      if (ctx.showNdx * 2 + 1 >= ctx.book.numPages()) return;
+      ctx.flipNdx = ctx.showNdx + 1;
+    }
     flip_1(ctx);
   };
   viewer.flip_back = () => {
@@ -89,27 +97,94 @@ function setupControls(ctx, viewer) {
   viewer.go_to_page = (pageNum) => {
     pageNum = Math.floor(Number(pageNum));
     if (isNaN(pageNum) || pageNum < 0 || pageNum >= ctx.book.numPages()) return;
-    ctx.showNdx = Math.floor(pageNum / 2);
+    if (ctx.spreadMode) {
+      console.log('go_to_page:' , ctx.spreadMode, pageNum);
+      ctx.showNdx = pageNum;
+    } else {
+      ctx.showNdx = Math.floor(pageNum / 2);
+    }
     ctx.flipNdx = null;
     showPages(ctx, viewer);
   };
 
   function flip_1(ctx) {
-    animate({
-      draw: (curr) => {
-        ctx.flipFrac = curr.flipFrac;
-        showFlip(ctx, viewer);
-      },
-      duration: 1111,
-      from: { flipFrac: 0 },
-      to: { flipFrac: 1 },
-      timing: (t) => t * t * (3.0 - 2.0 * t),
-      ondone: () => {
-        ctx.showNdx = ctx.flipNdx;
-        ctx.flipNdx = null;
-        showPages(ctx, viewer);
-      },
-    });
+    if (ctx.spreadMode) {
+      // Simple slide animation for spreadMode
+      const fromNdx = ctx.showNdx;
+      const toNdx = ctx.flipNdx;
+      const direction = toNdx > fromNdx ? 1 : -1;
+      const duration = 400;
+      const start = Date.now();
+      const canvas = ctx.canvas;
+      let fromPage, toPage;
+      ctx.book.getPage(fromNdx, (err, fromPg) => {
+        if (err) return;
+        fromPage = fromPg;
+        ctx.book.getPage(toNdx, (err, toPg) => {
+          if (err) return;
+          toPage = toPg;
+          animateSlide();
+        });
+      });
+      function animateSlide() {
+        let frac = (Date.now() - start) / duration;
+        if (frac > 1) frac = 1;
+        // Clear
+        canvas.ctx.save();
+        canvas.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        canvas.ctx.clearRect(0, 0, canvas.e.width, canvas.e.height);
+        // Slide out old page
+        let layout = calcLayout(ctx);
+        let offset = layout.width * frac * direction;
+        // Draw fromPage sliding out
+        if (fromPage) {
+          canvas.ctx.globalAlpha = 1 - frac * 0.5;
+          canvas.ctx.drawImage(
+            fromPage.img,
+            layout.left - offset,
+            layout.top,
+            layout.width,
+            layout.height
+          );
+        }
+        // Draw toPage sliding in
+        if (toPage) {
+          canvas.ctx.globalAlpha = 0.5 + frac * 0.5;
+          canvas.ctx.drawImage(
+            toPage.img,
+            layout.left + layout.width * direction - offset,
+            layout.top,
+            layout.width,
+            layout.height
+          );
+        }
+        canvas.ctx.globalAlpha = 1;
+        canvas.ctx.restore();
+        if (frac < 1) {
+          requestAnimationFrame(animateSlide);
+        } else {
+          ctx.showNdx = ctx.flipNdx;
+          ctx.flipNdx = null;
+          showPages(ctx, viewer);
+        }
+      }
+    } else {
+      animate({
+        draw: (curr) => {
+          ctx.flipFrac = curr.flipFrac;
+          showFlip(ctx, viewer);
+        },
+        duration: 1111,
+        from: { flipFrac: 0 },
+        to: { flipFrac: 1 },
+        timing: (t) => t * t * (3.0 - 2.0 * t),
+        ondone: () => {
+          ctx.showNdx = ctx.flipNdx;
+          ctx.flipNdx = null;
+          showPages(ctx, viewer);
+        },
+      });
+    }
   }
 }
 
@@ -147,11 +222,22 @@ function calcLayoutParameters(ctx, cb) {
     const usableH = 1 - ctx.sz.marginTop / 100;
     let height = h * usableH;
     const usableW = 1 - ctx.sz.marginLeft / 100;
-    let width = pg.width * 2 * (height / pg.height);
+    let width;
+    if (ctx.spreadMode) {
+      // Use the page's natural aspect ratio
+      width = pg.width * (height / pg.height);
+    } else {
+      // Double-page view
+      width = pg.width * 2 * (height / pg.height);
+    }
     const maxwidth = w * usableW;
     if (width > maxwidth) {
       width = maxwidth;
-      height = pg.height * (width / (pg.width * 2));
+      if (ctx.spreadMode) {
+        height = pg.height * (width / pg.width);
+      } else {
+        height = pg.height * (width / (pg.width * 2));
+      }
     }
 
     ctx.layout = {
@@ -304,19 +390,35 @@ function calcLayout(ctx) {
  */
 function showPages(ctx, viewer) {
   const canvas = ctx.canvas;
-  const left_ = ctx.showNdx * 2;
-  const right_ = left_ + 1;
+  let left_, right_;
+  let isSingleSpread = false;
+  if (ctx.spreadMode) {
+    left_ = ctx.showNdx;
+    right_ = null;
+    // If first or last page in spreadMode, treat as single spread
+    if (ctx.showNdx === 0 || ctx.showNdx === ctx.book.numPages() - 1) {
+      isSingleSpread = true;
+    }
+  } else {
+    left_ = ctx.showNdx * 2;
+    right_ = left_ + 1;
+  }
   canvas.ctx.save();
   ctx.book.getPage(left_, (err, left) => {
     if (err) return console.error(err);
     if (!ctx.flipNdx && ctx.flipNdx !== 0 && left) viewer.emit("seen", left_);
-    ctx.book.getPage(right_, (err, right) => {
-      if (err) return console.error(err);
-      if (!ctx.flipNdx && ctx.flipNdx !== 0 && right)
-        viewer.emit("seen", right_);
+    if (ctx.spreadMode || right_ === null) {
       show_bg_1();
-      show_pgs_1(left, right, () => canvas.ctx.restore());
-    });
+      show_pgs_1(left, null, () => canvas.ctx.restore(), isSingleSpread);
+    } else {
+      ctx.book.getPage(right_, (err, right) => {
+        if (err) return console.error(err);
+        if (!ctx.flipNdx && ctx.flipNdx !== 0 && right)
+          viewer.emit("seen", right_);
+        show_bg_1();
+        show_pgs_1(left, right, () => canvas.ctx.restore(), false);
+      });
+    }
   });
 
   /*    way/
@@ -324,18 +426,49 @@ function showPages(ctx, viewer) {
    * surrounding box. Otherwise show the left and right
    * pages on the correct positions
    */
-  function show_pgs_1(left, right, cb) {
-    const layout = calcLayout(ctx);
+  function show_pgs_1(left, right, cb, isSingleSpread) {
+    let layout = calcLayout(ctx);
 
     if (ctx.zoom == 0) show_bx_1(layout);
 
-    const page_l = Object.assign({}, layout);
-    const page_r = Object.assign({}, layout);
-    page_l.width /= 2;
-    page_r.width /= 2;
-    page_r.left = layout.mid;
-    if (left) show_pg_1(left, page_l);
-    if (right) show_pg_1(right, page_r);
+    if (ctx.spreadMode) {
+      if (left) {
+        if (isSingleSpread) {
+          // Center the single page using the largest size that fits, preserving aspect ratio
+          const boxW = ctx.sz.boxw * outputScale;
+          const boxH = ctx.sz.boxh * outputScale;
+          const usableH = 1 - ctx.sz.marginTop / 100;
+          const usableW = 1 - ctx.sz.marginLeft / 100;
+          let maxW = boxW * usableW;
+          let maxH = boxH * usableH;
+          let pageAR = left.width / left.height;
+          let dispW = maxW;
+          let dispH = dispW / pageAR;
+          if (dispH > maxH) {
+            dispH = maxH;
+            dispW = dispH * pageAR;
+          }
+          const centeredLayout = {
+            left: (boxW - dispW) / 2,
+            top: (boxH - dispH) / 2,
+            width: dispW,
+            height: dispH,
+          };
+          show_pg_1(left, centeredLayout);
+        } else {
+          // Normal spread mode: show the page as is
+          show_pg_1(left, layout);
+        }
+      }
+    } else {
+      const page_l = Object.assign({}, layout);
+      const page_r = Object.assign({}, layout);
+      page_l.width /= 2;
+      page_r.width /= 2;
+      page_r.left = layout.mid;
+      if (left) show_pg_1(left, page_l);
+      if (right) show_pg_1(right, page_r);
+    }
     cb();
   }
 
