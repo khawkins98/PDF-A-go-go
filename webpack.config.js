@@ -4,7 +4,7 @@ const path = require('path')
 const base = {
   entry: {
     'pdf-a-go-go': {
-      import: './src/index.js',
+      import: './src/flipbook.js',
       library: {
         name: 'flipbook',
         type: 'umd',
@@ -19,6 +19,14 @@ const base = {
     clean: {
       keep: 'index.html',
     },
+  },
+  module: {
+    rules: [
+      {
+        test: /pdf\.worker(\.min)?\.mjs$/,
+        type: 'asset/resource',
+      },
+    ],
   },
 }
 
