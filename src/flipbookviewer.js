@@ -226,6 +226,13 @@ function setupControls(ctx, viewer) {
     const start = Date.now();
     let fromImgs = [];
     let toImgs = [];
+    let layout; // cache layout for the whole animation
+
+    // GPU acceleration hint
+    if (canvas.e && canvas.e.style) {
+      canvas.e.style.willChange = 'transform';
+    }
+
     // Helper to get all pages, then animate
     function getPages(pages, cb) {
       let results = [];
@@ -243,25 +250,32 @@ function setupControls(ctx, viewer) {
       fromImgs = fromResults;
       getPages(toPages, (toResults) => {
         toImgs = toResults;
+        layout = calcLayout(ctx); // Only once!
         animateSlide();
       });
     });
     function animateSlide() {
       let frac = (Date.now() - start) / duration;
       if (frac > 1) frac = 1;
-      // Clear
+      // Only clear the region if possible, or keep as is if background is opaque
       canvas.ctx.save();
       canvas.ctx.setTransform(1, 0, 0, 1, 0, 0);
       canvas.ctx.clearRect(0, 0, canvas.e.width, canvas.e.height);
-      let layout = calcLayout(ctx);
+
       let offset = layout.width * frac * direction;
       const layouts = layoutFn(layout);
+
       // Draw fromPages sliding out
+      let lastAlpha = null;
       fromImgs.forEach((img, i) => {
         if (!img) return;
         const loc = { ...layouts[i] };
         loc.left = (loc.left || 0) - offset;
-        canvas.ctx.globalAlpha = 1 - frac * 0.5;
+        const alpha = 1 - frac * 0.5;
+        if (lastAlpha !== alpha) {
+          canvas.ctx.globalAlpha = alpha;
+          lastAlpha = alpha;
+        }
         canvas.ctx.drawImage(img.img, loc.left, loc.top, loc.width, loc.height);
       });
       // Draw toPages sliding in
@@ -269,10 +283,14 @@ function setupControls(ctx, viewer) {
         if (!img) return;
         const loc = { ...layouts[i] };
         loc.left = (loc.left || 0) + layout.width * direction - offset;
-        canvas.ctx.globalAlpha = 0.5 + frac * 0.5;
+        const alpha = 0.5 + frac * 0.5;
+        if (lastAlpha !== alpha) {
+          canvas.ctx.globalAlpha = alpha;
+          lastAlpha = alpha;
+        }
         canvas.ctx.drawImage(img.img, loc.left, loc.top, loc.width, loc.height);
       });
-      canvas.ctx.globalAlpha = 1;
+      if (lastAlpha !== 1) canvas.ctx.globalAlpha = 1;
       canvas.ctx.restore();
       if (frac < 1) {
         requestAnimationFrame(animateSlide);
@@ -280,6 +298,7 @@ function setupControls(ctx, viewer) {
         ondone();
       }
     }
+    // NOTE: For further performance, consider lowering outputScale on slow devices.
   }
 }
 
