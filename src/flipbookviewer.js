@@ -46,7 +46,10 @@ export function flipbookViewer(ctx, cb) {
     calcLayoutParameters(ctx, (err) => {
       if (err) return cb(err);
 
-      ctx.app.c(ctx.canvas.e);
+      // Only append the canvas if not already present
+      // if (!ctx.canvas.e.parentNode) {
+        ctx.app.appendChild(ctx.canvas.e);
+      // }
 
       setupMouseHandler(ctx, viewer);
 
@@ -118,7 +121,10 @@ export function flipbookViewer(ctx, cb) {
       if (err) return;
       calcLayoutParameters(ctx, (err) => {
         if (err) return;
-        ctx.app.c(ctx.canvas.e);
+        // Instead, only append the canvas if not already present
+        // if (!ctx.canvas.e.parentNode) {
+        //   ctx.app.appendChild(ctx.canvas.e);
+        // }
         showPages(ctx, viewer);
       });
     });
@@ -129,6 +135,8 @@ export function flipbookViewer(ctx, cb) {
   }
   window.addEventListener('resize', debouncedResize);
   window.addEventListener('orientationchange', debouncedResize);
+  // Tidy up display after initial load
+  setTimeout(debouncedResize, 100);
   // --- End resize/orientationchange handler ---
 }
 
@@ -351,9 +359,13 @@ function setupControls(ctx, viewer) {
  * calculate the display.
  */
 function setupCanvas(ctx, cb) {
-  const canvas = {
-    e: h("canvas"),
-  };
+  // If a canvas already exists, reuse it
+  let canvas;
+  if (ctx.canvas && ctx.canvas.e) {
+    canvas = ctx.canvas;
+  } else {
+    canvas = { e: h("canvas") };
+  }
 
   canvas.ctx = canvas.e.getContext("2d");
   canvas.e.width = Math.floor(ctx.sz.boxw * outputScale);
@@ -362,6 +374,12 @@ function setupCanvas(ctx, cb) {
   canvas.e.style.height = Math.floor(ctx.sz.boxh) + "px";
 
   ctx.canvas = canvas;
+
+  // Only append if not already in the DOM
+  // if (!canvas.e.parentNode) {
+  //   ctx.app.appendChild(canvas.e);
+  // }
+
   cb();
 }
 
