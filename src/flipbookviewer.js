@@ -136,7 +136,7 @@ export function flipbookViewer(ctx, cb) {
   window.addEventListener('resize', debouncedResize);
   window.addEventListener('orientationchange', debouncedResize);
   // Tidy up display after initial load
-  setTimeout(debouncedResize, 100);
+  // setTimeout(debouncedResize, 100);
   // --- End resize/orientationchange handler ---
 }
 

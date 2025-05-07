@@ -42,8 +42,10 @@ function init(book, id, opts, cb) {
       },
       sz: {
         bx_border: opts.boxBorder || 0,
-        boxw: opts.width || 1200,
-        boxh: opts.height || 800,
+        boxw: Math.min(window.innerWidth, 1200),
+        boxh: window.innerWidth < 700 ? window.innerHeight * 0.7 : 800,
+        // boxw: opts.width || 1200,
+        // boxh: opts.height || 800,
       },
       app,
       book,
@@ -99,8 +101,8 @@ function init(book, id, opts, cb) {
     const map = container.dataset;
     if (map.pdfUrl) opts.pdfUrl = map.pdfUrl;
     if (map.defaultPage) opts.defaultPage = parseInt(map.defaultPage, 10);
-    if (map.height) opts.height = parseInt(map.height, 10);
-    if (map.width) opts.width = parseInt(map.width, 10);
+    // if (map.height) opts.height = parseInt(map.height, 10);
+    // if (map.width) opts.width = parseInt(map.width, 10);
     if (map.backgroundColor) opts.backgroundColor = map.backgroundColor;
     if (map.boxBorder) opts.boxBorder = parseInt(map.boxBorder, 10);
     if (map.margin) opts.margin = parseFloat(map.margin);
