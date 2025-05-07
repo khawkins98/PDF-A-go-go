@@ -141,6 +141,8 @@ function setupControls(ctx, viewer) {
       if (ctx.showNdx * 2 + 1 >= ctx.book.numPages()) return;
       ctx.flipNdx = ctx.showNdx + 1;
     }
+    ctx.zoom = 0;
+    ctx.pan = null;
     flip_1(ctx);
   };
   viewer.flip_back = () => {
@@ -148,6 +150,8 @@ function setupControls(ctx, viewer) {
     if (ctx.book.numPages() <= 1) return;
     if (!ctx.showNdx) return;
     ctx.flipNdx = ctx.showNdx - 1;
+    ctx.zoom = 0;
+    ctx.pan = null;
     flip_1(ctx);
   };
 
@@ -156,86 +160,63 @@ function setupControls(ctx, viewer) {
     pageNum = Math.floor(Number(pageNum));
     if (isNaN(pageNum) || pageNum < 0 || pageNum >= ctx.book.numPages()) return;
     if (ctx.spreadMode) {
-      // console.log('go_to_page:' , ctx.spreadMode, pageNum);
       ctx.showNdx = pageNum;
     } else {
       ctx.showNdx = Math.floor(pageNum / 2);
     }
     ctx.flipNdx = null;
+    ctx.zoom = 0;
+    ctx.pan = null;
     showPages(ctx, viewer);
   };
 
   function flip_1(ctx) {
+    const fromNdx = ctx.showNdx;
+    const toNdx = ctx.flipNdx;
+    const direction = toNdx > fromNdx ? 1 : -1;
+    const duration = 400;
+    const canvas = ctx.canvas;
     if (ctx.spreadMode) {
-      // Simple slide animation for spreadMode
-      const fromNdx = ctx.showNdx;
-      const toNdx = ctx.flipNdx;
-      const direction = toNdx > fromNdx ? 1 : -1;
-      const duration = 400;
-      const start = Date.now();
-      const canvas = ctx.canvas;
-      let fromPage, toPage;
-      ctx.getCachedPage(fromNdx, (err, fromPg) => {
-        if (err) return;
-        fromPage = fromPg;
-        ctx.getCachedPage(toNdx, (err, toPg) => {
-          if (err) return;
-          toPage = toPg;
-          animateSlide();
-        });
-      });
-      function animateSlide() {
-        let frac = (Date.now() - start) / duration;
-        if (frac > 1) frac = 1;
-        // Clear
-        canvas.ctx.save();
-        canvas.ctx.setTransform(1, 0, 0, 1, 0, 0);
-        canvas.ctx.clearRect(0, 0, canvas.e.width, canvas.e.height);
-        // Slide out old page
-        let layout = calcLayout(ctx);
-        let offset = layout.width * frac * direction;
-        // Draw fromPage sliding out
-        if (fromPage) {
-          canvas.ctx.globalAlpha = 1 - frac * 0.5;
-          canvas.ctx.drawImage(
-            fromPage.img,
-            layout.left - offset,
-            layout.top,
-            layout.width,
-            layout.height
-          );
-        }
-        // Draw toPage sliding in
-        if (toPage) {
-          canvas.ctx.globalAlpha = 0.5 + frac * 0.5;
-          canvas.ctx.drawImage(
-            toPage.img,
-            layout.left + layout.width * direction - offset,
-            layout.top,
-            layout.width,
-            layout.height
-          );
-        }
-        canvas.ctx.globalAlpha = 1;
-        canvas.ctx.restore();
-        if (frac < 1) {
-          requestAnimationFrame(animateSlide);
-        } else {
+      // Spread mode: animate a single page
+      slidePagesAnimation({
+        ctx,
+        viewer,
+        canvas,
+        direction,
+        duration,
+        fromPages: [{ ndx: fromNdx }],
+        toPages: [{ ndx: toNdx }],
+        layoutFn: (layout) => [{ ...layout }],
+        ondone: () => {
           ctx.showNdx = ctx.flipNdx;
           ctx.flipNdx = null;
           showPages(ctx, viewer);
-        }
-      }
-    } else {
-      animate({
-        draw: (curr) => {
-          ctx.flipFrac = curr.flipFrac;
-          showFlip(ctx, viewer);
         },
-        duration: 1111,
-        from: { flipFrac: 0 },
-        to: { flipFrac: 1 },
-        timing: (t) => t * t * (3.0 - 2.0 * t),
+      });
+    } else {
+      // Dual-page mode: animate two pages
+      const fromLeftNdx = fromNdx * 2;
+      const fromRightNdx = fromLeftNdx + 1;
+      const toLeftNdx = toNdx * 2;
+      const toRightNdx = toLeftNdx + 1;
+      slidePagesAnimation({
+        ctx,
+        viewer,
+        canvas,
+        direction,
+        duration,
+        fromPages: [
+          { ndx: fromLeftNdx, isLeft: true },
+          { ndx: fromRightNdx, isLeft: false },
+        ],
+        toPages: [
+          { ndx: toLeftNdx, isLeft: true },
+          { ndx: toRightNdx, isLeft: false },
+        ],
+        layoutFn: (layout) => [
+          { ...layout, width: layout.width / 2 },
+          { ...layout, width: layout.width / 2, left: layout.mid },
+        ],
         ondone: () => {
           ctx.showNdx = ctx.flipNdx;
           ctx.flipNdx = null;
@@ -243,6 +224,86 @@ function setupControls(ctx, viewer) {
         },
       });
     }
+  }
+
+  // Consolidated slide animation for both spread and dual-page
+  function slidePagesAnimation({ ctx, viewer, canvas, direction, duration, fromPages, toPages, layoutFn, ondone }) {
+    const start = Date.now();
+    let fromImgs = [];
+    let toImgs = [];
+    let layout; // cache layout for the whole animation
+
+    // GPU acceleration hint
+    if (canvas.e && canvas.e.style) {
+      canvas.e.style.willChange = 'transform';
+    }
+
+    // Helper to get all pages, then animate
+    function getPages(pages, cb) {
+      let results = [];
+      let count = 0;
+      if (!pages.length) return cb([]);
+      pages.forEach((p, i) => {
+        ctx.getCachedPage(p.ndx, (err, pg) => {
+          results[i] = pg;
+          count++;
+          if (count === pages.length) cb(results);
+        });
+      });
+    }
+    getPages(fromPages, (fromResults) => {
+      fromImgs = fromResults;
+      getPages(toPages, (toResults) => {
+        toImgs = toResults;
+        layout = calcLayout(ctx); // Only once!
+        animateSlide();
+      });
+    });
+    function animateSlide() {
+      let frac = (Date.now() - start) / duration;
+      if (frac > 1) frac = 1;
+      // Only clear the region if possible, or keep as is if background is opaque
+      canvas.ctx.save();
+      canvas.ctx.setTransform(1, 0, 0, 1, 0, 0);
+      canvas.ctx.clearRect(0, 0, canvas.e.width, canvas.e.height);
+
+      let offset = layout.width * frac * direction;
+      const layouts = layoutFn(layout);
+
+      // Draw fromPages sliding out
+      let lastAlpha = null;
+      fromImgs.forEach((img, i) => {
+        if (!img) return;
+        const loc = { ...layouts[i] };
+        loc.left = (loc.left || 0) - offset;
+        const alpha = 1 - frac * 0.5;
+        if (lastAlpha !== alpha) {
+          canvas.ctx.globalAlpha = alpha;
+          lastAlpha = alpha;
+        }
+        canvas.ctx.drawImage(img.img, loc.left, loc.top, loc.width, loc.height);
+      });
+      // Draw toPages sliding in
+      toImgs.forEach((img, i) => {
+        if (!img) return;
+        const loc = { ...layouts[i] };
+        loc.left = (loc.left || 0) + layout.width * direction - offset;
+        const alpha = 0.5 + frac * 0.5;
+        if (lastAlpha !== alpha) {
+          canvas.ctx.globalAlpha = alpha;
+          lastAlpha = alpha;
+        }
+        canvas.ctx.drawImage(img.img, loc.left, loc.top, loc.width, loc.height);
+      });
+      if (lastAlpha !== 1) canvas.ctx.globalAlpha = 1;
+      canvas.ctx.restore();
+      if (frac < 1) {
+        requestAnimationFrame(animateSlide);
+      } else {
+        ondone();
+      }
+    }
+    // NOTE: For further performance, consider lowering outputScale on slow devices.
   }
 }
 
@@ -554,226 +615,6 @@ function showPages(ctx, viewer) {
       ctx.sz.boxw * outputScale,
       ctx.sz.boxh * outputScale
     );
-  }
-}
-
-/*    way/
- * show the current pages, then overlay the current flip
- */
-function showFlip(ctx, viewer) {
-  showPages(ctx, viewer);
-
-  const canvas = ctx.canvas;
-  const left = ctx.flipNdx * 2;
-  const right = left + 1;
-  const layout = calcLayout(ctx);
-  const strength = 0.5 - Math.abs(0.5 - ctx.flipFrac);
-  canvas.ctx.save();
-
-  ctx.getCachedPage(left, (err, leftPage) => {
-    if (err) return console.error(err);
-    ctx.getCachedPage(right, (err, rightPage) => {
-      if (err) return console.error(err);
-      show_flip_1(leftPage, rightPage, ctx.flipFrac, () => canvas.ctx.restore());
-    });
-  });
-
-  function show_flip_1(left, right, frac, cb) {
-    let loc, show, width, region, xloc, oheight, otop, controlpt, endpt;
-
-    if (ctx.showNdx < ctx.flipNdx) {
-      loc = Object.assign({}, layout);
-      loc.width /= 2;
-      loc.left = layout.mid;
-      show = loc.left + (1 - frac) * loc.width;
-      width = loc.width * frac;
-      xloc = xpand_rect_1(ctx, loc);
-      canvas.ctx.save();
-      region = new Path2D();
-      region.rect(show, xloc.top - 5, width, xloc.height + 10);
-      canvas.ctx.clip(region);
-      if (right) {
-        canvas.ctx.drawImage(
-          right.img,
-          loc.left,
-          loc.top,
-          loc.width,
-          loc.height
-        );
-      } else {
-        show_empty_1(ctx.color.bg, xloc);
-      }
-      canvas.ctx.restore();
-
-      loc = Object.assign({}, layout);
-      loc.left += (1 - frac) * loc.width;
-      loc.width /= 2;
-      width = loc.width * frac;
-
-      oheight = loc.height;
-      otop = loc.top;
-      loc.height *= 1 + strength * 0.1;
-      loc.top -= (loc.height - oheight) / 2;
-
-      canvas.ctx.save();
-      region = new Path2D();
-      region.moveTo(loc.left, otop);
-      region.lineTo(loc.left, otop + oheight);
-      controlpt = {
-        x: loc.left + width / 2,
-        y: loc.top + loc.height,
-      };
-      endpt = {
-        x: loc.left + width,
-        y: otop + oheight,
-      };
-      region.quadraticCurveTo(controlpt.x, controlpt.y, endpt.x, endpt.y);
-      region.lineTo(endpt.x, otop);
-      controlpt = {
-        x: loc.left + width,
-        y: loc.top,
-      };
-      endpt = {
-        x: loc.left,
-        y: otop,
-      };
-      region.quadraticCurveTo(controlpt.x, controlpt.y, endpt.x, endpt.y);
-      canvas.ctx.clip(region);
-      canvas.ctx.drawImage(left.img, loc.left, loc.top, loc.width, loc.height);
-      canvas.ctx.restore();
-
-      canvas.ctx.save();
-      const shadowsz = (loc.width / 2) * Math.max(Math.min(strength, 0.5), 0);
-
-      // Draw a sharp shadow on the left side of the page
-      canvas.ctx.strokeStyle = "rgba(0,0,0," + 0.1 * strength + ")";
-      canvas.ctx.lineWidth = 30 * strength;
-      canvas.ctx.beginPath();
-      canvas.ctx.moveTo(loc.left, otop);
-      canvas.ctx.lineTo(loc.left, otop + oheight);
-      canvas.ctx.stroke();
-
-      // Right side drop shadow
-      let gradient = canvas.ctx.createLinearGradient(
-        loc.left + width,
-        otop,
-        loc.left + width + shadowsz,
-        otop
-      );
-      gradient.addColorStop(0, "rgba(0,0,0," + 0.3 * strength + ")");
-      gradient.addColorStop(0.8, "rgba(0,0,0,0.0)");
-      canvas.ctx.fillStyle = gradient;
-      canvas.ctx.fillRect(loc.left + width, otop, width + shadowsz, oheight);
-
-      canvas.ctx.restore();
-    } else {
-      loc = Object.assign({}, layout);
-      loc.width /= 2;
-      width = loc.width * frac + ctx.sz.bx_border;
-      xloc = xpand_rect_1(ctx, loc);
-      canvas.ctx.save();
-      region = new Path2D();
-      region.rect(xloc.left, xloc.top - 5, width, xloc.height + 10);
-      canvas.ctx.clip(region);
-      if (left) {
-        canvas.ctx.drawImage(
-          left.img,
-          loc.left,
-          loc.top,
-          loc.width,
-          loc.height
-        );
-      } else {
-        show_empty_1(ctx.color.bg, loc);
-      }
-      canvas.ctx.restore();
-
-      loc = Object.assign({}, layout);
-      loc.width /= 2;
-      show = loc.left + frac * loc.width;
-      loc.left = show - (1 - frac) * loc.width;
-      width = loc.width * frac;
-
-      oheight = loc.height;
-      otop = loc.top;
-      loc.height *= 1 + strength * 0.1;
-      loc.top -= (loc.height - oheight) / 2;
-
-      canvas.ctx.save();
-      region = new Path2D();
-      region.moveTo(show, otop);
-      region.lineTo(show, otop + oheight);
-      controlpt = {
-        x: show + width / 2,
-        y: loc.top + loc.height,
-      };
-      endpt = {
-        x: show + width,
-        y: otop + oheight,
-      };
-      region.quadraticCurveTo(controlpt.x, controlpt.y, endpt.x, endpt.y);
-      region.lineTo(endpt.x, otop);
-      controlpt = {
-        x: show + width,
-        y: loc.top,
-      };
-      endpt = {
-        x: show,
-        y: otop,
-      };
-      region.quadraticCurveTo(controlpt.x, controlpt.y, endpt.x, endpt.y);
-      canvas.ctx.clip(region);
-      canvas.ctx.drawImage(right.img, loc.left, loc.top, loc.width, loc.height);
-      canvas.ctx.restore();
-
-      canvas.ctx.save();
-      const shadowsz = (loc.width / 2) * Math.max(Math.min(strength, 0.5), 0);
-
-      // Draw a sharp shadow on the right side of the page
-      canvas.ctx.strokeStyle = "rgba(0,0,0," + 0.1 * strength + ")";
-      canvas.ctx.lineWidth = 30 * strength;
-      canvas.ctx.beginPath();
-      canvas.ctx.moveTo(show + width, otop);
-      canvas.ctx.lineTo(show + width, otop + oheight);
-      canvas.ctx.stroke();
-
-      // Left side drop shadow
-      let gradient = canvas.ctx.createLinearGradient(
-        show,
-        otop,
-        show - shadowsz,
-        otop
-      );
-      gradient.addColorStop(0, "rgba(0,0,0," + 0.3 * strength + ")");
-      gradient.addColorStop(0.8, "rgba(0,0,0,0.0)");
-      canvas.ctx.fillStyle = gradient;
-      canvas.ctx.fillRect(show - shadowsz, otop, shadowsz, oheight);
-
-      canvas.ctx.restore();
-    }
-
-    cb();
-  }
-
-  function show_empty_1(fillStyle, loc) {
-    canvas.ctx.fillStyle = fillStyle;
-    const border = ctx.sz.bx_border;
-    canvas.ctx.fillRect(
-      loc.left - border,
-      loc.top - border - 5,
-      loc.width + border * 2,
-      loc.height + 2 * border + 10
-    );
-  }
-
-  function xpand_rect_1(ctx, loc) {
-    const border = ctx.sz.bx_border;
-    return {
-      left: loc.left - border,
-      top: loc.top - border,
-      width: loc.width + border * 2,
-      height: loc.height + border * 2,
-    };
   }
 }
 
