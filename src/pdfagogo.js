@@ -79,7 +79,7 @@ function init(book, id, opts, cb) {
     showPageSelector: true,
     showCurrentPage: true,
     showSearch: true,
-    pdfUrl: "https://texdoc.org/serve/pdfpages.pdf/0",
+    pdfUrl: "./example.pdf",
     showDownload: true,
   };
   // --- END: Option defaults ---

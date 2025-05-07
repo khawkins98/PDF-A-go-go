@@ -1,9 +1,8 @@
 # PDF-A-go-go
 
-[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/khawkins98/PDF-A-go-go/actions)
-[![npm version](https://img.shields.io/npm/v/pdf-a-go-go.svg?style=flat)](https://www.npmjs.com/package/pdf-a-go-go)
-[![Open Issues](https://img.shields.io/github/issues/khawkins98/PDF-A-go-go.svg)](https://github.com/khawkins98/PDF-A-go-go/issues)
+[![Open issues](https://img.shields.io/github/issues/khawkins98/PDF-A-go-go.svg)](https://github.com/khawkins98/PDF-A-go-go/issues)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 PDF-A-go-go is a simple, embeddable PDF viewer project. It is designed to be lightweight and easy to integrate into your own applications.
 
@@ -61,30 +60,15 @@ window.PDFaGoGoOptions = {
 
 ### Features
 
-- **Autodetection:**
-  - The viewer will automatically detect if a PDF is in spread mode by checking the aspect ratio of the first (or second) page. If the page is much wider than it is tall, spread mode is enabled.
-- **Manual Override:**
-  - You can force spread mode on or off by passing the `spreadMode` option:
-    ```js
-    PDFaGoGoOptions = { spreadMode: true };
-    ```
-- **UI Toggle:**
-  - A "Spread Mode" checkbox is available in the viewer controls, allowing users to switch between normal and spread mode at any time. The viewer will attempt to keep you on the same logical page when toggling.
-- **First/Last Page Handling:**
+- **Open to a specific page**
+  - You can open the viewer to a specific page by adding `#page=N` to the URL (e.g. `#page=5`).
+  - This will override the `defaultPage` option if both are present.
+- **Page spread (Two-page/single-spread) support**
+  - PDF-A-go-go supports both traditional single-page and two-page spread ("spread mode") PDFs, including those where each PDF page is already a two-page spread image.
+- **First/Last page handling:**
   - In spread mode, if the first or last page is a single (not double) spread, it will be centered and shown at its natural aspect ratio, not stretched.
 
-### Specifically notable features
-
-#### Open to a Specific Page
-
-You can open the viewer to a specific page by adding `#page=N` to the URL (e.g. `#page=5`).
-This will override the `defaultPage` option if both are present.
-
-#### Page spread (Two-page/single-spread) support
-
-PDF-A-go-go supports both traditional single-page and two-page spread ("spread mode") PDFs, including those where each PDF page is already a two-page spread image.
-
-## Development
+## Credits
 
 This project is heavily based on the following open-source projects:
 
@@ -99,6 +83,7 @@ To set up a local development environment:
 
 - Fork the repository and create your branch from `main`.
 - Run `yarn install` and `yarn dev` to set up your environment.
+- Compiled JS is available in the local `/dist` folder.
 - Please follow the code style and add comments where helpful.
 - Open a pull request with a clear description of your changes.
 

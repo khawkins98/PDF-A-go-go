@@ -48,13 +48,14 @@ export function removeLoadingBar() {
 }
 
 /**
- * Shows an error message in the loading bar or as an alert.
+ * Shows an error message
  * @param {string} message - The error message to display.
  */
 export function showError(message) {
   const loadingDiv = document.querySelector(".pdfagogo-loading");
-  if (loadingDiv) loadingDiv.innerHTML = message;
-  alert(message);
+  if (loadingDiv) {
+    loadingDiv.innerHTML = `<div class="pdfagogo-loading-error">${message}</div>`;
+  }
 }
 
 /**

@@ -92,6 +92,9 @@
 .pdfagogo-hint-zone.active .pdfagogo-hint-arrow {
   opacity: 1;
 }
+.pdfagogo-loading {
+  color: #fff;
+}
 .pdfagogo-loading-text {
   color: #fff;
   font-size: 18px;
