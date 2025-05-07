@@ -104,6 +104,32 @@ export function flipbookViewer(ctx, cb) {
       showPages(ctx, viewer);
     });
   });
+
+  // --- Add resize/orientationchange handler ---
+  let resizeTimeout;
+  function handleResize() {
+    // Use same sizing logic as in pdfagogo.js
+    const width = Math.min(window.innerWidth, 1200);
+    const height = window.innerWidth < 700 ? window.innerHeight * 0.7 : 800;
+    ctx.sz.boxw = width;
+    ctx.sz.boxh = height;
+    // Recreate canvas and layout, then redraw
+    setupCanvas(ctx, (err) => {
+      if (err) return;
+      calcLayoutParameters(ctx, (err) => {
+        if (err) return;
+        ctx.app.c(ctx.canvas.e);
+        showPages(ctx, viewer);
+      });
+    });
+  }
+  function debouncedResize() {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(handleResize, 150);
+  }
+  window.addEventListener('resize', debouncedResize);
+  window.addEventListener('orientationchange', debouncedResize);
+  // --- End resize/orientationchange handler ---
 }
 
 function setupControls(ctx, viewer) {
