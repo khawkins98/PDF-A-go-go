@@ -61,6 +61,8 @@ Set options via data attributes on the container:
 - `data-background-color` (string): Background color (optional)
 - `data-box-border` (number): Box border size (optional)
 - `data-margin`, `data-margin-top`, `data-margin-left` (number): Margins (optional)
+- `data-disable-webgl` (true/false): Disable WebGL rendering in PDF.js (default: true / WebGL off).
+  - **Note:** Disabling WebGL (the default) seems to be more performant in most browsers.
 
 ## Development
 

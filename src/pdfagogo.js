@@ -103,6 +103,20 @@ function init(book, id, opts, cb) {
     if (el && el.parentNode) el.parentNode.removeChild(el);
   });
 
+  // Set pdfjsDisableWebGL based on data attribute (default: true)
+  function getDisableWebGLFromDataAttrs(container) {
+    // return false;
+    if (!container) return true; // default: disable WebGL
+    const val = container.getAttribute('data-disable-webgl');
+    if (val === null) return true; // default: disable WebGL
+    if (val === 'false') return false;
+    return true;
+  }
+
+  if (typeof window !== "undefined") {
+    window.pdfjsDisableWebGL = getDisableWebGLFromDataAttrs(pdfagogoContainer);
+  }
+
   // Load PDF with progress
   loadPdfWithProgress(featureOptions.pdfUrl, (progress) => {
     updateLoadingBar(progressBar, progress);
