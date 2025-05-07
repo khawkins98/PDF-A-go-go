@@ -313,6 +313,12 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     window.__pdfagogo__highlights = {};
     window.__pdfagogo__highlights[matchPages[currentMatchIdx]] = highlights;
     setPageByNumber(pageNum);
+    // Force viewer to re-render so highlights are picked up
+    if (typeof viewer._renderAllPages === 'function') {
+      viewer._renderAllPages();
+    } else if (typeof viewer.go_to_page === 'function') {
+      viewer.go_to_page(viewer.currentPage || 0);
+    }
     if (searchResult)
       searchResult.textContent = `Match ${currentMatchIdx + 1} of ${
         matchPages.length

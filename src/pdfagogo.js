@@ -105,7 +105,6 @@ function init(book, id, opts, cb) {
 
   // Set pdfjsDisableWebGL based on data attribute (default: true)
   function getDisableWebGLFromDataAttrs(container) {
-    // return false;
     if (!container) return true; // default: disable WebGL
     const val = container.getAttribute('data-disable-webgl');
     if (val === null) return true; // default: disable WebGL

@@ -47,8 +47,8 @@ export class ScrollablePdfViewer extends EventEmitter {
     let pageIdx = 1;
     if (this.pageCount < 2) pageIdx = 0;
     const canvas = this.pageCanvases[pageIdx];
-    if (canvas && canvas.width) {
-      return canvas.width;
+    if (canvas && canvas.clientWidth) {
+      return canvas.clientWidth;
     }
     // Fallback: estimate based on container height and aspect ratio
     const containerHeight = this.scrollContainer.clientHeight || 600;
@@ -72,11 +72,12 @@ export class ScrollablePdfViewer extends EventEmitter {
     for (let i = 0; i < this.pageCount; i++) {
       const canvas = this.pageCanvases[i];
       if (canvas) {
+        const highlights = window.__pdfagogo__highlights ? window.__pdfagogo__highlights[i] : undefined;
         this.book.getPage(i, (err, pg) => {
           if (err) return;
           const scale = this.options.scale || 2;
           renderPdfPageToCanvas(canvas, pg, this._getPageHeight(), scale);
-        });
+        }, highlights);
       }
     }
   }
@@ -89,11 +90,12 @@ export class ScrollablePdfViewer extends EventEmitter {
     this.pageCanvases[ndx] = canvas;
     this.scrollContainer.appendChild(canvas);
     // Render PDF page
+    const highlights = window.__pdfagogo__highlights ? window.__pdfagogo__highlights[ndx] : undefined;
     this.book.getPage(ndx, (err, pg) => {
       if (err) return;
       const scale = this.options.scale || 2;
       renderPdfPageToCanvas(canvas, pg, this._getPageHeight(), scale);
-    });
+    }, highlights);
   }
 
   _updateVisiblePages() {
@@ -164,7 +166,6 @@ export class ScrollablePdfViewer extends EventEmitter {
 
   go_to_page(pageNum) {
     // Center the given page
-    console.log("go_to_page", this._getPageWidth());
     const pageWidth = this._getPageWidth() + 24;
     const left = Math.max(0, pageWidth * pageNum - this.scrollContainer.clientWidth / 2 + pageWidth / 2);
     this.scrollContainer.scrollTo({
@@ -173,7 +174,6 @@ export class ScrollablePdfViewer extends EventEmitter {
     });
     this.currentPage = pageNum;
     this.emit("seen", pageNum + 1);
-    // No need to re-render pages
   }
 
   get showNdx() {
