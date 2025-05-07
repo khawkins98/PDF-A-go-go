@@ -15,20 +15,9 @@
     This is an example of a large double spread PDF.
   </p>
   <!--
-    UI controls (search, prev/next, page selector, etc) can be enabled/disabled via window.PDFaGoGoOptions.
+    UI controls (search, prev/next, page selector, etc) can be enabled/disabled via data attributes.
     See README.md for details.
   -->
-  <script>
-    // Example: Hide search and page selector controls
-    window.PDFaGoGoOptions = {
-      defaultPage: 3,
-      height: 1500,
-      pdfUrl: "./example_spread.pdf",
-      // showSearch: false,
-      showPrevNext: false,
-      // showPageSelector: false
-    };
-  </script>
   <script defer="defer" src="pdf-a-go-go.js"></script>
   <div class="pdfagogo-container" id="pdfagogo-container"
        tabindex="0"
@@ -36,6 +25,10 @@
        aria-label="PDF Viewer"
        aria-live="polite"
        aria-atomic="true"
+       data-pdf-url="./example_spread.pdf"
+       data-default-page="3"
+       data-height="1500"
+       data-show-prev-next="false"
        style="width:100vw;max-width:100%;box-sizing:border-box;overflow-x:hidden;"></div>
 
   <style>
