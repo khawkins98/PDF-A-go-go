@@ -260,6 +260,15 @@ function setupControls(ctx, viewer) {
       });
     });
     function animateSlide() {
+      // Throttle to ~60fps
+      if (!animateSlide.lastFrameTime) animateSlide.lastFrameTime = 0;
+      if (Date.now() - animateSlide.lastFrameTime < 60) {
+        requestAnimationFrame(animateSlide);
+        return;
+      }
+      animateSlide.lastFrameTime = Date.now();
+      // Disable image smoothing for performance during animation
+      canvas.ctx.imageSmoothingEnabled = false;
       let frac = (Date.now() - start) / duration;
       if (frac > 1) frac = 1;
       // Only clear the region if possible, or keep as is if background is opaque
@@ -300,6 +309,9 @@ function setupControls(ctx, viewer) {
       if (frac < 1) {
         requestAnimationFrame(animateSlide);
       } else {
+        // Restore image smoothing for normal rendering
+        canvas.ctx.imageSmoothingEnabled = true;
+        animateSlide.lastFrameTime = 0;
         ondone();
       }
     }
