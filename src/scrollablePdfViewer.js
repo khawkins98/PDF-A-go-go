@@ -13,19 +13,21 @@ export class ScrollablePdfViewer extends EventEmitter {
     this.scrollContainer.className = "pdfagogo-scroll-container";
     this.app.appendChild(this.scrollContainer);
     this._setupResizeHandler();
-    this._renderVisiblePages();
+    this._renderAllPages();
     this._setupScrollHandler();
+    this._updateVisiblePages();
   }
 
   _setupResizeHandler() {
     window.addEventListener("resize", () => {
-      this._renderVisiblePages();
+      this._resizeAllPages();
+      this._updateVisiblePages();
     });
   }
 
   _setupScrollHandler() {
     this.scrollContainer.addEventListener("scroll", () => {
-      this._renderVisiblePages();
+      this._updateVisiblePages();
       this._updateCurrentPage();
     });
   }
@@ -41,28 +43,32 @@ export class ScrollablePdfViewer extends EventEmitter {
     return this.scrollContainer.clientHeight || 600;
   }
 
-  _renderVisiblePages() {
-    const container = this.scrollContainer;
-    const scrollLeft = container.scrollLeft;
-    const containerWidth = container.clientWidth;
-    const pageWidth = this._getPageWidth();
-    const bufferPages = 2; // render 2 pages before/after viewport
-    const firstVisible = Math.max(0, Math.floor(scrollLeft / (pageWidth + 24)) - bufferPages);
-    const lastVisible = Math.min(this.pageCount - 1, Math.ceil((scrollLeft + containerWidth) / (pageWidth + 24)) + bufferPages);
-
-    // Remove canvases not in range
-    for (const ndx in this.pageCanvases) {
-      if (ndx < firstVisible || ndx > lastVisible) {
-        const canvas = this.pageCanvases[ndx];
-        if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
-        delete this.pageCanvases[ndx];
-      }
+  _renderAllPages() {
+    // Remove any existing canvases
+    this.scrollContainer.innerHTML = "";
+    this.pageCanvases = {};
+    for (let i = 0; i < this.pageCount; i++) {
+      this._renderPage(i);
     }
+  }
 
-    // Render visible pages
-    for (let i = firstVisible; i <= lastVisible; i++) {
-      if (!this.pageCanvases[i]) {
-        this._renderPage(i);
+  _resizeAllPages() {
+    for (let i = 0; i < this.pageCount; i++) {
+      const canvas = this.pageCanvases[i];
+      if (canvas) {
+        this.book.getPage(i, (err, pg) => {
+          if (err) return;
+          const aspect = pg.width / pg.height;
+          const containerHeight = this._getPageHeight();
+          const height = containerHeight;
+          const width = height * aspect;
+          canvas.width = width;
+          canvas.height = height;
+          canvas.style.height = height + "px";
+          canvas.style.width = width + "px";
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(pg.img, 0, 0, width, height);
+        });
       }
     }
   }
@@ -73,18 +79,7 @@ export class ScrollablePdfViewer extends EventEmitter {
     canvas.setAttribute("tabindex", "0");
     canvas.setAttribute("data-page", ndx + 1);
     this.pageCanvases[ndx] = canvas;
-    // Insert in correct order
-    let inserted = false;
-    for (let i = 0; i < this.scrollContainer.children.length; i++) {
-      const child = this.scrollContainer.children[i];
-      const childNdx = parseInt(child.getAttribute("data-page"), 10) - 1;
-      if (childNdx > ndx) {
-        this.scrollContainer.insertBefore(canvas, child);
-        inserted = true;
-        break;
-      }
-    }
-    if (!inserted) this.scrollContainer.appendChild(canvas);
+    this.scrollContainer.appendChild(canvas);
     // Render PDF page
     this.book.getPage(ndx, (err, pg) => {
       if (err) return;
@@ -99,6 +94,33 @@ export class ScrollablePdfViewer extends EventEmitter {
       const ctx = canvas.getContext("2d");
       ctx.drawImage(pg.img, 0, 0, width, height);
     });
+  }
+
+  _updateVisiblePages() {
+    // Find which pages are visible in the scroll container
+    const container = this.scrollContainer;
+    const containerRect = container.getBoundingClientRect();
+    const visiblePages = [];
+    for (let i = 0; i < this.pageCount; i++) {
+      const canvas = this.pageCanvases[i];
+      if (!canvas) continue;
+      const rect = canvas.getBoundingClientRect();
+      // Check if the canvas is visible in the container (horizontal scroll)
+      if (
+        rect.right > containerRect.left &&
+        rect.left < containerRect.right
+      ) {
+        visiblePages.push(i + 1); // 1-based
+      }
+    }
+    // Output visible page numbers to the indicator
+    if (visiblePages.length > 0) {
+      this.visiblePagesIndicator.textContent =
+        "Visible pages: " + visiblePages.join(", ");
+    } else {
+      this.visiblePagesIndicator.textContent = "Visible pages: (none)";
+    }
+    this.emit("visiblePages", visiblePages);
   }
 
   _updateCurrentPage() {
@@ -150,7 +172,7 @@ export class ScrollablePdfViewer extends EventEmitter {
     });
     this.currentPage = pageNum;
     this.emit("seen", pageNum + 1);
-    this._renderVisiblePages();
+    // No need to re-render pages
   }
 
   get showNdx() {
