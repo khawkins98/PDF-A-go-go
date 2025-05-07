@@ -124,7 +124,7 @@
   max-width: 100vw;
   height: 100%;
   box-sizing: border-box;
-  padding: 0 33% 1rem;
+  padding: 1rem 33%;
 }
 
 .pdfagogo-page-canvas {
@@ -133,8 +133,6 @@
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.18);
   transition: box-shadow 0.2s;
-  max-width: 95vw;
-  max-height: 80vh;
   flex-shrink: 0;
 }
 
