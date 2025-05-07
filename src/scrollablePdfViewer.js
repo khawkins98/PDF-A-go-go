@@ -29,9 +29,14 @@ export class ScrollablePdfViewer extends EventEmitter {
   }
 
   _setupResizeHandler() {
+    let resizeTimeout = null;
     window.addEventListener("resize", () => {
-      this._resizeAllPages();
-      this._updateVisiblePages();
+      if (resizeTimeout) return;
+      resizeTimeout = setTimeout(() => {
+        this._resizeAllPages();
+        this._updateVisiblePages();
+        resizeTimeout = null;
+      }, 300);
     });
   }
 
