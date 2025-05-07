@@ -141,6 +141,8 @@ function setupControls(ctx, viewer) {
       if (ctx.showNdx * 2 + 1 >= ctx.book.numPages()) return;
       ctx.flipNdx = ctx.showNdx + 1;
     }
+    ctx.zoom = 0;
+    ctx.pan = null;
     flip_1(ctx);
   };
   viewer.flip_back = () => {
@@ -148,6 +150,8 @@ function setupControls(ctx, viewer) {
     if (ctx.book.numPages() <= 1) return;
     if (!ctx.showNdx) return;
     ctx.flipNdx = ctx.showNdx - 1;
+    ctx.zoom = 0;
+    ctx.pan = null;
     flip_1(ctx);
   };
 
@@ -156,12 +160,13 @@ function setupControls(ctx, viewer) {
     pageNum = Math.floor(Number(pageNum));
     if (isNaN(pageNum) || pageNum < 0 || pageNum >= ctx.book.numPages()) return;
     if (ctx.spreadMode) {
-      // console.log('go_to_page:' , ctx.spreadMode, pageNum);
       ctx.showNdx = pageNum;
     } else {
       ctx.showNdx = Math.floor(pageNum / 2);
     }
     ctx.flipNdx = null;
+    ctx.zoom = 0;
+    ctx.pan = null;
     showPages(ctx, viewer);
   };
 
@@ -623,8 +628,6 @@ function animate({ draw, duration, from, to, timing, ondone }) {
   const start = Date.now();
 
   animate_1();
-
-  console.log('animate', { draw, duration, from, to, timing, ondone });
 
   function animate_1() {
     let frac = (Date.now() - start) / duration;
