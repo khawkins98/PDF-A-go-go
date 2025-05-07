@@ -1,7 +1,6 @@
 import { loadPdfWithProgress } from "./pdfLoader.js";
 import { createLoadingBar, updateLoadingBar, removeLoadingBar, showError, setupControls } from "./ui.js";
 import { getH } from "@tpp/htm-x";
-import { outputScale } from "./flipbookviewer.js";
 import { ScrollablePdfViewer } from "./scrollablePdfViewer.js";
 
 let pdf = null;
@@ -121,7 +120,7 @@ function init(book, id, opts, cb) {
           pdf
             .getPage(pageNum)
             .then(async function (page) {
-              const viewport = page.getViewport({ scale: typeof outputScale !== 'undefined' ? outputScale : 2 });
+              const viewport = page.getViewport({ scale: 2 });
               const canvas = document.createElement("canvas");
               const context = canvas.getContext("2d");
               canvas.width = viewport.width;

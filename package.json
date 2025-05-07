@@ -1,11 +1,10 @@
 {
   "name": "pdf-a-go-go",
   "version": "0.1.0",
-  "description": "A lightweight, accessible, embeddable PDF flipbook viewer based on pdf.js and flipbook-viewer.",
+  "description": "A lightweight, accessible, embeddable PDF viewer that uses on pdf.js.",
   "keywords": [
     "pdf",
     "viewer",
-    "flipbook",
     "accessible",
     "javascript",
     "web",

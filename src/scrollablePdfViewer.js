@@ -9,7 +9,6 @@ export class ScrollablePdfViewer extends EventEmitter {
     this.pageCount = book.numPages();
     this.currentPage = 0;
     this.pageCanvases = {};
-    this.pageSizes = [];
     this.scrollContainer = document.createElement("div");
     this.scrollContainer.className = "pdfagogo-scroll-container";
     this.app.appendChild(this.scrollContainer);
