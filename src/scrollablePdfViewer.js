@@ -12,10 +12,20 @@ export class ScrollablePdfViewer extends EventEmitter {
     this.scrollContainer = document.createElement("div");
     this.scrollContainer.className = "pdfagogo-scroll-container";
     this.app.appendChild(this.scrollContainer);
+
+    // Add visible pages indicator
+    // this.visiblePagesIndicator = document.createElement("div");
+    // this.visiblePagesIndicator.className = "pdfagogo-visible-pages-indicator";
+    // this.visiblePagesIndicator.style.margin = "8px 0";
+    // this.visiblePagesIndicator.style.fontSize = "16px";
+    // this.visiblePagesIndicator.style.color = "#1976d2";
+    // this.app.insertBefore(this.visiblePagesIndicator, this.scrollContainer);
+
     this._setupResizeHandler();
     this._renderAllPages();
     this._setupScrollHandler();
     this._updateVisiblePages();
+    this._setupGrabAndScroll();
   }
 
   _setupResizeHandler() {
@@ -114,12 +124,12 @@ export class ScrollablePdfViewer extends EventEmitter {
       }
     }
     // Output visible page numbers to the indicator
-    if (visiblePages.length > 0) {
-      this.visiblePagesIndicator.textContent =
-        "Visible pages: " + visiblePages.join(", ");
-    } else {
-      this.visiblePagesIndicator.textContent = "Visible pages: (none)";
-    }
+    // if (visiblePages.length > 0) {
+    //   this.visiblePagesIndicator.textContent =
+    //     "Visible pages: " + visiblePages.join(", ");
+    // } else {
+    //   this.visiblePagesIndicator.textContent = "Visible pages: (none)";
+    // }
     this.emit("visiblePages", visiblePages);
   }
 
@@ -185,5 +195,73 @@ export class ScrollablePdfViewer extends EventEmitter {
 
   on(event, handler) {
     super.on(event, handler);
+  }
+
+  _setupGrabAndScroll() {
+    const container = this.scrollContainer;
+    let isDown = false;
+    let startX;
+    let scrollLeft;
+
+    container.style.cursor = 'grab';
+
+    container.addEventListener('mousedown', (e) => {
+      isDown = true;
+      container.classList.add('grabbing');
+      container.style.cursor = 'grabbing';
+      startX = e.pageX - container.offsetLeft;
+      scrollLeft = container.scrollLeft;
+      e.preventDefault();
+    });
+
+    container.addEventListener('mouseleave', () => {
+      isDown = false;
+      container.classList.remove('grabbing');
+      container.style.cursor = 'grab';
+    });
+
+    container.addEventListener('mouseup', () => {
+      isDown = false;
+      container.classList.remove('grabbing');
+      container.style.cursor = 'grab';
+    });
+
+    container.addEventListener('mousemove', (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - container.offsetLeft;
+      const walk = (x - startX) * 1; // scroll-fastness
+      container.scrollLeft = scrollLeft - walk;
+    });
+
+    // Touch support for mobile
+    container.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) return;
+      isDown = true;
+      container.classList.add('grabbing');
+      container.style.cursor = 'grabbing';
+      startX = e.touches[0].pageX - container.offsetLeft;
+      scrollLeft = container.scrollLeft;
+    }, { passive: false });
+
+    container.addEventListener('touchend', () => {
+      isDown = false;
+      container.classList.remove('grabbing');
+      container.style.cursor = 'grab';
+    });
+
+    container.addEventListener('touchcancel', () => {
+      isDown = false;
+      container.classList.remove('grabbing');
+      container.style.cursor = 'grab';
+    });
+
+    container.addEventListener('touchmove', (e) => {
+      if (!isDown || e.touches.length !== 1) return;
+      e.preventDefault();
+      const x = e.touches[0].pageX - container.offsetLeft;
+      const walk = (x - startX) * 1;
+      container.scrollLeft = scrollLeft - walk;
+    }, { passive: false });
   }
 }
