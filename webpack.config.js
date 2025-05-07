@@ -24,6 +24,9 @@ const base = {
       {
         test: /pdf\.worker(\.min)?\.mjs$/,
         type: 'asset/resource',
+        generator: {
+          filename: 'pdf-a-go-go.dependencies.js'
+        }
       },
     ],
   },
