@@ -67,7 +67,7 @@ Set options via data attributes on the container:
 - `data-margin`, `data-margin-top`, `data-margin-left` (number): Margins (optional)
 - `data-spread-mode` (true/false): Force spread mode (optional)
 
-### Features
+### Advanced feature notes
 
 - **Open to a specific page**
   - You can open the viewer to a specific page by adding `#page=N` to the URL (e.g. `#page=5`).
