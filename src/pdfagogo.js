@@ -120,7 +120,9 @@ function init(book, id, opts, cb) {
           pdf
             .getPage(pageNum)
             .then(async function (page) {
-              const viewport = page.getViewport({ scale: 2 });
+              // Use devicePixelRatio for HiDPI support
+              const scale = window.devicePixelRatio || 1;
+              const viewport = page.getViewport({ scale });
               const canvas = document.createElement("canvas");
               const context = canvas.getContext("2d");
               canvas.width = viewport.width;

@@ -250,7 +250,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
   );
   function updatePage(n) {
     const totalPages = book.numPages();
-    const currentPage = parseInt(n) + 1;
+    const currentPage = parseInt(n);
     if (pageIndicator)
       pageIndicator.textContent = `Page: ${currentPage} / ${totalPages}`;
     if (pageAnnouncement)
@@ -397,7 +397,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       isLast = viewer.showNdx === (pdf.numPages - 1);
     } else {
       isFirst = viewer.showNdx === 0;
-      isLast = (viewer.showNdx * 2 + 1) >= pdf.numPages;
+      isLast = (viewer.showNdx + 1) >= pdf.numPages;
     }
     prevBtn.style.visibility = isFirst ? 'hidden' : '';
     nextBtn.style.visibility = isLast ? 'hidden' : '';

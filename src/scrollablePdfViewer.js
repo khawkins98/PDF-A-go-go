@@ -43,9 +43,15 @@ export class ScrollablePdfViewer extends EventEmitter {
   }
 
   _getPageWidth() {
-    // Estimate page width based on container height and aspect ratio
+    // Try to get the width of the second page's rendered image (or first if not available)
+    let pageIdx = 1;
+    if (this.pageCount < 2) pageIdx = 0;
+    const canvas = this.pageCanvases[pageIdx];
+    if (canvas && canvas.width) {
+      return canvas.width;
+    }
+    // Fallback: estimate based on container height and aspect ratio
     const containerHeight = this.scrollContainer.clientHeight || 600;
-    // Default aspect ratio 0.7 (A4)
     return containerHeight * 0.7;
   }
 
@@ -174,6 +180,7 @@ export class ScrollablePdfViewer extends EventEmitter {
 
   go_to_page(pageNum) {
     // Center the given page
+    console.log("go_to_page", this._getPageWidth());
     const pageWidth = this._getPageWidth() + 24;
     const left = Math.max(0, pageWidth * pageNum - this.scrollContainer.clientWidth / 2 + pageWidth / 2);
     this.scrollContainer.scrollTo({
