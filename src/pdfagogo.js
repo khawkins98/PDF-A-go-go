@@ -120,8 +120,8 @@ function init(book, id, opts, cb) {
           pdf
             .getPage(pageNum)
             .then(async function (page) {
-              // Use devicePixelRatio for HiDPI support
-              const scale = window.devicePixelRatio || 1;
+              const scale = window.devicePixelRatio || 2;
+              // const scale = 3;
               const viewport = page.getViewport({ scale });
               const canvas = document.createElement("canvas");
               const context = canvas.getContext("2d");
@@ -163,6 +163,8 @@ function init(book, id, opts, cb) {
             });
         },
       };
+      // Pass scale to ScrollablePdfViewer
+      featureOptions.scale = 3;
       init(book, "pdfagogo-container", featureOptions, function (err, v) {
         removeLoadingBar();
         if (err) {

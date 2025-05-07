@@ -74,16 +74,8 @@ export class ScrollablePdfViewer extends EventEmitter {
       if (canvas) {
         this.book.getPage(i, (err, pg) => {
           if (err) return;
-          const aspect = pg.width / pg.height;
-          const containerHeight = this._getPageHeight();
-          const height = containerHeight;
-          const width = height * aspect;
-          canvas.width = width;
-          canvas.height = height;
-          canvas.style.height = height + "px";
-          canvas.style.width = width + "px";
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(pg.img, 0, 0, width, height);
+          const scale = this.options.scale || 2;
+          renderPdfPageToCanvas(canvas, pg, this._getPageHeight(), scale);
         });
       }
     }
@@ -99,16 +91,8 @@ export class ScrollablePdfViewer extends EventEmitter {
     // Render PDF page
     this.book.getPage(ndx, (err, pg) => {
       if (err) return;
-      const aspect = pg.width / pg.height;
-      const containerHeight = this._getPageHeight();
-      const height = containerHeight;
-      const width = height * aspect;
-      canvas.width = width;
-      canvas.height = height;
-      canvas.style.height = height + "px";
-      canvas.style.width = width + "px";
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(pg.img, 0, 0, width, height);
+      const scale = this.options.scale || 2;
+      renderPdfPageToCanvas(canvas, pg, this._getPageHeight(), scale);
     });
   }
 
@@ -271,4 +255,17 @@ export class ScrollablePdfViewer extends EventEmitter {
       container.scrollLeft = scrollLeft - walk;
     }, { passive: false });
   }
+}
+
+// Utility function to render a PDF page to a canvas with scaling
+function renderPdfPageToCanvas(canvas, pg, targetHeight, scale) {
+  const aspect = pg.width / pg.height;
+  const height = targetHeight;
+  const width = height * aspect;
+  canvas.width = width * scale;
+  canvas.height = height * scale;
+  canvas.style.height = height + "px";
+  canvas.style.width = width + "px";
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(pg.img, 0, 0, width * scale, height * scale);
 }
