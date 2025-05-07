@@ -367,27 +367,6 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     }
   });
 
-  // Spread Mode toggle (if present)
-  const spreadToggle = document.querySelector('.pdfagogo-spread-toggle');
-  if (spreadToggle) {
-    spreadToggle.checked = !!featureOptions.spreadMode;
-    spreadToggle.onchange = function () {
-      let currentPage = 1;
-      if (viewer && typeof viewer.showNdx === 'number') {
-        if (featureOptions.spreadMode) {
-          currentPage = viewer.showNdx + 1;
-        } else {
-          currentPage = viewer.showNdx * 2 + 1;
-        }
-      }
-      featureOptions.spreadMode = spreadToggle.checked;
-      // Re-initialize viewer with new mode
-      // (This will re-call setupControls via pdfagogo.js)
-      window.PDFaGoGoOptions = featureOptions;
-      window.location.reload();
-    };
-  }
-
   // Hide/show navigation arrows on first/last page
   function updateNavArrows() {
     if (!prevBtn || !nextBtn) return;

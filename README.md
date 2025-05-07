@@ -18,18 +18,17 @@ This project is very fresh (rolled on 6 May 2025). I may yet publish to npm or c
 ## Features
 
 - 📖 Side-scroll-style PDF viewing
-- 📄📄 Dual-spread PDF viewing (auto-detects PDFs with 2 page layout, see notes below)
-- 🔍 Text search within PDFs
 - 🦾 Accessible (keyboard navigation, ARIA labels, screen reader support)
 - ⚡ Fast, lightweight, and dependency-minimal
 - 🎨 Customizable UI (show/hide controls)
-- 📱 Responsive and embeddable
+- 📱 Mobile friendly
 - 🎯 Set a default page to open via embed options
 - 🔗 Shareable page links
 - 🪶 Lightweight, embeddable PDF viewer
 - ⌨️ Keyboard and accessible navigation
 - 🔍 Search with next/prev match
 - 📑 Page selector and navigation controls
+- 🔍 Basic search within PDFs
 - ⬇️ Download PDF button
 - 🛠️ Based on [pdf.js](https://github.com/mozilla/pdf.js)
 
@@ -59,22 +58,9 @@ Set options via data attributes on the container:
 - `data-show-search` (true/false): Show search controls (default: true)
 - `data-show-download` (true/false): Show a Download PDF button (default: true)
 - `data-default-page` (number): Default page to open if no #page=N in URL (1-based)
-- `data-height` (number): Viewer height in px (optional)
-- `data-width` (number): Viewer width in px (optional)
 - `data-background-color` (string): Background color (optional)
 - `data-box-border` (number): Box border size (optional)
 - `data-margin`, `data-margin-top`, `data-margin-left` (number): Margins (optional)
-- `data-spread-mode` (true/false): Force spread mode (optional)
-
-### Advanced feature notes
-
-- **Open to a specific page**
-  - You can open the viewer to a specific page by adding `#page=N` to the URL (e.g. `#page=5`).
-  - This will override the `defaultPage` option if both are present.
-- **Page spread (Two-page/single-spread) support**
-  - PDF-A-go-go supports both traditional single-page and two-page spread ("spread mode") PDFs, including those where each PDF page is already a two-page spread image.
-- **First/Last page handling:**
-  - In spread mode, if the first or last page is a single (not double) spread, it will be centered and shown at its natural aspect ratio, not stretched.
 
 ## Development
 
