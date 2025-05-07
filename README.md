@@ -41,22 +41,31 @@ Include the JS and CSS in your HTML, and add a container:
 ```html
 <link rel="stylesheet" href="pdf-a-go-go.css">
 <script src="pdf-a-go-go.js"></script>
-<div class="pdfagogo-container" id="pdfagogo-container"></div>
+<div class="pdfagogo-container" id="pdfagogo-container"
+     data-pdf-url="./example.pdf"
+     data-show-search="true"
+     data-show-prev-next="true"
+     data-show-page-selector="true"
+     data-show-current-page="true"
+     data-show-download="true"
+     style="width:100vw;max-width:100%;box-sizing:border-box;overflow-x:hidden;"></div>
 ```
 
-Set options before loading:
+Set options via data attributes on the container:
 
-```js
-window.PDFaGoGoOptions = {
-  showPrevNext: true,      // Show previous/next page buttons (default: true)
-  showPageSelector: true,  // Show page selector input (default: true)
-  showCurrentPage: true,   // Show current page indicator (default: true)
-  showSearch: true,        // Show search controls (default: true)
-  showDownload: true,      // Show a Download PDF button
-  pdfUrl: "https://example.com/your.pdf", // PDF URL to load (default: sample PDF)
-  defaultPage: 3,              // (NEW) Default page to open if no #page=N in URL (1-based)
-};
-```
+- `data-pdf-url` (string): PDF URL to load (default: sample PDF)
+- `data-show-prev-next` (true/false): Show previous/next page buttons (default: true)
+- `data-show-page-selector` (true/false): Show page selector input (default: true)
+- `data-show-current-page` (true/false): Show current page indicator (default: true)
+- `data-show-search` (true/false): Show search controls (default: true)
+- `data-show-download` (true/false): Show a Download PDF button (default: true)
+- `data-default-page` (number): Default page to open if no #page=N in URL (1-based)
+- `data-height` (number): Viewer height in px (optional)
+- `data-width` (number): Viewer width in px (optional)
+- `data-background-color` (string): Background color (optional)
+- `data-box-border` (number): Box border size (optional)
+- `data-margin`, `data-margin-top`, `data-margin-left` (number): Margins (optional)
+- `data-spread-mode` (true/false): Force spread mode (optional)
 
 ### Features
 

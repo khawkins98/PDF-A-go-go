@@ -1,4 +1,4 @@
-// This is a modified version of the flipbook.js file from the PDF-A-go-go project
+// This is a heavily forked version of the flipbook.js file
 // https://github.com/theproductiveprogrammer/flipbook-viewer
 
 "use strict";

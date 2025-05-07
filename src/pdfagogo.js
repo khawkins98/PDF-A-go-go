@@ -84,17 +84,40 @@ function init(book, id, opts, cb) {
   };
   // --- END: Option defaults ---
 
-  // Merge options from user (if any)
-  const userOptions = {
-    width: Math.min(window.innerWidth, 1200),
-    height: window.innerWidth < 700 ? window.innerHeight * 0.7 : 800,
-    backgroundColor: "#353535",
-  };
-  if (window.PDFaGoGoOptions) {
-    Object.assign(userOptions, window.PDFaGoGoOptions);
+  // Helper: parse boolean or fallback
+  function parseBool(val, fallback) {
+    if (val === undefined) return fallback;
+    if (typeof val === 'boolean') return val;
+    if (typeof val === 'string') return val === 'true' || val === '';
+    return fallback;
   }
-  // Merge feature toggles
-  const featureOptions = Object.assign({}, defaultOptions, userOptions);
+
+  // Read options from data attributes
+  function getOptionsFromDataAttrs(container) {
+    const opts = {};
+    if (!container) return opts;
+    const map = container.dataset;
+    if (map.pdfUrl) opts.pdfUrl = map.pdfUrl;
+    if (map.defaultPage) opts.defaultPage = parseInt(map.defaultPage, 10);
+    if (map.height) opts.height = parseInt(map.height, 10);
+    if (map.width) opts.width = parseInt(map.width, 10);
+    if (map.backgroundColor) opts.backgroundColor = map.backgroundColor;
+    if (map.boxBorder) opts.boxBorder = parseInt(map.boxBorder, 10);
+    if (map.margin) opts.margin = parseFloat(map.margin);
+    if (map.marginTop) opts.marginTop = parseFloat(map.marginTop);
+    if (map.marginLeft) opts.marginLeft = parseFloat(map.marginLeft);
+    if (map.spreadMode !== undefined) opts.spreadMode = parseBool(map.spreadMode, undefined);
+    if (map.showPrevNext !== undefined) opts.showPrevNext = parseBool(map.showPrevNext, undefined);
+    if (map.showPageSelector !== undefined) opts.showPageSelector = parseBool(map.showPageSelector, undefined);
+    if (map.showCurrentPage !== undefined) opts.showCurrentPage = parseBool(map.showCurrentPage, undefined);
+    if (map.showSearch !== undefined) opts.showSearch = parseBool(map.showSearch, undefined);
+    if (map.showDownload !== undefined) opts.showDownload = parseBool(map.showDownload, undefined);
+    return opts;
+  }
+
+  // Merge options from data attributes
+  const dataOptions = getOptionsFromDataAttrs(pdfagogoContainer);
+  const featureOptions = Object.assign({}, defaultOptions, dataOptions);
 
   // Remove any existing controls
   [

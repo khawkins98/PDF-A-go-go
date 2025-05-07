@@ -12,21 +12,9 @@
     <a href="https://github.com/khawkins98/PDF-A-go-go" target="_blank" rel="noopener noreferrer">GitHub</a>.
   </div>
   <!--
-    UI controls (search, prev/next, page selector, etc) can be enabled/disabled via window.PDFaGoGoOptions.
+    UI controls (search, prev/next, page selector, etc) can be enabled/disabled via data attributes.
     See README.md for details.
   -->
-  <script>
-    // Example: Hide search and page selector controls
-    window.PDFaGoGoOptions = {
-      // defaultPage: 3,
-      // pdfUrl: "https://texdoc.org/serve/pdfpages.pdf/0",
-      // pdfUrl: "https://www.princexml.com/samples/catalog/PrinceCatalogue.pdf",
-      // pdfUrl: "https://www.undrr.org/sites/default/files/2022-12/11_Traditional%20Knowledges_2022_2.pdf?startDownload=true",
-      // showSearch: false,
-      // showPrevNext: false,
-      // showPageSelector: false
-    };
-  </script>
   <script defer="defer" src="pdf-a-go-go.js"></script>
   <div class="pdfagogo-container" id="pdfagogo-container"
        tabindex="0"
@@ -34,6 +22,12 @@
        aria-label="PDF Viewer"
        aria-live="polite"
        aria-atomic="true"
+       data-pdf-url="./example.pdf"
+       data-show-search="true"
+       data-show-prev-next="true"
+       data-show-page-selector="true"
+       data-show-current-page="true"
+       data-show-download="true"
        style="width:100vw;max-width:100%;box-sizing:border-box;overflow-x:hidden;"></div>
 
   <style>
