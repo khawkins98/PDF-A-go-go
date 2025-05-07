@@ -166,168 +166,118 @@ function setupControls(ctx, viewer) {
   };
 
   function flip_1(ctx) {
+    const fromNdx = ctx.showNdx;
+    const toNdx = ctx.flipNdx;
+    const direction = toNdx > fromNdx ? 1 : -1;
+    const duration = 400;
+    const canvas = ctx.canvas;
     if (ctx.spreadMode) {
-      // Slide animation for spreadMode
-      const fromNdx = ctx.showNdx;
-      const toNdx = ctx.flipNdx;
-      const direction = toNdx > fromNdx ? 1 : -1;
-      const duration = 400;
-      const start = Date.now();
-      const canvas = ctx.canvas;
-      let fromPage, toPage;
-      ctx.getCachedPage(fromNdx, (err, fromPg) => {
-        if (err) return;
-        fromPage = fromPg;
-        ctx.getCachedPage(toNdx, (err, toPg) => {
-          if (err) return;
-          toPage = toPg;
-          animateSlide();
-        });
-      });
-      function animateSlide() {
-        let frac = (Date.now() - start) / duration;
-        if (frac > 1) frac = 1;
-        // Clear
-        canvas.ctx.save();
-        canvas.ctx.setTransform(1, 0, 0, 1, 0, 0);
-        canvas.ctx.clearRect(0, 0, canvas.e.width, canvas.e.height);
-        // Slide out old page
-        let layout = calcLayout(ctx);
-        let offset = layout.width * frac * direction;
-        // Draw fromPage sliding out
-        if (fromPage) {
-          canvas.ctx.globalAlpha = 1 - frac * 0.5;
-          canvas.ctx.drawImage(
-            fromPage.img,
-            layout.left - offset,
-            layout.top,
-            layout.width,
-            layout.height
-          );
-        }
-        // Draw toPage sliding in
-        if (toPage) {
-          canvas.ctx.globalAlpha = 0.5 + frac * 0.5;
-          canvas.ctx.drawImage(
-            toPage.img,
-            layout.left + layout.width * direction - offset,
-            layout.top,
-            layout.width,
-            layout.height
-          );
-        }
-        canvas.ctx.globalAlpha = 1;
-        canvas.ctx.restore();
-        if (frac < 1) {
-          requestAnimationFrame(animateSlide);
-        } else {
+      // Spread mode: animate a single page
+      slidePagesAnimation({
+        ctx,
+        viewer,
+        canvas,
+        direction,
+        duration,
+        fromPages: [{ ndx: fromNdx }],
+        toPages: [{ ndx: toNdx }],
+        layoutFn: (layout) => [{ ...layout }],
+        ondone: () => {
           ctx.showNdx = ctx.flipNdx;
           ctx.flipNdx = null;
           showPages(ctx, viewer);
-        }
-      }
+        },
+      });
     } else {
-      // Slide animation for dual-page (non-spreadMode) view
-      const fromNdx = ctx.showNdx;
-      const toNdx = ctx.flipNdx;
-      const direction = toNdx > fromNdx ? 1 : -1;
-      const duration = 400;
-      const start = Date.now();
-      const canvas = ctx.canvas;
-      let fromLeft, fromRight, toLeft, toRight;
+      // Dual-page mode: animate two pages
       const fromLeftNdx = fromNdx * 2;
       const fromRightNdx = fromLeftNdx + 1;
       const toLeftNdx = toNdx * 2;
       const toRightNdx = toLeftNdx + 1;
-      ctx.getCachedPage(fromLeftNdx, (err, fromLeftPg) => {
-        if (err) return;
-        fromLeft = fromLeftPg;
-        ctx.getCachedPage(fromRightNdx, (err, fromRightPg) => {
-          if (err) return;
-          fromRight = fromRightPg;
-          ctx.getCachedPage(toLeftNdx, (err, toLeftPg) => {
-            if (err) return;
-            toLeft = toLeftPg;
-            ctx.getCachedPage(toRightNdx, (err, toRightPg) => {
-              if (err) return;
-              toRight = toRightPg;
-              animateSlide();
-            });
-          });
-        });
-      });
-      function animateSlide() {
-        let frac = (Date.now() - start) / duration;
-        if (frac > 1) frac = 1;
-        // Clear
-        canvas.ctx.save();
-        canvas.ctx.setTransform(1, 0, 0, 1, 0, 0);
-        canvas.ctx.clearRect(0, 0, canvas.e.width, canvas.e.height);
-        // Slide out old pages
-        let layout = calcLayout(ctx);
-        let offset = layout.width * frac * direction;
-        // Left page
-        if (fromLeft) {
-          const page_l = Object.assign({}, layout);
-          page_l.width /= 2;
-          canvas.ctx.globalAlpha = 1 - frac * 0.5;
-          canvas.ctx.drawImage(
-            fromLeft.img,
-            page_l.left - offset,
-            page_l.top,
-            page_l.width,
-            page_l.height
-          );
-        }
-        // Right page
-        if (fromRight) {
-          const page_r = Object.assign({}, layout);
-          page_r.width /= 2;
-          page_r.left = layout.mid;
-          canvas.ctx.globalAlpha = 1 - frac * 0.5;
-          canvas.ctx.drawImage(
-            fromRight.img,
-            page_r.left - offset,
-            page_r.top,
-            page_r.width,
-            page_r.height
-          );
-        }
-        // Slide in new pages
-        if (toLeft) {
-          const page_l = Object.assign({}, layout);
-          page_l.width /= 2;
-          canvas.ctx.globalAlpha = 0.5 + frac * 0.5;
-          canvas.ctx.drawImage(
-            toLeft.img,
-            page_l.left + layout.width * direction - offset,
-            page_l.top,
-            page_l.width,
-            page_l.height
-          );
-        }
-        if (toRight) {
-          const page_r = Object.assign({}, layout);
-          page_r.width /= 2;
-          page_r.left = layout.mid;
-          canvas.ctx.globalAlpha = 0.5 + frac * 0.5;
-          canvas.ctx.drawImage(
-            toRight.img,
-            page_r.left + layout.width * direction - offset,
-            page_r.top,
-            page_r.width,
-            page_r.height
-          );
-        }
-        canvas.ctx.globalAlpha = 1;
-        canvas.ctx.restore();
-        if (frac < 1) {
-          requestAnimationFrame(animateSlide);
-        } else {
+      slidePagesAnimation({
+        ctx,
+        viewer,
+        canvas,
+        direction,
+        duration,
+        fromPages: [
+          { ndx: fromLeftNdx, isLeft: true },
+          { ndx: fromRightNdx, isLeft: false },
+        ],
+        toPages: [
+          { ndx: toLeftNdx, isLeft: true },
+          { ndx: toRightNdx, isLeft: false },
+        ],
+        layoutFn: (layout) => [
+          { ...layout, width: layout.width / 2 },
+          { ...layout, width: layout.width / 2, left: layout.mid },
+        ],
+        ondone: () => {
           ctx.showNdx = ctx.flipNdx;
           ctx.flipNdx = null;
           showPages(ctx, viewer);
-        }
+        },
+      });
+    }
+  }
+
+  // Consolidated slide animation for both spread and dual-page
+  function slidePagesAnimation({ ctx, viewer, canvas, direction, duration, fromPages, toPages, layoutFn, ondone }) {
+    const start = Date.now();
+    let fromImgs = [];
+    let toImgs = [];
+    // Helper to get all pages, then animate
+    function getPages(pages, cb) {
+      let results = [];
+      let count = 0;
+      if (!pages.length) return cb([]);
+      pages.forEach((p, i) => {
+        ctx.getCachedPage(p.ndx, (err, pg) => {
+          results[i] = pg;
+          count++;
+          if (count === pages.length) cb(results);
+        });
+      });
+    }
+    getPages(fromPages, (fromResults) => {
+      fromImgs = fromResults;
+      getPages(toPages, (toResults) => {
+        toImgs = toResults;
+        animateSlide();
+      });
+    });
+    function animateSlide() {
+      let frac = (Date.now() - start) / duration;
+      if (frac > 1) frac = 1;
+      // Clear
+      canvas.ctx.save();
+      canvas.ctx.setTransform(1, 0, 0, 1, 0, 0);
+      canvas.ctx.clearRect(0, 0, canvas.e.width, canvas.e.height);
+      let layout = calcLayout(ctx);
+      let offset = layout.width * frac * direction;
+      const layouts = layoutFn(layout);
+      // Draw fromPages sliding out
+      fromImgs.forEach((img, i) => {
+        if (!img) return;
+        const loc = { ...layouts[i] };
+        loc.left = (loc.left || 0) - offset;
+        canvas.ctx.globalAlpha = 1 - frac * 0.5;
+        canvas.ctx.drawImage(img.img, loc.left, loc.top, loc.width, loc.height);
+      });
+      // Draw toPages sliding in
+      toImgs.forEach((img, i) => {
+        if (!img) return;
+        const loc = { ...layouts[i] };
+        loc.left = (loc.left || 0) + layout.width * direction - offset;
+        canvas.ctx.globalAlpha = 0.5 + frac * 0.5;
+        canvas.ctx.drawImage(img.img, loc.left, loc.top, loc.width, loc.height);
+      });
+      canvas.ctx.globalAlpha = 1;
+      canvas.ctx.restore();
+      if (frac < 1) {
+        requestAnimationFrame(animateSlide);
+      } else {
+        ondone();
       }
     }
   }
