@@ -212,12 +212,12 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
   const gotoPageInput = document.querySelector(".pdfagogo-goto-page");
   const gotoBtn = document.querySelector(".pdfagogo-goto-btn");
   function setPageByNumber(pageNum) {
-    if (!viewer || !pdf) return;
+    if (!viewer || !book) return;
     if (
       typeof pageNum !== "number" ||
-      isNaN(pageNum / 2) ||
+      isNaN(pageNum) ||
       pageNum < 1 ||
-      pageNum / 2 > pdf.numPages
+      pageNum > book.numPages()
     ) {
       alert("Invalid page number");
       return;
@@ -225,24 +225,6 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     if (typeof viewer.go_to_page === "function") {
       viewer.go_to_page(pageNum - 1); // zero-based
       return;
-    }
-    const targetShowNdx = Math.floor(pageNum / 2);
-    if (viewer.flipNdx !== undefined && viewer.flipNdx !== null) {
-      viewer.flipNdx = null;
-    }
-    viewer.flipNdx = targetShowNdx;
-    if (viewer.showNdx !== targetShowNdx) {
-      viewer.showNdx = targetShowNdx;
-      viewer.emit("seen", targetShowNdx * 2);
-      if (targetShowNdx < viewer.page_count - 1) {
-        viewer.flip_forward();
-        viewer.flip_back();
-      } else if (targetShowNdx > 0) {
-        viewer.flip_back();
-        viewer.flip_forward();
-      }
-    } else {
-      viewer.emit("seen", targetShowNdx * 2);
     }
   }
   if (gotoBtn)
@@ -267,13 +249,12 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     ".pdfagogo-page-indicator"
   );
   function updatePage(n) {
-    const totalPages = pdf.numPages;
-    const leftPage = parseInt(n);
-    const rightPage = Math.min(leftPage + 1, totalPages);
+    const totalPages = book.numPages();
+    const currentPage = parseInt(n);
     if (pageIndicator)
-      pageIndicator.textContent = `Page: ${leftPage}-${rightPage} / ${totalPages}`;
+      pageIndicator.textContent = `Page: ${currentPage} / ${totalPages}`;
     if (pageAnnouncement)
-      pageAnnouncement.textContent = `Pages ${leftPage} to ${rightPage} of ${totalPages}`;
+      pageAnnouncement.textContent = `Page ${currentPage} of ${totalPages}`;
   }
   viewer.on("seen", updatePage);
   updatePage(0);
@@ -378,10 +359,10 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       viewer.flip_forward();
       event.preventDefault();
     } else if (event.key === "+" || event.key === "=") {
-      viewer.zoom(viewer.zoomLevel ? viewer.zoomLevel + 1 : 1);
+      // No zoom in scroll mode
       event.preventDefault();
     } else if (event.key === "-") {
-      viewer.zoom(viewer.zoomLevel ? viewer.zoomLevel - 1 : -1);
+      // No zoom in scroll mode
       event.preventDefault();
     }
   });
@@ -416,7 +397,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       isLast = viewer.showNdx === (pdf.numPages - 1);
     } else {
       isFirst = viewer.showNdx === 0;
-      isLast = (viewer.showNdx * 2 + 1) >= pdf.numPages;
+      isLast = (viewer.showNdx + 1) >= pdf.numPages;
     }
     prevBtn.style.visibility = isFirst ? 'hidden' : '';
     nextBtn.style.visibility = isLast ? 'hidden' : '';
@@ -498,9 +479,9 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     if (!viewer || !pdf) return;
     if (
       typeof pageNum !== "number" ||
-      isNaN(pageNum / 2) ||
+      isNaN(pageNum) ||
       pageNum < 1 ||
-      pageNum / 2 > pdf.numPages
+      pageNum > pdf.numPages
     ) {
       alert("Invalid page number");
       return;

@@ -1,12 +1,18 @@
 .pdfagogo-container {
   width: 100%;
-  /* height: 900px; */
+  height: 80vh;
   margin: 40px auto 10px auto;
   border: 1px solid #ccc;
   padding: 2rem 0;
   background: #353535;
   text-align: center;
   position: relative;
+  overflow-x: hidden;
+}
+@media (min-width: 768px) {
+  .pdfagogo-container {
+    height: 900px;
+  }
 }
 .pdfagogo-container:focus {
   outline: 3px solid #1976d2;
@@ -56,12 +62,18 @@
   font-size: 15px;
 }
 .pdfagogo-hint-zone {
-  position: absolute;
-  top: 0;
-  width: 50%;
-  height: 100%;
-  z-index: 10;
-  pointer-events: auto;
+  display: none;
+}
+@media (min-width: 768px) {
+  .pdfagogo-hint-zone {
+    display: block;
+    position: absolute;
+    top: 0;
+    width: 20%;
+    height: 100%;
+    z-index: 10;
+    pointer-events: auto;
+  }
 }
 .pdfagogo-hint-left {
   left: 0;
@@ -100,4 +112,40 @@
   font-size: 18px;
   text-shadow: 0 0 8px #222;
   user-select: none;
+}
+
+.pdfagogo-scroll-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  width: 100vw;
+  max-width: 100vw;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 1rem 33%;
+}
+
+.pdfagogo-page-canvas {
+  margin: 0 1.5vw;
+  background: #222;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+  transition: box-shadow 0.2s;
+  flex-shrink: 0;
+}
+
+.pdfagogo-page-canvas:focus {
+  outline: 3px solid #1976d2;
+}
+
+@media (max-width: 600px) {
+  .pdfagogo-scroll-container {
+    min-height: 200px;
+    padding: 0;
+  }
+  .pdfagogo-page-canvas {
+    margin: 0 2vw;
+  }
 }

@@ -17,7 +17,7 @@ This project is very fresh (rolled on 6 May 2025). I may yet publish to npm or c
 
 ## Features
 
-- 📖 Flipbook-style PDF viewing
+- 📖 Side-scroll-style PDF viewing
 - 📄📄 Dual-spread PDF viewing (auto-detects PDFs with 2 page layout, see notes below)
 - 🔍 Text search within PDFs
 - 🦾 Accessible (keyboard navigation, ARIA labels, screen reader support)
@@ -31,8 +31,7 @@ This project is very fresh (rolled on 6 May 2025). I may yet publish to npm or c
 - 🔍 Search with next/prev match
 - 📑 Page selector and navigation controls
 - ⬇️ Download PDF button
-- 🛠️ Based on [pdf.js](https://github.com/mozilla/pdf.js) and [flipbook-viewer](https://github.com/theproductiveprogrammer/flipbook-viewer)
-
+- 🛠️ Based on [pdf.js](https://github.com/mozilla/pdf.js)
 
 ## Usage and features
 
@@ -76,15 +75,6 @@ Set options via data attributes on the container:
   - PDF-A-go-go supports both traditional single-page and two-page spread ("spread mode") PDFs, including those where each PDF page is already a two-page spread image.
 - **First/Last page handling:**
   - In spread mode, if the first or last page is a single (not double) spread, it will be centered and shown at its natural aspect ratio, not stretched.
-
-## Credits
-
-This project is heavily based on the following open-source projects:
-
-- [flipbook-viewer](https://github.com/theproductiveprogrammer/flipbook-viewer/)
-- [pdf.js](https://github.com/mozilla/pdf.js)
-
-> Note: The flipbook-viewer has been forked in this project to support navigating directly to specific pages and searching within the PDF.
 
 ## Development
 
