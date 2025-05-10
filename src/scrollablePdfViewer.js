@@ -74,17 +74,25 @@ export class ScrollablePdfViewer extends EventEmitter {
   }
 
   _resizeAllPages() {
+    // Refactored: returns a Promise that resolves when all pages are redrawn
+    const renderPromises = [];
     for (let i = 0; i < this.pageCount; i++) {
       const canvas = this.pageCanvases[i];
       if (canvas) {
         const highlights = window.__pdfagogo__highlights ? window.__pdfagogo__highlights[i] : undefined;
-        this.book.getPage(i, (err, pg) => {
-          if (err) return;
-          const scale = this.options.scale || 2;
-          renderPdfPageToCanvas(canvas, pg, this._getPageHeight(), scale);
-        }, highlights);
+        // Wrap each render in a Promise
+        const p = new Promise((resolve) => {
+          this.book.getPage(i, (err, pg) => {
+            if (err) return resolve();
+            const scale = this.options.scale || 2;
+            renderPdfPageToCanvas(canvas, pg, this._getPageHeight(), scale);
+            resolve();
+          }, highlights);
+        });
+        renderPromises.push(p);
       }
     }
+    return Promise.all(renderPromises);
   }
 
   _renderPage(ndx) {

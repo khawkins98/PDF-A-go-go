@@ -55,6 +55,7 @@ function init(book, id, opts, cb) {
     showPageSelector: true,
     showCurrentPage: true,
     showSearch: true,
+    showResizeGrip: true,
     pdfUrl: "./example.pdf",
     showDownload: true,
   };
@@ -84,6 +85,7 @@ function init(book, id, opts, cb) {
     if (map.showPageSelector !== undefined) opts.showPageSelector = parseBool(map.showPageSelector, undefined);
     if (map.showCurrentPage !== undefined) opts.showCurrentPage = parseBool(map.showCurrentPage, undefined);
     if (map.showSearch !== undefined) opts.showSearch = parseBool(map.showSearch, undefined);
+    if (map.showResizeGrip !== undefined) opts.showResizeGrip = parseBool(map.showResizeGrip, undefined);
     if (map.showDownload !== undefined) opts.showDownload = parseBool(map.showDownload, undefined);
     return opts;
   }
