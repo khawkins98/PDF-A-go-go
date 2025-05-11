@@ -383,6 +383,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     } else {
       isFirst = viewer.showNdx === 0;
       isLast = (viewer.showNdx + 1) >= pdf.numPages;
+      isLast = (viewer.showNdx) >= pdf.numPages;
     }
     prevBtn.style.visibility = isFirst ? 'hidden' : '';
     nextBtn.style.visibility = isLast ? 'hidden' : '';
@@ -476,7 +477,6 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
   };
 
   // --- Resize grip feature: enabled by default, can be disabled with featureOptions.resize === false ---
-  console.log('featureOptions.resizeGrip', featureOptions);
   if (featureOptions.showResizeGrip !== false) {
     let resizeGrip = document.createElement("div");
     resizeGrip.className = "pdfagogo-resize-grip";
