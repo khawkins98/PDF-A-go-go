@@ -266,6 +266,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
   let matchPages = [];
   let currentMatchIdx = 0;
   let matchHighlights = {}; // {pageNum: [highlightBox, ...]}
+  let prevMatchPage = null; // Track previous match page index
   async function searchPdf(query) {
     matchPages = [];
     currentMatchIdx = 0;
@@ -307,14 +308,23 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     currentMatchIdx =
       ((idx % matchPages.length) + matchPages.length) % matchPages.length; // wrap around
     const pageNum = matchPages[currentMatchIdx] + 1; // 1-based
+    const pageIdx = matchPages[currentMatchIdx];
     // Highlight only the current match
-    const highlights = matchHighlights[matchPages[currentMatchIdx]] || [];
+    const highlights = matchHighlights[pageIdx] || [];
     // Set global highlights for viewer
     window.__pdfagogo__highlights = {};
-    window.__pdfagogo__highlights[matchPages[currentMatchIdx]] = highlights;
+    window.__pdfagogo__highlights[pageIdx] = highlights;
     setPageByNumber(pageNum);
-    // Force viewer to re-render so highlights are picked up
-    if (typeof viewer._renderAllPages === 'function') {
+    // Only re-render the current and previous match pages
+    if (typeof viewer.rerenderPage === 'function') {
+      viewer.rerenderPage(pageIdx);
+      if (prevMatchPage !== null && prevMatchPage !== pageIdx) {
+        // Clear highlights for previous page and re-render
+        window.__pdfagogo__highlights[prevMatchPage] = [];
+        viewer.rerenderPage(prevMatchPage);
+      }
+      prevMatchPage = pageIdx;
+    } else if (typeof viewer._renderAllPages === 'function') {
       viewer._renderAllPages();
     } else if (typeof viewer.go_to_page === 'function') {
       viewer.go_to_page(viewer.currentPage || 0);

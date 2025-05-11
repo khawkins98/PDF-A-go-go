@@ -254,14 +254,14 @@ export class ScrollablePdfViewer extends EventEmitter {
   go_to_page(pageNum) {
     // Center the given page
     const pageWidth = this._getPageWidth() + 24;
-    const left = Math.max(0, pageWidth * pageNum - this.scrollContainer.clientWidth / 2 + pageWidth / 2);
+    const left = Math.max(0, pageWidth * pageNum);
     console.log('left', left);
     this.scrollContainer.scrollTo({
       left,
       behavior: "smooth"
     });
     this.currentPage = pageNum;
-    this.emit("seen", pageNum + 1);
+    this.emit("seen", pageNum);
   }
 
   get showNdx() {
@@ -384,6 +384,17 @@ export class ScrollablePdfViewer extends EventEmitter {
       }
       // Otherwise, let vertical scroll bubble up (do not preventDefault)
     }, { passive: false });
+  }
+
+  rerenderPage(ndx) {
+    const canvas = this.pageCanvases[ndx];
+    if (!canvas) return;
+    const highlights = window.__pdfagogo__highlights ? window.__pdfagogo__highlights[ndx] : undefined;
+    this.book.getPage(ndx, (err, pg) => {
+      if (err) return;
+      const scale = this.options.scale || 2;
+      renderPdfPageToCanvas(canvas, pg, this._getPageHeight(), scale);
+    }, highlights);
   }
 }
 
