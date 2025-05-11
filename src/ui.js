@@ -382,7 +382,6 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       isLast = viewer.showNdx === (pdf.numPages - 1);
     } else {
       isFirst = viewer.showNdx === 0;
-      isLast = (viewer.showNdx + 1) >= pdf.numPages;
       isLast = (viewer.showNdx) >= pdf.numPages;
     }
     prevBtn.style.visibility = isFirst ? 'hidden' : '';

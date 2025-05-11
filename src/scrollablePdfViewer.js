@@ -31,7 +31,10 @@ export class ScrollablePdfViewer extends EventEmitter {
     this._setupResizeHandler();
     this._renderAllPages();
     this._setupScrollHandler();
-    this._updateVisiblePages();
+    // Intersection Observer setup
+    this._visiblePages = new Set();
+    this._intersectionObserver = this._createIntersectionObserver();
+    this._observeAllPages();
     this._setupGrabAndScroll();
     this._setupWheelScrollHandler();
   }
@@ -49,9 +52,14 @@ export class ScrollablePdfViewer extends EventEmitter {
   }
 
   _setupScrollHandler() {
+    let scrollTimeout;
     this.scrollContainer.addEventListener("scroll", () => {
-      this._updateVisiblePages();
-      this._updateCurrentPage();
+      if (scrollTimeout) return;
+      scrollTimeout = setTimeout(() => {
+        this._updateVisiblePages();
+        this._updateCurrentPage();
+        scrollTimeout = null;
+      }, 100);
     });
   }
 
@@ -72,12 +80,63 @@ export class ScrollablePdfViewer extends EventEmitter {
     return this.scrollContainer.clientHeight || 600;
   }
 
+  // Track which pages are visible
+  _createIntersectionObserver() {
+    const container = document.querySelector('body');
+    // Root is the scroll container, threshold 0.01+ for partial visibility
+    return new window.IntersectionObserver(
+      (entries) => {
+        // Update the set of visible pages
+        this._visiblePages.clear();
+        let maxRatio = -1;
+        let mostVisiblePage = null;
+        for (const entry of entries) {
+          const pageNum = parseInt(entry.target.getAttribute('data-page'), 10);
+          if (entry.isIntersecting) {
+            this._visiblePages.add(pageNum);
+            if (entry.intersectionRatio > maxRatio) {
+              maxRatio = entry.intersectionRatio;
+              mostVisiblePage = pageNum;
+            }
+          }
+        }
+        // Emit all visible pages (sorted)
+        const visiblePagesArr = Array.from(this._visiblePages).sort((a, b) => a - b);
+        this.emit('visiblePages', visiblePagesArr);
+        // Emit the most visible page as 'seen'
+        if (mostVisiblePage !== null) {
+          this.emit('seen', mostVisiblePage);
+        }
+      },
+      {
+        root: container,
+        threshold: 0.3,
+      }
+    );
+  }
+
+  _observeAllPages() {
+    if (!this._intersectionObserver) return;
+    // Unobserve all first
+    this._intersectionObserver.disconnect();
+    for (let i = 0; i < this.pageCount; i++) {
+      const canvas = this.pageCanvases[i];
+      if (canvas) {
+        this._intersectionObserver.observe(canvas);
+      }
+    }
+  }
+
   _renderAllPages() {
     // Remove any existing canvases
     this.scrollContainer.innerHTML = "";
     this.pageCanvases = {};
     for (let i = 0; i < this.pageCount; i++) {
       this._renderPage(i);
+    }
+    // After rendering, re-observe all pages
+    if (this._intersectionObserver) {
+      this._observeAllPages();
     }
   }
 
@@ -99,6 +158,10 @@ export class ScrollablePdfViewer extends EventEmitter {
         });
         renderPromises.push(p);
       }
+    }
+    // After resizing, re-observe all pages
+    if (this._intersectionObserver) {
+      this._observeAllPages();
     }
     return Promise.all(renderPromises);
   }
@@ -147,26 +210,28 @@ export class ScrollablePdfViewer extends EventEmitter {
   }
 
   _updateCurrentPage() {
+    // todo: remove this, i believe it's not needed
     // Find the page whose left edge is closest to the center of the container
-    const container = this.scrollContainer;
-    const center = container.scrollLeft + container.clientWidth / 2;
-    let minDist = Infinity;
-    let closest = 0;
-    for (let i = 0; i < this.pageCount; i++) {
-      const canvas = this.pageCanvases[i];
-      if (!canvas) continue;
-      const rect = canvas.getBoundingClientRect();
-      const pageCenter = rect.left + rect.width / 2 + container.scrollLeft - container.getBoundingClientRect().left;
-      const dist = Math.abs(pageCenter - center);
-      if (dist < minDist) {
-        minDist = dist;
-        closest = i;
-      }
-    }
-    if (this.currentPage !== closest) {
-      this.currentPage = closest;
-      this.emit("seen", closest + 1);
-    }
+    // const container = this.scrollContainer;
+    // const center = container.scrollLeft - 2000 + (container.clientWidth - 2000) / 2;
+    // console.log('center', center);
+    // let minDist = Infinity;
+    // let closest = 0;
+    // for (let i = 0; i < this.pageCount; i++) {
+    //   const canvas = this.pageCanvases[i];
+    //   if (!canvas) continue;
+    //   const rect = canvas.getBoundingClientRect();
+    //   const pageCenter = rect.left + rect.width / 2 + container.scrollLeft - container.getBoundingClientRect().left;
+    //   const dist = Math.abs(pageCenter - center);
+    //   if (dist < minDist) {
+    //     minDist = dist;
+    //     closest = i;
+    //   }
+    // }
+    // if (this.currentPage !== closest) {
+    //   this.currentPage = closest;
+    //   this.emit("seen", closest + 1);
+    // }
   }
 
   flip_forward() {
@@ -185,10 +250,12 @@ export class ScrollablePdfViewer extends EventEmitter {
     });
   }
 
+  // Change the view to show a specific page
   go_to_page(pageNum) {
     // Center the given page
     const pageWidth = this._getPageWidth() + 24;
     const left = Math.max(0, pageWidth * pageNum - this.scrollContainer.clientWidth / 2 + pageWidth / 2);
+    console.log('left', left);
     this.scrollContainer.scrollTo({
       left,
       behavior: "smooth"
