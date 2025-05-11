@@ -18,7 +18,7 @@ export class ScrollablePdfViewer extends EventEmitter {
      * Set via options.momentum (from data-momentum attribute)
      * Higher values = faster scrolling when dragging.
      */
-    this.momentum = typeof this.options.momentum === 'number' ? this.options.momentum : 1;
+    this.momentum = typeof this.options.momentum === 'number' ? this.options.momentum : 1.5;
 
     // Add visible pages indicator
     // this.visiblePagesIndicator = document.createElement("div");
@@ -312,7 +312,7 @@ export class ScrollablePdfViewer extends EventEmitter {
     this.scrollContainer.addEventListener('wheel', (e) => {
       // If horizontal scroll (deltaX), scroll the container and preventDefault
       if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-        this.scrollContainer.scrollLeft += e.deltaX;
+        this.scrollContainer.scrollLeft += e.deltaX * (this.momentum * 1.5); // We add a 50% boost to the momentum as scroll wheels seem slower
         e.preventDefault();
       }
       // Otherwise, let vertical scroll bubble up (do not preventDefault)
