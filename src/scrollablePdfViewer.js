@@ -13,6 +13,13 @@ export class ScrollablePdfViewer extends EventEmitter {
     this.scrollContainer.className = "pdfagogo-scroll-container";
     this.app.appendChild(this.scrollContainer);
 
+    /**
+     * Configurable momentum for grab-and-scroll (default: 1)
+     * Set via options.momentum (from data-momentum attribute)
+     * Higher values = faster scrolling when dragging.
+     */
+    this.momentum = typeof this.options.momentum === 'number' ? this.options.momentum : 1;
+
     // Add visible pages indicator
     // this.visiblePagesIndicator = document.createElement("div");
     // this.visiblePagesIndicator.className = "pdfagogo-visible-pages-indicator";
@@ -26,6 +33,7 @@ export class ScrollablePdfViewer extends EventEmitter {
     this._setupScrollHandler();
     this._updateVisiblePages();
     this._setupGrabAndScroll();
+    this._setupWheelScrollHandler();
   }
 
   _setupResizeHandler() {
@@ -204,68 +212,110 @@ export class ScrollablePdfViewer extends EventEmitter {
   _setupGrabAndScroll() {
     const container = this.scrollContainer;
     let isDown = false;
-    let startX;
+    let startX, startY;
     let scrollLeft;
+    let isHorizontalDrag = false;
 
     container.style.cursor = 'grab';
 
     container.addEventListener('mousedown', (e) => {
       isDown = true;
+      isHorizontalDrag = false;
       container.classList.add('grabbing');
       container.style.cursor = 'grabbing';
       startX = e.pageX - container.offsetLeft;
+      startY = e.pageY;
       scrollLeft = container.scrollLeft;
-      e.preventDefault();
+      // Do not preventDefault here; wait for movement direction
     });
 
     container.addEventListener('mouseleave', () => {
       isDown = false;
+      isHorizontalDrag = false;
       container.classList.remove('grabbing');
       container.style.cursor = 'grab';
     });
 
     container.addEventListener('mouseup', () => {
       isDown = false;
+      isHorizontalDrag = false;
       container.classList.remove('grabbing');
       container.style.cursor = 'grab';
     });
 
     container.addEventListener('mousemove', (e) => {
       if (!isDown) return;
-      e.preventDefault();
       const x = e.pageX - container.offsetLeft;
-      const walk = (x - startX) * 1; // scroll-fastness
-      container.scrollLeft = scrollLeft - walk;
+      const y = e.pageY;
+      const dx = x - startX;
+      const dy = y - startY;
+      if (!isHorizontalDrag && Math.abs(dx) > 5) {
+        // Only start horizontal drag if horizontal movement is dominant
+        if (Math.abs(dx) > Math.abs(dy)) {
+          isHorizontalDrag = true;
+        }
+      }
+      if (isHorizontalDrag) {
+        e.preventDefault();
+        const walk = dx * this.momentum;
+        container.scrollLeft = scrollLeft - walk;
+      }
     });
 
     // Touch support for mobile
     container.addEventListener('touchstart', (e) => {
       if (e.touches.length !== 1) return;
       isDown = true;
+      isHorizontalDrag = false;
       container.classList.add('grabbing');
       container.style.cursor = 'grabbing';
       startX = e.touches[0].pageX - container.offsetLeft;
+      startY = e.touches[0].pageY;
       scrollLeft = container.scrollLeft;
     }, { passive: false });
 
     container.addEventListener('touchend', () => {
       isDown = false;
+      isHorizontalDrag = false;
       container.classList.remove('grabbing');
       container.style.cursor = 'grab';
     });
 
     container.addEventListener('touchcancel', () => {
       isDown = false;
+      isHorizontalDrag = false;
       container.classList.remove('grabbing');
       container.style.cursor = 'grab';
     });
 
     container.addEventListener('touchmove', (e) => {
       if (!isDown || e.touches.length !== 1) return;
-      e.preventDefault();
       const x = e.touches[0].pageX - container.offsetLeft;
-      const walk = (x - startX) * 1;
-      container.scrollLeft = scrollLeft - walk;
+      const y = e.touches[0].pageY;
+      const dx = x - startX;
+      const dy = y - startY;
+      if (!isHorizontalDrag && Math.abs(dx) > 5) {
+        if (Math.abs(dx) > Math.abs(dy)) {
+          isHorizontalDrag = true;
+        }
+      }
+      if (isHorizontalDrag) {
+        e.preventDefault();
+        const walk = dx * this.momentum;
+        container.scrollLeft = scrollLeft - walk;
+      }
+    }, { passive: false });
+  }
+
+  _setupWheelScrollHandler() {
+    // Only intercept horizontal wheel events; let vertical scroll bubble up
+    this.scrollContainer.addEventListener('wheel', (e) => {
+      // If horizontal scroll (deltaX), scroll the container and preventDefault
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+        this.scrollContainer.scrollLeft += e.deltaX;
+        e.preventDefault();
+      }
+      // Otherwise, let vertical scroll bubble up (do not preventDefault)
     }, { passive: false });
   }
 }

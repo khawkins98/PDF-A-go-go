@@ -66,6 +66,7 @@ Set options via data attributes on the container:
 - `data-margin`, `data-margin-top`, `data-margin-left` (number): Margins (optional)
 - `data-disable-webgl` (true/false): Disable WebGL rendering in PDF.js (default: true / WebGL off).
   - **Note:** Disabling WebGL (the default) seems to be more performant in most browsers.
+- `data-momentum` (number): Controls the speed of grab-and-scroll (momentum) for fast navigation. Default is 1. Higher values allow faster scrolling when dragging the document horizontally.
 
 ## Development
 
