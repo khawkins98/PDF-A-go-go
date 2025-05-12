@@ -37,7 +37,8 @@ const base = {
         { from: 'src/index.html', to: 'index.html' },
         { from: 'src/double-spread.html', to: 'double-spread.html' },
         { from: 'src/example.pdf', to: 'example.pdf' },
-        { from: 'src/example_spread.pdf', to: 'example_spread.pdf' }
+        { from: 'src/example_spread.pdf', to: 'example_spread.pdf' },
+        { from: 'src/tests', to: 'tests' }
       ]
     })
   ]
