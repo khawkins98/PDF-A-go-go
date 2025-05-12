@@ -24,8 +24,23 @@ export class ScrollablePdfViewer extends EventEmitter {
       pageRenderTimes: {},
       highResUpgradeTimes: {},
       totalPagesRendered: 0,
-      totalHighResUpgrades: 0
+      totalHighResUpgrades: 0,
+      memoryUsage: {},
+      lastUpdate: Date.now()
     };
+
+    if (this.debug) {
+      this._setupDebugDisplay();
+    }
+
+    /**
+     * Memory management configuration
+     */
+    this.isMobile = window.innerWidth <= 768;
+    this.maxCachedPages = this.isMobile ? 3 : 5; // Fewer cached pages on mobile
+    this.renderQueue = [];
+    this.isRendering = false;
+    this.cleanupInterval = this.isMobile ? 15000 : 30000; // More frequent cleanup on mobile
 
     /**
      * Configurable momentum for grab-and-scroll (default: 1)
@@ -59,6 +74,23 @@ export class ScrollablePdfViewer extends EventEmitter {
     this._observeAllPages();
     this._setupGrabAndScroll();
     this._setupWheelScrollHandler();
+
+    // Set up periodic cleanup
+    this._cleanupInterval = setInterval(() => this._cleanupOffscreenPages(), this.cleanupInterval);
+
+    // Listen for visibility changes to manage memory
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        this._cleanupOffscreenPages(true); // Force cleanup when tab is hidden
+      }
+    });
+
+    // Listen for memory pressure
+    if ('onmemorypressure' in window) {
+      window.addEventListener('memorypressure', () => {
+        this._cleanupOffscreenPages(true);
+      });
+    }
   }
 
   _setupResizeHandler() {
@@ -262,7 +294,11 @@ export class ScrollablePdfViewer extends EventEmitter {
     const canvas = this.pageCanvases[ndx];
     if (!canvas) return;
 
-    const scale = resolution === 'high' ? (this.options.scale || 1.8) : 0.25;
+    // Adjust scale based on device pixel ratio and screen size
+    const baseScale = resolution === 'high' ? (this.options.scale || 1.8) : 0.25;
+    const isMobile = window.innerWidth <= 768;
+    const scale = isMobile ? baseScale * 0.75 : baseScale; // Reduce scale on mobile
+    
     const highlights = window.__pdfagogo__highlights ? window.__pdfagogo__highlights[ndx] : undefined;
 
     this.book.getPage(ndx, (err, pg) => {
@@ -277,12 +313,40 @@ export class ScrollablePdfViewer extends EventEmitter {
       // Canvas style dimensions should already be set, but ensure they are correct
       canvas.style.height = targetHeight + "px";
       canvas.style.width = width + "px";
-
-      // Update canvas buffer dimensions and render
       canvas.width = width * scale;
       canvas.height = targetHeight * scale;
-      renderPdfPageToCanvas(canvas, pg, targetHeight, scale);
-      canvas.setAttribute('data-resolution', resolution);
+
+      // Use lower quality settings on mobile for better performance
+      const ctx = canvas.getContext("2d", {
+        alpha: false,
+        willReadFrequently: false
+      });
+      
+      if (isMobile) {
+        ctx.imageSmoothingQuality = 'low';
+      }
+
+      // Clear canvas before drawing
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw the page
+      if (pg.img) {
+        ctx.drawImage(pg.img, 0, 0, canvas.width, canvas.height);
+      }
+
+      // Draw highlights if present
+      if (Array.isArray(highlights) && highlights.length > 0) {
+        ctx.fillStyle = "rgba(255, 255, 0, 0.3)";
+        highlights.forEach((h) => {
+          ctx.fillRect(
+            h.x * canvas.width,
+            h.y * canvas.height,
+            h.w * canvas.width,
+            h.h * canvas.height
+          );
+        });
+      }
 
       if (this.debug) {
         const endTime = performance.now();
@@ -290,23 +354,36 @@ export class ScrollablePdfViewer extends EventEmitter {
         if (resolution === 'high') {
           this.metrics.highResUpgradeTimes[ndx] = duration;
           this.metrics.totalHighResUpgrades++;
-          console.log(`[PDF-A-go-go Debug] Page ${ndx + 1} upgraded to high-res in ${duration.toFixed(2)}ms`);
         } else {
           this.metrics.pageRenderTimes[ndx] = duration;
           this.metrics.totalPagesRendered++;
-          console.log(`[PDF-A-go-go Debug] Page ${ndx + 1} rendered in low-res in ${duration.toFixed(2)}ms`);
         }
+        this._updateDebugInfo(); // Update immediately after render
       }
 
+      canvas.setAttribute('data-resolution', resolution);
       if (callback) callback();
     }, highlights);
   }
 
   _upgradeVisiblePagesToHighRes() {
-    // Upgrade visible pages to high res
-    this._visiblePages.forEach(pageNum => {
+    if (!this.initialRenderComplete) return;
+
+    // Sort visible pages by distance from current page
+    const currentPage = this.currentPage;
+    const visiblePages = Array.from(this._visiblePages)
+      .sort((a, b) => Math.abs(a - currentPage) - Math.abs(b - currentPage));
+
+    // Only upgrade up to maxCachedPages
+    visiblePages.slice(0, this.maxCachedPages).forEach(pageNum => {
       const canvas = this.pageCanvases[pageNum - 1];
       if (canvas && canvas.getAttribute('data-resolution') !== 'high') {
+        // Queue the render if already rendering
+        if (this.isRendering) {
+          this.renderQueue.push({ ndx: pageNum - 1, resolution: 'high' });
+          if (this.debug) console.log(`[PDF-A-go-go Debug] Queued high-res upgrade for page ${pageNum}`);
+          return;
+        }
         this._renderPageWithResolution(pageNum - 1, 'high');
       }
     });
@@ -404,96 +481,92 @@ export class ScrollablePdfViewer extends EventEmitter {
     let startX, startY;
     let scrollLeft;
     let isHorizontalDrag = false;
+    let lastX, lastY;
+    let velocity = 0;
+    let lastTime = 0;
 
     container.style.cursor = 'grab';
 
-    container.addEventListener('mousedown', (e) => {
+    const onStart = (e) => {
       isDown = true;
       isHorizontalDrag = false;
       container.classList.add('grabbing');
       container.style.cursor = 'grabbing';
-      startX = e.pageX - container.offsetLeft;
-      startY = e.pageY;
+      startX = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
+      startY = e.type.startsWith('touch') ? e.touches[0].pageY : e.pageY;
+      lastX = startX;
+      lastY = startY;
       scrollLeft = container.scrollLeft;
-      // Do not preventDefault here; wait for movement direction
-    });
+      lastTime = Date.now();
+      velocity = 0;
+    };
 
-    container.addEventListener('mouseleave', () => {
-      isDown = false;
-      isHorizontalDrag = false;
-      container.classList.remove('grabbing');
-      container.style.cursor = 'grab';
-    });
-
-    container.addEventListener('mouseup', () => {
-      isDown = false;
-      isHorizontalDrag = false;
-      container.classList.remove('grabbing');
-      container.style.cursor = 'grab';
-    });
-
-    container.addEventListener('mousemove', (e) => {
+    const onMove = (e) => {
       if (!isDown) return;
-      const x = e.pageX - container.offsetLeft;
-      const y = e.pageY;
-      const dx = x - startX;
-      const dy = y - startY;
-      if (!isHorizontalDrag && Math.abs(dx) > 5) {
-        // Only start horizontal drag if horizontal movement is dominant
-        if (Math.abs(dx) > Math.abs(dy)) {
-          isHorizontalDrag = true;
-        }
-      }
-      if (isHorizontalDrag) {
-        e.preventDefault();
-        const walk = dx * this.momentum;
-        container.scrollLeft = scrollLeft - walk;
-      }
-    });
-
-    // Touch support for mobile
-    container.addEventListener('touchstart', (e) => {
-      if (e.touches.length !== 1) return;
-      isDown = true;
-      isHorizontalDrag = false;
-      container.classList.add('grabbing');
-      container.style.cursor = 'grabbing';
-      startX = e.touches[0].pageX - container.offsetLeft;
-      startY = e.touches[0].pageY;
-      scrollLeft = container.scrollLeft;
-    }, { passive: false });
-
-    container.addEventListener('touchend', () => {
-      isDown = false;
-      isHorizontalDrag = false;
-      container.classList.remove('grabbing');
-      container.style.cursor = 'grab';
-    });
-
-    container.addEventListener('touchcancel', () => {
-      isDown = false;
-      isHorizontalDrag = false;
-      container.classList.remove('grabbing');
-      container.style.cursor = 'grab';
-    });
-
-    container.addEventListener('touchmove', (e) => {
-      if (!isDown || e.touches.length !== 1) return;
-      const x = e.touches[0].pageX - container.offsetLeft;
-      const y = e.touches[0].pageY;
-      const dx = x - startX;
-      const dy = y - startY;
+      
+      const x = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
+      const y = e.type.startsWith('touch') ? e.touches[0].pageY : e.pageY;
+      const dx = x - lastX;
+      const dy = y - lastY;
+      const now = Date.now();
+      const dt = now - lastTime;
+      
       if (!isHorizontalDrag && Math.abs(dx) > 5) {
         if (Math.abs(dx) > Math.abs(dy)) {
           isHorizontalDrag = true;
         }
       }
+
       if (isHorizontalDrag) {
         e.preventDefault();
+        velocity = dx / dt; // pixels per millisecond
         const walk = dx * this.momentum;
         container.scrollLeft = scrollLeft - walk;
+        scrollLeft = container.scrollLeft;
       }
-    }, { passive: false });
+
+      lastX = x;
+      lastY = y;
+      lastTime = now;
+    };
+
+    const onEnd = () => {
+      if (!isDown) return;
+      isDown = false;
+      isHorizontalDrag = false;
+      container.classList.remove('grabbing');
+      container.style.cursor = 'grab';
+
+      // Apply inertia if velocity is significant
+      if (Math.abs(velocity) > 0.2) {
+        const startVelocity = velocity;
+        const startScroll = container.scrollLeft;
+        const startTime = Date.now();
+        const animate = () => {
+          const elapsed = Date.now() - startTime;
+          const deceleration = 0.002; // pixels per ms^2
+          const remaining = startVelocity * Math.exp(-deceleration * elapsed);
+          
+          if (Math.abs(remaining) > 0.01 && elapsed < 500) {
+            container.scrollLeft = startScroll - (startVelocity / deceleration) * (1 - Math.exp(-deceleration * elapsed));
+            requestAnimationFrame(animate);
+          }
+        };
+        requestAnimationFrame(animate);
+      }
+    };
+
+    // Mouse events
+    container.addEventListener('mousedown', onStart);
+    container.addEventListener('mousemove', onMove);
+    container.addEventListener('mouseup', onEnd);
+    container.addEventListener('mouseleave', onEnd);
+
+    // Touch events
+    container.addEventListener('touchstart', onStart, { passive: true });
+    container.addEventListener('touchmove', onMove, { passive: false });
+    container.addEventListener('touchend', onEnd);
+    container.addEventListener('touchcancel', onEnd);
   }
 
   _setupWheelScrollHandler() {
@@ -538,6 +611,110 @@ export class ScrollablePdfViewer extends EventEmitter {
       pageRenderTimes: this.metrics.pageRenderTimes,
       highResUpgradeTimes: this.metrics.highResUpgradeTimes
     };
+  }
+
+  _cleanupOffscreenPages(force = false) {
+    if (this.debug) console.log('[PDF-A-go-go Debug] Running memory cleanup');
+    
+    const visiblePages = Array.from(this._visiblePages);
+    const start = Math.min(...visiblePages);
+    const end = Math.max(...visiblePages);
+    
+    // Keep a buffer of pages in each direction (smaller on mobile)
+    const buffer = this.isMobile ? 1 : 2;
+    const keepRange = new Set();
+    for (let i = start - buffer; i <= end + buffer; i++) {
+      if (i >= 1 && i <= this.pageCount) {
+        keepRange.add(i);
+      }
+    }
+    
+    Object.keys(this.pageCanvases).forEach(pageNum => {
+      pageNum = parseInt(pageNum);
+      if (!keepRange.has(pageNum + 1) || force) {
+        const canvas = this.pageCanvases[pageNum];
+        
+        if (canvas && canvas.getContext) {
+          const ctx = canvas.getContext('2d');
+          
+          // Measure memory before cleanup
+          if (this.debug) {
+            const memoryBefore = canvas.width * canvas.height * 4;
+            this.metrics.memoryUsage[pageNum] = {
+              freed: memoryBefore,
+              timestamp: Date.now()
+            };
+          }
+          
+          // Clear canvas and reduce its size
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          canvas.width = canvas.height = 32; // Minimal size to maintain layout
+          
+          // Remove from render queue if present
+          this.renderQueue = this.renderQueue.filter(item => item.ndx !== pageNum);
+          
+          if (this.debug) {
+            console.log(`[PDF-A-go-go Debug] Cleaned up page ${pageNum + 1}, freed ~${Math.round(this.metrics.memoryUsage[pageNum].freed / 1024 / 1024)}MB`);
+          }
+        }
+      }
+    });
+  }
+
+  _setupDebugDisplay() {
+    this.debugElement = document.createElement('div');
+    this.debugElement.className = 'pdfagogo-debug-info';
+    document.body.appendChild(this.debugElement);
+
+    // Update debug info every 500ms
+    this._debugInterval = setInterval(() => this._updateDebugInfo(), 500);
+
+    // Clean up on page unload
+    window.addEventListener('unload', () => {
+      if (this._debugInterval) {
+        clearInterval(this._debugInterval);
+      }
+      if (this.debugElement && this.debugElement.parentNode) {
+        this.debugElement.parentNode.removeChild(this.debugElement);
+      }
+    });
+  }
+
+  _updateDebugInfo() {
+    if (!this.debug || !this.debugElement) return;
+
+    const now = Date.now();
+    const timeSinceStart = this.metrics.initialRenderEnd ? 
+      (this.metrics.initialRenderEnd - this.metrics.initialRenderStart).toFixed(2) : 
+      (now - this.metrics.initialRenderStart).toFixed(2);
+
+    const avgLowResTime = Object.values(this.metrics.pageRenderTimes).length ? 
+      (Object.values(this.metrics.pageRenderTimes).reduce((a, b) => a + b, 0) / 
+       Object.values(this.metrics.pageRenderTimes).length).toFixed(2) : 
+      'N/A';
+
+    const avgHighResTime = Object.values(this.metrics.highResUpgradeTimes).length ? 
+      (Object.values(this.metrics.highResUpgradeTimes).reduce((a, b) => a + b, 0) / 
+       Object.values(this.metrics.highResUpgradeTimes).length).toFixed(2) : 
+      'N/A';
+
+    const totalMemoryFreed = Object.values(this.metrics.memoryUsage)
+      .reduce((total, item) => total + (item.freed || 0), 0);
+
+    const visiblePages = Array.from(this._visiblePages).join(', ');
+
+    this.debugElement.innerHTML = `
+      <div class="timing">Initial Render: ${timeSinceStart}ms</div>
+      <div class="timing">Avg Low-Res: ${avgLowResTime}ms</div>
+      <div class="timing">Avg High-Res: ${avgHighResTime}ms</div>
+      <div>Pages Rendered: ${this.metrics.totalPagesRendered}</div>
+      <div>High-Res Updates: ${this.metrics.totalHighResUpgrades}</div>
+      <div class="memory">Memory Freed: ${(totalMemoryFreed / 1024 / 1024).toFixed(2)}MB</div>
+      <div>Visible Pages: ${visiblePages}</div>
+      <div>Resolution Changes: ${Object.keys(this.metrics.highResUpgradeTimes).length}</div>
+    `;
+
+    this.metrics.lastUpdate = now;
   }
 }
 
