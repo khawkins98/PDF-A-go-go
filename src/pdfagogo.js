@@ -136,7 +136,7 @@ function init(book, id, opts, cb) {
           pdf
             .getPage(pageNum)
             .then(async function (page) {
-              const scale = window.devicePixelRatio || 2;
+              const scale = window.devicePixelRatio || 1.8;
               // const scale = 3;
               const viewport = page.getViewport({ scale });
               const canvas = document.createElement("canvas");
@@ -180,7 +180,7 @@ function init(book, id, opts, cb) {
         },
       };
       // Pass scale to ScrollablePdfViewer
-      featureOptions.scale = 3;
+      // featureOptions.scale = 2;
       init(book, "pdfagogo-container", featureOptions, function (err, v) {
         removeLoadingBar();
         if (err) {

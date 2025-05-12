@@ -42,7 +42,12 @@ export class ScrollablePdfViewer extends EventEmitter {
   _setupResizeHandler() {
     let resizeTimeout = null;
     window.addEventListener("resize", () => {
-      if (resizeTimeout) return;
+      // Clear any existing timeout
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
+      }
+
+      // Set new timeout to wait for resize to finish
       resizeTimeout = setTimeout(() => {
         this._resizeAllPages();
         this._updateVisiblePages();
@@ -54,7 +59,9 @@ export class ScrollablePdfViewer extends EventEmitter {
   _setupScrollHandler() {
     let scrollTimeout;
     this.scrollContainer.addEventListener("scroll", () => {
-      if (scrollTimeout) return;
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
+      }
       scrollTimeout = setTimeout(() => {
         this._updateVisiblePages();
         this._updateCurrentPage();
@@ -151,7 +158,7 @@ export class ScrollablePdfViewer extends EventEmitter {
         const p = new Promise((resolve) => {
           this.book.getPage(i, (err, pg) => {
             if (err) return resolve();
-            const scale = this.options.scale || 2;
+            const scale = this.options.scale || 1.8;
             renderPdfPageToCanvas(canvas, pg, this._getPageHeight(), scale);
             resolve();
           }, highlights);
@@ -177,7 +184,7 @@ export class ScrollablePdfViewer extends EventEmitter {
     const highlights = window.__pdfagogo__highlights ? window.__pdfagogo__highlights[ndx] : undefined;
     this.book.getPage(ndx, (err, pg) => {
       if (err) return;
-      const scale = this.options.scale || 2;
+      const scale = this.options.scale || 1.8;
       renderPdfPageToCanvas(canvas, pg, this._getPageHeight(), scale);
     }, highlights);
   }
@@ -379,13 +386,14 @@ export class ScrollablePdfViewer extends EventEmitter {
   }
 
   rerenderPage(ndx) {
+    console.log('rerenderPage');
     const canvas = this.pageCanvases[ndx];
     if (!canvas) return;
     const highlights = window.__pdfagogo__highlights ? window.__pdfagogo__highlights[ndx] : undefined;
     this.book.getPage(ndx, (err, pg) => {
       if (err) return;
-      const scale = this.options.scale || 2;
-      renderPdfPageToCanvas(canvas, pg, this._getPageHeight(), scale);
+      const scale = this.options.scale || 1.8;
+      renderPdfPageToCanvas(canvas, pg, this._getPageHeight(), 2);
     }, highlights);
   }
 }
