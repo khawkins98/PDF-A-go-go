@@ -14,6 +14,20 @@ export class ScrollablePdfViewer extends EventEmitter {
     this.app.appendChild(this.scrollContainer);
 
     /**
+     * Debug mode for performance metrics
+     * Set via options.debug (from data-debug attribute)
+     */
+    this.debug = typeof this.options.debug === 'boolean' ? this.options.debug : false;
+    this.metrics = {
+      initialRenderStart: 0,
+      initialRenderEnd: 0,
+      pageRenderTimes: {},
+      highResUpgradeTimes: {},
+      totalPagesRendered: 0,
+      totalHighResUpgrades: 0
+    };
+
+    /**
      * Configurable momentum for grab-and-scroll (default: 1)
      * Set via options.momentum (from data-momentum attribute)
      * Higher values = faster scrolling when dragging.
@@ -157,6 +171,11 @@ export class ScrollablePdfViewer extends EventEmitter {
   }
 
   _renderAllPages() {
+    if (this.debug) {
+      this.metrics.initialRenderStart = performance.now();
+      console.log('[PDF-A-go-go Debug] Starting initial render of all pages');
+    }
+
     // Remove any existing canvases
     this.scrollContainer.innerHTML = "";
     this.pageCanvases = {};
@@ -199,7 +218,13 @@ export class ScrollablePdfViewer extends EventEmitter {
       renderPromises.push(promise);
     }
 
-    return Promise.all(renderPromises);
+    return Promise.all(renderPromises).then(() => {
+      if (this.debug) {
+        this.metrics.initialRenderEnd = performance.now();
+        const duration = this.metrics.initialRenderEnd - this.metrics.initialRenderStart;
+        console.log(`[PDF-A-go-go Debug] Initial render complete in ${duration.toFixed(2)}ms`);
+      }
+    });
   }
 
   _resizeAllPages() {
@@ -233,7 +258,7 @@ export class ScrollablePdfViewer extends EventEmitter {
   }
 
   _renderPageWithResolution(ndx, resolution, callback = null) {
-    // console.log('renderPageWithResolution', ndx, resolution);
+    const startTime = this.debug ? performance.now() : 0;
     const canvas = this.pageCanvases[ndx];
     if (!canvas) return;
 
@@ -258,6 +283,21 @@ export class ScrollablePdfViewer extends EventEmitter {
       canvas.height = targetHeight * scale;
       renderPdfPageToCanvas(canvas, pg, targetHeight, scale);
       canvas.setAttribute('data-resolution', resolution);
+
+      if (this.debug) {
+        const endTime = performance.now();
+        const duration = endTime - startTime;
+        if (resolution === 'high') {
+          this.metrics.highResUpgradeTimes[ndx] = duration;
+          this.metrics.totalHighResUpgrades++;
+          console.log(`[PDF-A-go-go Debug] Page ${ndx + 1} upgraded to high-res in ${duration.toFixed(2)}ms`);
+        } else {
+          this.metrics.pageRenderTimes[ndx] = duration;
+          this.metrics.totalPagesRendered++;
+          console.log(`[PDF-A-go-go Debug] Page ${ndx + 1} rendered in low-res in ${duration.toFixed(2)}ms`);
+        }
+      }
+
       if (callback) callback();
     }, highlights);
   }
@@ -480,6 +520,24 @@ export class ScrollablePdfViewer extends EventEmitter {
         }, 200);
       }
     });
+  }
+
+  // Add a method to get performance metrics
+  getPerformanceMetrics() {
+    if (!this.debug) return null;
+
+    const avgLowResTime = Object.values(this.metrics.pageRenderTimes).reduce((a, b) => a + b, 0) / this.metrics.totalPagesRendered;
+    const avgHighResTime = Object.values(this.metrics.highResUpgradeTimes).reduce((a, b) => a + b, 0) / this.metrics.totalHighResUpgrades;
+
+    return {
+      initialRenderTime: this.metrics.initialRenderEnd - this.metrics.initialRenderStart,
+      averageLowResRenderTime: avgLowResTime,
+      averageHighResRenderTime: avgHighResTime,
+      totalPagesRendered: this.metrics.totalPagesRendered,
+      totalHighResUpgrades: this.metrics.totalHighResUpgrades,
+      pageRenderTimes: this.metrics.pageRenderTimes,
+      highResUpgradeTimes: this.metrics.highResUpgradeTimes
+    };
   }
 }
 

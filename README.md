@@ -68,6 +68,40 @@ Set options via data attributes on the container:
   - **Note:** Disabling WebGL (the default) seems to be more performant in most browsers.
 - `data-momentum` (number): Controls the speed of grab-and-scroll (momentum) for fast navigation. Default is 1. Higher values allow faster scrolling when dragging the document horizontally.
 
+## Performance Monitoring
+
+PDF-A-go-go includes a debug mode that provides detailed performance metrics for PDF loading and rendering. To enable debug mode, add the `data-debug="true"` attribute to your container:
+
+```html
+<div class="pdfagogo-container" 
+     data-pdf-url="./example.pdf"
+     data-debug="true"
+     ...></div>
+```
+
+When debug mode is enabled, the following metrics are logged to the console:
+- Initial render time for all pages
+- Individual page render times (both low and high resolution)
+- Average render times for low and high resolution pages
+- Total number of pages rendered and high-res upgrades
+
+You can also programmatically access these metrics using the `getPerformanceMetrics()` method:
+
+```javascript
+const viewer = document.querySelector('.pdfagogo-container').pdfViewer;
+const metrics = viewer.getPerformanceMetrics();
+console.log(metrics);
+```
+
+The metrics object includes:
+- `initialRenderTime`: Time taken for initial render of all pages (ms)
+- `averageLowResRenderTime`: Average time to render a page in low resolution (ms)
+- `averageHighResRenderTime`: Average time to upgrade a page to high resolution (ms)
+- `totalPagesRendered`: Total number of pages rendered
+- `totalHighResUpgrades`: Total number of high-res upgrades performed
+- `pageRenderTimes`: Object mapping page numbers to their low-res render times
+- `highResUpgradeTimes`: Object mapping page numbers to their high-res upgrade times
+
 ## Development
 
 To set up a local development environment:

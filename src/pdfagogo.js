@@ -88,6 +88,7 @@ function init(book, id, opts, cb) {
     if (map.showResizeGrip !== undefined) opts.showResizeGrip = parseBool(map.showResizeGrip, undefined);
     if (map.showDownload !== undefined) opts.showDownload = parseBool(map.showDownload, undefined);
     if (map.momentum !== undefined) opts.momentum = parseFloat(map.momentum) || 1.5;
+    if (map.debug !== undefined) opts.debug = parseBool(map.debug, false);
     return opts;
   }
 
