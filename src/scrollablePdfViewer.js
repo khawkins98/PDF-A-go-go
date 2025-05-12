@@ -28,11 +28,19 @@ export class ScrollablePdfViewer extends EventEmitter {
     // this.visiblePagesIndicator.style.color = "#1976d2";
     // this.app.insertBefore(this.visiblePagesIndicator, this.scrollContainer);
 
-    this._setupResizeHandler();
-    this._renderAllPages();
-    this._setupScrollHandler();
-    // Intersection Observer setup
     this._visiblePages = new Set();
+    this.initialRenderComplete = false;
+
+    this._setupResizeHandler();
+    this._renderAllPages().then(() => {
+      // After all pages are rendered in low-res, wait 200ms then upgrade visible pages
+      setTimeout(() => {
+        this.initialRenderComplete = true;
+        this._upgradeVisiblePagesToHighRes();
+        this.emit('initialRenderComplete');
+      }, 200);
+    });
+    this._setupScrollHandler();
     this._intersectionObserver = this._createIntersectionObserver();
     this._observeAllPages();
     this._setupGrabAndScroll();
@@ -87,37 +95,51 @@ export class ScrollablePdfViewer extends EventEmitter {
     return this.scrollContainer.clientHeight || 600;
   }
 
-  // Track which pages are visible
   _createIntersectionObserver() {
     const container = document.querySelector('body');
-    // Root is the scroll container, threshold 0.01+ for partial visibility
     return new window.IntersectionObserver(
       (entries) => {
         // Update the set of visible pages
-        this._visiblePages.clear();
-        let maxRatio = -1;
-        let mostVisiblePage = null;
-        for (const entry of entries) {
+        entries.forEach(entry => {
           const pageNum = parseInt(entry.target.getAttribute('data-page'), 10);
+          const canvas = this.pageCanvases[pageNum - 1];
+
           if (entry.isIntersecting) {
             this._visiblePages.add(pageNum);
-            if (entry.intersectionRatio > maxRatio) {
-              maxRatio = entry.intersectionRatio;
-              mostVisiblePage = pageNum;
+            // Only upgrade to high-res if initial render is complete
+            if (this.initialRenderComplete && canvas && canvas.getAttribute('data-resolution') !== 'high') {
+              this._renderPageWithResolution(pageNum - 1, 'high');
+            }
+          } else {
+            this._visiblePages.delete(pageNum);
+            // Always downgrade to low-res when moving out of view
+            if (canvas && canvas.getAttribute('data-resolution') !== 'low') {
+              this._renderPageWithResolution(pageNum - 1, 'low');
             }
           }
-        }
-        // Emit all visible pages (sorted)
+        });
+
+        // Emit visible pages
         const visiblePagesArr = Array.from(this._visiblePages).sort((a, b) => a - b);
         this.emit('visiblePages', visiblePagesArr);
-        // Emit the most visible page as 'seen'
+
+        // Find most visible page for 'seen' event
+        let maxRatio = -1;
+        let mostVisiblePage = null;
+        entries.forEach(entry => {
+          if (entry.isIntersecting && entry.intersectionRatio > maxRatio) {
+            maxRatio = entry.intersectionRatio;
+            mostVisiblePage = parseInt(entry.target.getAttribute('data-page'), 10);
+          }
+        });
         if (mostVisiblePage !== null) {
           this.emit('seen', mostVisiblePage);
         }
       },
       {
         root: container,
-        threshold: 0.3,
+        threshold: 0.1,
+        rootMargin: '100px 0px'
       }
     );
   }
@@ -138,55 +160,116 @@ export class ScrollablePdfViewer extends EventEmitter {
     // Remove any existing canvases
     this.scrollContainer.innerHTML = "";
     this.pageCanvases = {};
+
+    // Create a promise for each page render
+    const renderPromises = [];
     for (let i = 0; i < this.pageCount; i++) {
-      this._renderPage(i);
+      const promise = new Promise((resolve) => {
+        const canvas = document.createElement("canvas");
+        canvas.className = "pdfagogo-page-canvas";
+        canvas.setAttribute("tabindex", "0");
+        canvas.setAttribute("data-page", i + 1);
+        canvas.setAttribute("data-resolution", "low");
+
+        // Set initial geometry immediately
+        this.book.getPage(i, (err, pg) => {
+          if (err) {
+            resolve();
+            return;
+          }
+          const targetHeight = this._getPageHeight();
+          const aspect = pg.width / pg.height;
+          const width = targetHeight * aspect;
+
+          // Set canvas style dimensions immediately
+          canvas.style.height = targetHeight + "px";
+          canvas.style.width = width + "px";
+
+          // Now proceed with actual rendering
+          const scale = 0.25; // Start with low resolution
+          canvas.width = width * scale;
+          canvas.height = targetHeight * scale;
+          // renderPdfPageToCanvas(canvas, pg, targetHeight, scale);
+          resolve();
+        });
+
+        this.pageCanvases[i] = canvas;
+        this.scrollContainer.appendChild(canvas);
+      });
+      renderPromises.push(promise);
     }
-    // After rendering, re-observe all pages
-    if (this._intersectionObserver) {
-      this._observeAllPages();
-    }
+
+    return Promise.all(renderPromises);
   }
 
   _resizeAllPages() {
-    // Refactored: returns a Promise that resolves when all pages are redrawn
+    this.initialRenderComplete = false;
     const renderPromises = [];
+
+    // First render all pages in low res
     for (let i = 0; i < this.pageCount; i++) {
       const canvas = this.pageCanvases[i];
       if (canvas) {
-        const highlights = window.__pdfagogo__highlights ? window.__pdfagogo__highlights[i] : undefined;
-        // Wrap each render in a Promise
         const p = new Promise((resolve) => {
-          this.book.getPage(i, (err, pg) => {
-            if (err) return resolve();
-            const scale = this.options.scale || 1.8;
-            renderPdfPageToCanvas(canvas, pg, this._getPageHeight(), scale);
-            resolve();
-          }, highlights);
+          this._renderPageWithResolution(i, 'low', resolve);
         });
         renderPromises.push(p);
       }
     }
-    // After resizing, re-observe all pages
+
+    // After all pages are rendered in low res, upgrade visible pages
+    Promise.all(renderPromises).then(() => {
+      setTimeout(() => {
+        this.initialRenderComplete = true;
+        this._upgradeVisiblePagesToHighRes();
+      }, 200);
+    });
+
     if (this._intersectionObserver) {
       this._observeAllPages();
     }
+
     return Promise.all(renderPromises);
   }
 
-  _renderPage(ndx) {
-    const canvas = document.createElement("canvas");
-    canvas.className = "pdfagogo-page-canvas";
-    canvas.setAttribute("tabindex", "0");
-    canvas.setAttribute("data-page", ndx + 1);
-    this.pageCanvases[ndx] = canvas;
-    this.scrollContainer.appendChild(canvas);
-    // Render PDF page
+  _renderPageWithResolution(ndx, resolution, callback = null) {
+    // console.log('renderPageWithResolution', ndx, resolution);
+    const canvas = this.pageCanvases[ndx];
+    if (!canvas) return;
+
+    const scale = resolution === 'high' ? (this.options.scale || 1.8) : 0.25;
     const highlights = window.__pdfagogo__highlights ? window.__pdfagogo__highlights[ndx] : undefined;
+
     this.book.getPage(ndx, (err, pg) => {
-      if (err) return;
-      const scale = this.options.scale || 1.8;
-      renderPdfPageToCanvas(canvas, pg, this._getPageHeight(), scale);
+      if (err) {
+        if (callback) callback();
+        return;
+      }
+      const targetHeight = this._getPageHeight();
+      const aspect = pg.width / pg.height;
+      const width = targetHeight * aspect;
+
+      // Canvas style dimensions should already be set, but ensure they are correct
+      canvas.style.height = targetHeight + "px";
+      canvas.style.width = width + "px";
+
+      // Update canvas buffer dimensions and render
+      canvas.width = width * scale;
+      canvas.height = targetHeight * scale;
+      renderPdfPageToCanvas(canvas, pg, targetHeight, scale);
+      canvas.setAttribute('data-resolution', resolution);
+      if (callback) callback();
     }, highlights);
+  }
+
+  _upgradeVisiblePagesToHighRes() {
+    // Upgrade visible pages to high res
+    this._visiblePages.forEach(pageNum => {
+      const canvas = this.pageCanvases[pageNum - 1];
+      if (canvas && canvas.getAttribute('data-resolution') !== 'high') {
+        this._renderPageWithResolution(pageNum - 1, 'high');
+      }
+    });
   }
 
   _updateVisiblePages() {
@@ -386,15 +469,17 @@ export class ScrollablePdfViewer extends EventEmitter {
   }
 
   rerenderPage(ndx) {
-    // console.log('rerenderPage');
     const canvas = this.pageCanvases[ndx];
     if (!canvas) return;
-    const highlights = window.__pdfagogo__highlights ? window.__pdfagogo__highlights[ndx] : undefined;
-    this.book.getPage(ndx, (err, pg) => {
-      if (err) return;
-      const scale = this.options.scale || 1.8;
-      renderPdfPageToCanvas(canvas, pg, this._getPageHeight(), 2);
-    }, highlights);
+
+    // Always start with low res, then upgrade if visible and initial render is complete
+    this._renderPageWithResolution(ndx, 'low', () => {
+      if (this.initialRenderComplete && this._visiblePages.has(ndx + 1)) {
+        setTimeout(() => {
+          this._renderPageWithResolution(ndx, 'high');
+        }, 200);
+      }
+    });
   }
 }
 

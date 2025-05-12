@@ -193,7 +193,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
   if (shareBtn)
     shareBtn.onclick = () => {
       const page = currentPage + 1;
-      const shareUrl = `${window.location.origin}${window.location.pathname}#page=${page}`;
+      const shareUrl = `${window.location.origin}${window.location.pathname}#pdf-page=${page}`;
       navigator.clipboard.writeText(shareUrl);
       alert("Share link copied to clipboard:\n" + shareUrl);
     };
@@ -438,7 +438,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
 
   // --- Hash-based page navigation ---
   function getPageFromHash() {
-    const match = window.location.hash.match(/page=(\d+)/);
+    const match = window.location.hash.match(/pdf-page=(\d+)/);
     if (match) {
       const pageNum = parseInt(match[1], 10);
       if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= pdf.numPages) {
@@ -448,14 +448,21 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     return null;
   }
   function goToHashPage() {
+    // console.log('goToHashPage');
     const pageNum = getPageFromHash();
     if (pageNum) {
-      setPageByNumber(pageNum);
-      window.__pdfagogo__pageSetBy = 'hash';
+      setTimeout(() => {
+        // console.log('goToHashPage', pageNum);
+        setPageByNumber(pageNum);
+        window.__pdfagogo__pageSetBy = 'hash';
+      }, 200);
     }
   }
-  // Go to page on load if hash is present
-  goToHashPage();
+  // Wait for initial render before going to hash page
+  viewer.on('initialRenderComplete', () => {
+    // console.log('initialRenderComplete');
+    goToHashPage();
+  });
   // Listen for hash changes
   window.addEventListener("hashchange", goToHashPage);
   // If no hash, use defaultPage from options
@@ -479,7 +486,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       alert("Invalid page number");
       return;
     }
-    window.location.hash = `page=${pageNum}`;
+    window.location.hash = `pdf-page=${pageNum}`;
     originalSetPageByNumber(pageNum);
   };
 
