@@ -7,11 +7,7 @@
   background: #353535;
   text-align: center;
   position: relative;
-  /*
-   * IMPORTANT: Allow horizontal scrolling. If set to hidden, users cannot scroll to see wide or double-page PDFs on small screens,
-   * causing a viewing glitch where content is clipped. Do not change to overflow-x: hidden!
-   */
-  overflow-x: auto;
+  overflow-x: hidden;
 }
 @media (min-width: 768px) {
   .pdfagogo-container {

@@ -264,14 +264,6 @@ export class ScrollablePdfViewer extends EventEmitter {
     this.emit("seen", pageNum);
   }
 
-  get showNdx() {
-    return this.currentPage;
-  }
-
-  set showNdx(val) {
-    this.go_to_page(val);
-  }
-
   on(event, handler) {
     super.on(event, handler);
   }

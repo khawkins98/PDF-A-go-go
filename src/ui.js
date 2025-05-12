@@ -173,6 +173,9 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     );
   }
 
+  // Track the current page number using the 'seen' event
+  let currentPage = 0;
+
   // --- Event wiring and logic ---
 
   // Navigation buttons
@@ -189,7 +192,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
   const shareBtn = document.querySelector(".pdfagogo-share");
   if (shareBtn)
     shareBtn.onclick = () => {
-      const page = viewer.showNdx ? viewer.showNdx + 1 : 1;
+      const page = currentPage + 1;
       const shareUrl = `${window.location.origin}${window.location.pathname}#page=${page}`;
       navigator.clipboard.writeText(shareUrl);
       alert("Share link copied to clipboard:\n" + shareUrl);
@@ -249,8 +252,8 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     ".pdfagogo-page-indicator"
   );
   function updatePage(n) {
+    currentPage = parseInt(n);
     const totalPages = book.numPages();
-    const currentPage = parseInt(n);
     if (pageIndicator)
       pageIndicator.textContent = `Page: ${currentPage} / ${totalPages}`;
     if (pageAnnouncement)
@@ -387,13 +390,8 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
   function updateNavArrows() {
     if (!prevBtn || !nextBtn) return;
     let isFirst, isLast;
-    if (featureOptions.spreadMode) {
-      isFirst = viewer.showNdx === 0;
-      isLast = viewer.showNdx === (pdf.numPages - 1);
-    } else {
-      isFirst = viewer.showNdx === 0;
-      isLast = (viewer.showNdx) >= pdf.numPages;
-    }
+    isFirst = currentPage === 0;
+    isLast = currentPage >= pdf.numPages;
     prevBtn.style.visibility = isFirst ? 'hidden' : '';
     nextBtn.style.visibility = isLast ? 'hidden' : '';
     setTimeout(() => {
@@ -512,7 +510,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       document.addEventListener('mousemove', onMouseMove);
       document.addEventListener('mouseup', onMouseUp);
       document.addEventListener('touchmove', onMouseMove, { passive: false });
-      document.addEventListener('touchend', onMouseUp);
+      // document.addEventListener('touchend', onMouseUp);
       e.preventDefault();
     }
 
@@ -533,25 +531,26 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
      * Handler for when the user releases the resize grip (mouse/touch up).
      * Cleans up event listeners, redraws the PDF pages, and restores the scroll position to the current page.
      */
-    async function onMouseUp(e) {
-      isResizing = false;
-      document.body.style.cursor = '';
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-      document.removeEventListener('touchmove', onMouseMove);
-      document.removeEventListener('touchend', onMouseUp);
-      // Only redraw after resizing ends
-      // Store the current page index so we can restore the scroll position after redraw
-      let currentPage = (typeof viewer.showNdx === 'number') ? viewer.showNdx : (viewer.currentPage || 0);
-      if (typeof viewer?._resizeAllPages === 'function') {
-        await viewer._resizeAllPages();
-      }
-      // Restore the scroll position to the same page after resizing
-      if (typeof viewer?.go_to_page === 'function') {
-        viewer.go_to_page(currentPage);
-      }
-      e.preventDefault();
-    }
+    // Redundant with viewer.on("seen", updateNavArrows);
+    // async function onMouseUp(e) {
+    //   isResizing = false;
+    //   document.body.style.cursor = '';
+    //   document.removeEventListener('mousemove', onMouseMove);
+    //   document.removeEventListener('mouseup', onMouseUp);
+    //   document.removeEventListener('touchmove', onMouseMove);
+    //   document.removeEventListener('touchend', onMouseUp);
+    //   // Only redraw after resizing ends
+    //   // Store the current page index so we can restore the scroll position after redraw
+    //   let currentPage = (typeof viewer.showNdx === 'number') ? viewer.showNdx : (viewer.currentPage || 0);
+    //   if (typeof viewer?._resizeAllPages === 'function') {
+    //     await viewer._resizeAllPages();
+    //   }
+    //   // Restore the scroll position to the same page after resizing
+    //   if (typeof viewer?.go_to_page === 'function') {
+    //     viewer.go_to_page(currentPage);
+    //   }
+    //   e.preventDefault();
+    // }
 
     // Attach event listeners to the resize grip for mouse and touch support
     resizeGrip.addEventListener('mousedown', onMouseDown);
