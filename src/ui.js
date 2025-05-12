@@ -531,26 +531,25 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
      * Handler for when the user releases the resize grip (mouse/touch up).
      * Cleans up event listeners, redraws the PDF pages, and restores the scroll position to the current page.
      */
-    // Redundant with viewer.on("seen", updateNavArrows);
-    // async function onMouseUp(e) {
-    //   isResizing = false;
-    //   document.body.style.cursor = '';
-    //   document.removeEventListener('mousemove', onMouseMove);
-    //   document.removeEventListener('mouseup', onMouseUp);
-    //   document.removeEventListener('touchmove', onMouseMove);
-    //   document.removeEventListener('touchend', onMouseUp);
-    //   // Only redraw after resizing ends
-    //   // Store the current page index so we can restore the scroll position after redraw
-    //   let currentPage = (typeof viewer.showNdx === 'number') ? viewer.showNdx : (viewer.currentPage || 0);
-    //   if (typeof viewer?._resizeAllPages === 'function') {
-    //     await viewer._resizeAllPages();
-    //   }
-    //   // Restore the scroll position to the same page after resizing
-    //   if (typeof viewer?.go_to_page === 'function') {
-    //     viewer.go_to_page(currentPage);
-    //   }
-    //   e.preventDefault();
-    // }
+    async function onMouseUp(e) {
+      isResizing = false;
+      document.body.style.cursor = '';
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      document.removeEventListener('touchmove', onMouseMove);
+      document.removeEventListener('touchend', onMouseUp);
+      // Only redraw after resizing ends
+      // Store the current page index so we can restore the scroll position after redraw
+      let currentPage = (typeof viewer.showNdx === 'number') ? viewer.showNdx : (viewer.currentPage || 0);
+      if (typeof viewer?._resizeAllPages === 'function') {
+        await viewer._resizeAllPages();
+      }
+      // Restore the scroll position to the same page after resizing
+      if (typeof viewer?.go_to_page === 'function') {
+        viewer.go_to_page(currentPage);
+      }
+      e.preventDefault();
+    }
 
     // Attach event listeners to the resize grip for mouse and touch support
     resizeGrip.addEventListener('mousedown', onMouseDown);

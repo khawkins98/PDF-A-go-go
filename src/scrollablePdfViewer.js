@@ -262,7 +262,7 @@ export class ScrollablePdfViewer extends EventEmitter {
     // Center the given page
     const pageWidth = this._getPageWidth() + 24;
     const left = Math.max(0, pageWidth * pageNum);
-    console.log('left', left);
+    // console.log('left', left);
     this.scrollContainer.scrollTo({
       left,
       behavior: "smooth"
@@ -386,7 +386,7 @@ export class ScrollablePdfViewer extends EventEmitter {
   }
 
   rerenderPage(ndx) {
-    console.log('rerenderPage');
+    // console.log('rerenderPage');
     const canvas = this.pageCanvases[ndx];
     if (!canvas) return;
     const highlights = window.__pdfagogo__highlights ? window.__pdfagogo__highlights[ndx] : undefined;
