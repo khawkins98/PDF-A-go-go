@@ -159,6 +159,7 @@
   -webkit-tap-highlight-color: transparent;
   contain: layout style paint size;
   will-change: transform;
+  z-index: 1;
 }
 
 /* Center the first page */
@@ -182,6 +183,8 @@
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   -webkit-tap-highlight-color: transparent;
+  z-index: 1;
+  pointer-events: none;
 }
 
 .pdfagogo-text-layer {
@@ -193,9 +196,15 @@
   overflow: hidden;
   opacity: 0.2;
   line-height: 1.0;
-  pointer-events: none;
+  pointer-events: auto;
   mix-blend-mode: multiply;
   border-radius: 8px;
+  transition: opacity 0.2s ease-in-out;
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  z-index: 2;
 }
 
 .pdfagogo-text-layer span {
@@ -204,25 +213,40 @@
   white-space: pre;
   cursor: text;
   transform-origin: 0% 0%;
-  pointer-events: all;
+  pointer-events: auto;
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  -webkit-touch-callout: text;
+  touch-action: auto;
 }
 
 /* Show text on selection */
 .pdfagogo-text-layer span::selection {
-  background: rgba(0, 0, 255, 0.3);
-  color: transparent;
+  background: rgba(0, 0, 255, 0.3) !important;
+  color: transparent !important;
+}
+
+.pdfagogo-text-layer span::-moz-selection {
+  background: rgba(0, 0, 255, 0.3) !important;
+  color: transparent !important;
 }
 
 /* Make text visible on hover for accessibility */
 .pdfagogo-text-layer:hover {
-  opacity: 1;
-  background: rgba(255, 255, 255, 0.9);
+  opacity: 0.7;
+  background: rgba(255, 255, 255, 0.95);
+  mix-blend-mode: normal;
+  pointer-events: auto;
 }
 
-.pdfagogo-text-layer:hover span {
-  color: black;
-}
+/* For debugging */
+/* .pdfagogo-text-layer:hover span {
+  color: rgba(0, 0, 0, 0.8);
+} */
 
+/* Improve visibility on mobile */
 @media (max-width: 768px) {
   .pdfagogo-page-wrapper {
     margin: 0 0.75rem;
@@ -230,7 +254,11 @@
   }
 
   .pdfagogo-text-layer {
-    opacity: 0.1;
+    opacity: 0.15;
+  }
+
+  .pdfagogo-text-layer:hover {
+    opacity: 0.8;
   }
 }
 

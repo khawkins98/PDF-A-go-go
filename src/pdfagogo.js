@@ -138,7 +138,6 @@ function init(book, id, opts, cb) {
             .getPage(pageNum)
             .then(async function (page) {
               const scale = window.devicePixelRatio || 1.8;
-              // const scale = 3;
               const viewport = page.getViewport({ scale });
               const canvas = document.createElement("canvas");
               const context = canvas.getContext("2d");
@@ -173,6 +172,8 @@ function init(book, id, opts, cb) {
                 img: canvas,
                 width: viewport.width,
                 height: viewport.height,
+                getTextContent: () => page.getTextContent(),
+                getViewport: (opts) => page.getViewport(opts)
               });
             })
             .catch(function (err) {

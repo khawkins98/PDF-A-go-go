@@ -227,7 +227,7 @@ export class ScrollablePdfViewer extends EventEmitter {
       const promise = new Promise((resolve) => {
         const wrapper = document.createElement('div');
         wrapper.className = 'pdfagogo-page-wrapper';
-        
+
         const canvas = document.createElement("canvas");
         canvas.className = "pdfagogo-page-canvas";
         canvas.setAttribute("tabindex", "0");
@@ -400,20 +400,43 @@ export class ScrollablePdfViewer extends EventEmitter {
             // Clear existing text
             textLayer.innerHTML = '';
 
+            // Style text layer container
+            textLayer.style.width = width + "px";
+            textLayer.style.height = targetHeight + "px";
+            textLayer.style.position = 'absolute';
+            textLayer.style.left = '0';
+            textLayer.style.top = '0';
+            textLayer.style.right = '0';
+            textLayer.style.bottom = '0';
+            textLayer.style.overflow = 'hidden';
+            textLayer.style.opacity = '0.15';
+            textLayer.style.lineHeight = '1.0';
+            textLayer.style.userSelect = 'text';
+            textLayer.style.pointerEvents = 'auto';
+
             // Create text items
             textContent.items.forEach(item => {
               const tx = document.createElement('span');
               const transform = item.transform;
               const [a, b, c, d, e, f] = transform;
 
-              // Apply text positioning and styling
-              tx.style.transform = `matrix(${a}, ${b}, ${c}, ${d}, ${e * scale}, ${f * scale})`;
-              tx.style.fontSize = `${Math.sqrt(a * a + b * b) * 100}%`;
-              tx.textContent = item.str;
+              // Scale factors - account for both viewport scaling and canvas size
+              const scaleX = (width / canvas.width) * viewport.scale * 1.15;
+              const scaleY = (targetHeight / canvas.height) * viewport.scale * 1.16;
 
-              if (item.dir === 'rtl') {
-                tx.dir = 'rtl';
-              }
+              // Position and style the text
+              tx.textContent = item.str;
+              tx.style.position = 'absolute';
+              tx.style.left = '0';
+              tx.style.top = '0';
+              tx.style.fontFamily = item.fontName || 'sans-serif';
+              tx.style.fontSize = '1px';
+              tx.style.whiteSpace = 'pre';
+              tx.style.transformOrigin = '0% 0%';
+              // Invert the y-coordinate to flip text order top-to-bottom
+              tx.style.transform = `matrix(${a * scaleX}, ${b * scaleY}, ${c * scaleX}, ${d * scaleY}, ${e * scaleX}, ${targetHeight - (f * scaleY)})`;
+              tx.style.pointerEvents = 'auto';
+              tx.dataset.isSelectableText = true;
 
               textLayer.appendChild(tx);
             });
@@ -488,12 +511,12 @@ export class ScrollablePdfViewer extends EventEmitter {
       // Check if the wrapper is visible in the container
       if (rect.right > containerRect.left && rect.left < containerRect.right) {
         visiblePages.push(pageNum); // 1-based
-        
+
         // Calculate how much of the page is visible
-        const visibleWidth = Math.min(rect.right, containerRect.right) - 
+        const visibleWidth = Math.min(rect.right, containerRect.right) -
                            Math.max(rect.left, containerRect.left);
         const percentVisible = visibleWidth / rect.width;
-        
+
         // Track the most visible page
         if (percentVisible > maxVisibleRatio) {
           maxVisibleRatio = percentVisible;
@@ -574,10 +597,10 @@ export class ScrollablePdfViewer extends EventEmitter {
     const containerWidth = this.scrollContainer.clientWidth;
     const wrapperRect = wrapper.getBoundingClientRect();
     const containerRect = this.scrollContainer.getBoundingClientRect();
-    
+
     // Calculate scroll position to center the page
     const scrollLeft = wrapper.offsetLeft - (containerWidth - wrapperRect.width) / 2;
-    
+
     this.scrollContainer.scrollTo({
       left: Math.max(0, scrollLeft),
       behavior: "smooth"
