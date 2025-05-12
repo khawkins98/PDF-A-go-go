@@ -13,6 +13,16 @@ export class ScrollablePdfViewer extends EventEmitter {
     this.scrollContainer.className = "pdfagogo-scroll-container";
     this.app.appendChild(this.scrollContainer);
 
+    // Add inner container for proper centering
+    this.pagesContainer = document.createElement("div");
+    this.pagesContainer.className = "pdfagogo-pages-container";
+    this.pagesContainer.style.display = "flex";
+    this.pagesContainer.style.flexDirection = "row";
+    this.pagesContainer.style.alignItems = "center";
+    this.pagesContainer.style.minWidth = "100%";
+    this.pagesContainer.style.height = "100%";
+    this.scrollContainer.appendChild(this.pagesContainer);
+
     /**
      * Debug mode for performance metrics
      * Set via options.debug (from data-debug attribute)
@@ -118,7 +128,6 @@ export class ScrollablePdfViewer extends EventEmitter {
       }
       scrollTimeout = setTimeout(() => {
         this._updateVisiblePages();
-        this._updateCurrentPage();
         scrollTimeout = null;
       }, 100);
     });
@@ -209,18 +218,22 @@ export class ScrollablePdfViewer extends EventEmitter {
     }
 
     // Remove any existing canvases
-    this.scrollContainer.innerHTML = "";
+    this.pagesContainer.innerHTML = "";
     this.pageCanvases = {};
 
     // Create a promise for each page render
     const renderPromises = [];
     for (let i = 0; i < this.pageCount; i++) {
       const promise = new Promise((resolve) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'pdfagogo-page-wrapper';
+        
         const canvas = document.createElement("canvas");
         canvas.className = "pdfagogo-page-canvas";
         canvas.setAttribute("tabindex", "0");
         canvas.setAttribute("data-page", i + 1);
         canvas.setAttribute("data-resolution", "low");
+        wrapper.appendChild(canvas);
 
         // Set initial geometry immediately
         this.book.getPage(i, (err, pg) => {
@@ -232,20 +245,19 @@ export class ScrollablePdfViewer extends EventEmitter {
           const aspect = pg.width / pg.height;
           const width = targetHeight * aspect;
 
-          // Set canvas style dimensions immediately
-          canvas.style.height = targetHeight + "px";
+          wrapper.style.width = width + "px";
+          wrapper.style.height = targetHeight + "px";
           canvas.style.width = width + "px";
+          canvas.style.height = targetHeight + "px";
 
-          // Now proceed with actual rendering
-          const scale = 0.25; // Start with low resolution
+          const scale = 0.25;
           canvas.width = width * scale;
           canvas.height = targetHeight * scale;
-          // renderPdfPageToCanvas(canvas, pg, targetHeight, scale);
           resolve();
         });
 
         this.pageCanvases[i] = canvas;
-        this.scrollContainer.appendChild(canvas);
+        this.pagesContainer.appendChild(wrapper);
       });
       renderPromises.push(promise);
     }
@@ -294,11 +306,10 @@ export class ScrollablePdfViewer extends EventEmitter {
     const canvas = this.pageCanvases[ndx];
     if (!canvas) return;
 
-    // Adjust scale based on device pixel ratio and screen size
     const baseScale = resolution === 'high' ? (this.options.scale || 1.8) : 0.25;
     const isMobile = window.innerWidth <= 768;
-    const scale = isMobile ? baseScale * 0.75 : baseScale; // Reduce scale on mobile
-    
+    const scale = isMobile ? baseScale * 0.75 : baseScale;
+
     const highlights = window.__pdfagogo__highlights ? window.__pdfagogo__highlights[ndx] : undefined;
 
     this.book.getPage(ndx, (err, pg) => {
@@ -306,31 +317,62 @@ export class ScrollablePdfViewer extends EventEmitter {
         if (callback) callback();
         return;
       }
+
       const targetHeight = this._getPageHeight();
       const aspect = pg.width / pg.height;
       const width = targetHeight * aspect;
 
-      // Canvas style dimensions should already be set, but ensure they are correct
-      canvas.style.height = targetHeight + "px";
+      // Create or get wrapper div for canvas and text layer
+      let wrapper = canvas.parentElement;
+      if (!wrapper || !wrapper.classList.contains('pdfagogo-page-wrapper')) {
+        wrapper = document.createElement('div');
+        wrapper.className = 'pdfagogo-page-wrapper';
+        canvas.parentElement.insertBefore(wrapper, canvas);
+        wrapper.appendChild(canvas);
+      }
+
+      // Set wrapper dimensions
+      wrapper.style.width = width + "px";
+      wrapper.style.height = targetHeight + "px";
+      wrapper.style.position = 'relative';
+
+      // Set canvas dimensions
       canvas.style.width = width + "px";
+      canvas.style.height = targetHeight + "px";
       canvas.width = width * scale;
       canvas.height = targetHeight * scale;
 
-      // Use lower quality settings on mobile for better performance
+      // Get or create text layer
+      let textLayer = wrapper.querySelector('.pdfagogo-text-layer');
+      if (!textLayer) {
+        textLayer = document.createElement('div');
+        textLayer.className = 'pdfagogo-text-layer';
+        wrapper.appendChild(textLayer);
+      }
+
+      // Style text layer
+      textLayer.style.width = width + "px";
+      textLayer.style.height = targetHeight + "px";
+
+      // Clear existing text content
+      textLayer.innerHTML = '';
+
+      // Render canvas content
       const ctx = canvas.getContext("2d", {
         alpha: false,
         willReadFrequently: false
       });
-      
+
       if (isMobile) {
         ctx.imageSmoothingQuality = 'low';
       }
 
-      // Clear canvas before drawing
       ctx.fillStyle = '#fff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Draw the page
+      const renderPromises = [];
+
+      // Draw the page image
       if (pg.img) {
         ctx.drawImage(pg.img, 0, 0, canvas.width, canvas.height);
       }
@@ -348,21 +390,60 @@ export class ScrollablePdfViewer extends EventEmitter {
         });
       }
 
-      if (this.debug) {
-        const endTime = performance.now();
-        const duration = endTime - startTime;
-        if (resolution === 'high') {
-          this.metrics.highResUpgradeTimes[ndx] = duration;
-          this.metrics.totalHighResUpgrades++;
-        } else {
-          this.metrics.pageRenderTimes[ndx] = duration;
-          this.metrics.totalPagesRendered++;
-        }
-        this._updateDebugInfo(); // Update immediately after render
+      // Only render text layer for high resolution
+      if (resolution === 'high' && pg.getTextContent) {
+        const viewport = pg.getViewport({ scale });
+
+        // Get text content
+        renderPromises.push(
+          pg.getTextContent().then(textContent => {
+            // Clear existing text
+            textLayer.innerHTML = '';
+
+            // Create text items
+            textContent.items.forEach(item => {
+              const tx = document.createElement('span');
+              const transform = item.transform;
+              const [a, b, c, d, e, f] = transform;
+
+              // Apply text positioning and styling
+              tx.style.transform = `matrix(${a}, ${b}, ${c}, ${d}, ${e * scale}, ${f * scale})`;
+              tx.style.fontSize = `${Math.sqrt(a * a + b * b) * 100}%`;
+              tx.textContent = item.str;
+
+              if (item.dir === 'rtl') {
+                tx.dir = 'rtl';
+              }
+
+              textLayer.appendChild(tx);
+            });
+
+            // Make text layer visible
+            textLayer.style.display = 'block';
+          })
+        );
+      } else {
+        // Hide text layer for low resolution
+        textLayer.style.display = 'none';
       }
 
-      canvas.setAttribute('data-resolution', resolution);
-      if (callback) callback();
+      Promise.all(renderPromises).then(() => {
+        if (this.debug) {
+          const endTime = performance.now();
+          const duration = endTime - startTime;
+          if (resolution === 'high') {
+            this.metrics.highResUpgradeTimes[ndx] = duration;
+            this.metrics.totalHighResUpgrades++;
+          } else {
+            this.metrics.pageRenderTimes[ndx] = duration;
+            this.metrics.totalPagesRendered++;
+          }
+          this._updateDebugInfo();
+        }
+
+        canvas.setAttribute('data-resolution', resolution);
+        if (callback) callback();
+      });
     }, highlights);
   }
 
@@ -394,25 +475,46 @@ export class ScrollablePdfViewer extends EventEmitter {
     const container = this.scrollContainer;
     const containerRect = container.getBoundingClientRect();
     const visiblePages = [];
-    for (let i = 0; i < this.pageCount; i++) {
-      const canvas = this.pageCanvases[i];
-      if (!canvas) continue;
-      const rect = canvas.getBoundingClientRect();
-      // Check if the canvas is visible in the container (horizontal scroll)
-      if (
-        rect.right > containerRect.left &&
-        rect.left < containerRect.right
-      ) {
-        visiblePages.push(i + 1); // 1-based
+    let maxVisiblePage = null;
+    let maxVisibleRatio = 0;
+
+    // Look for wrapper divs instead of canvases directly
+    const wrappers = container.querySelectorAll('.pdfagogo-page-wrapper');
+    wrappers.forEach(wrapper => {
+      const pageNum = parseInt(wrapper.querySelector('canvas')?.getAttribute('data-page'), 10);
+      if (!pageNum) return;
+
+      const rect = wrapper.getBoundingClientRect();
+      // Check if the wrapper is visible in the container
+      if (rect.right > containerRect.left && rect.left < containerRect.right) {
+        visiblePages.push(pageNum); // 1-based
+        
+        // Calculate how much of the page is visible
+        const visibleWidth = Math.min(rect.right, containerRect.right) - 
+                           Math.max(rect.left, containerRect.left);
+        const percentVisible = visibleWidth / rect.width;
+        
+        // Track the most visible page
+        if (percentVisible > maxVisibleRatio) {
+          maxVisibleRatio = percentVisible;
+          maxVisiblePage = pageNum;
+        }
+      }
+    });
+
+    // Update current page if we found a most visible page
+    if (maxVisiblePage !== null && maxVisibleRatio > 0.5) {
+      const newPage = maxVisiblePage - 1; // Convert to 0-based
+      if (this.currentPage !== newPage) {
+        this.currentPage = newPage;
+        this.emit("seen", maxVisiblePage);
+        if (this.debug) {
+          console.log(`[PDF-A-go-go Debug] Current page changed to ${maxVisiblePage}`);
+        }
       }
     }
-    // Output visible page numbers to the indicator
-    // if (visiblePages.length > 0) {
-    //   this.visiblePagesIndicator.textContent =
-    //     "Visible pages: " + visiblePages.join(", ");
-    // } else {
-    //   this.visiblePagesIndicator.textContent = "Visible pages: (none)";
-    // }
+
+    this._visiblePages = new Set(visiblePages);
     this.emit("visiblePages", visiblePages);
   }
 
@@ -442,11 +544,17 @@ export class ScrollablePdfViewer extends EventEmitter {
   }
 
   flip_forward() {
-    this.scrollBy(0.8);
+    const nextPage = this.currentPage + 1;
+    if (nextPage < this.pageCount) {
+      this.go_to_page(nextPage);
+    }
   }
 
   flip_back() {
-    this.scrollBy(-0.8);
+    const prevPage = this.currentPage - 1;
+    if (prevPage >= 0) {
+      this.go_to_page(prevPage);
+    }
   }
 
   scrollBy(pages) {
@@ -460,15 +568,28 @@ export class ScrollablePdfViewer extends EventEmitter {
   // Change the view to show a specific page
   go_to_page(pageNum) {
     // Center the given page
-    const pageWidth = this._getPageWidth() + 24;
-    const left = Math.max(0, pageWidth * pageNum);
-    // console.log('left', left);
+    const wrapper = this.pageCanvases[pageNum]?.parentElement;
+    if (!wrapper) return;
+
+    const containerWidth = this.scrollContainer.clientWidth;
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const containerRect = this.scrollContainer.getBoundingClientRect();
+    
+    // Calculate scroll position to center the page
+    const scrollLeft = wrapper.offsetLeft - (containerWidth - wrapperRect.width) / 2;
+    
     this.scrollContainer.scrollTo({
-      left,
+      left: Math.max(0, scrollLeft),
       behavior: "smooth"
     });
+
+    // Update current page immediately
     this.currentPage = pageNum;
-    this.emit("seen", pageNum);
+    this.emit("seen", pageNum + 1); // Emit 1-based page number
+
+    if (this.debug) {
+      console.log(`[PDF-A-go-go Debug] Navigated to page ${pageNum + 1}`);
+    }
   }
 
   on(event, handler) {
@@ -503,14 +624,14 @@ export class ScrollablePdfViewer extends EventEmitter {
 
     const onMove = (e) => {
       if (!isDown) return;
-      
+
       const x = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
       const y = e.type.startsWith('touch') ? e.touches[0].pageY : e.pageY;
       const dx = x - lastX;
       const dy = y - lastY;
       const now = Date.now();
       const dt = now - lastTime;
-      
+
       if (!isHorizontalDrag && Math.abs(dx) > 5) {
         if (Math.abs(dx) > Math.abs(dy)) {
           isHorizontalDrag = true;
@@ -546,7 +667,7 @@ export class ScrollablePdfViewer extends EventEmitter {
           const elapsed = Date.now() - startTime;
           const deceleration = 0.002; // pixels per ms^2
           const remaining = startVelocity * Math.exp(-deceleration * elapsed);
-          
+
           if (Math.abs(remaining) > 0.01 && elapsed < 500) {
             container.scrollLeft = startScroll - (startVelocity / deceleration) * (1 - Math.exp(-deceleration * elapsed));
             requestAnimationFrame(animate);
@@ -615,11 +736,11 @@ export class ScrollablePdfViewer extends EventEmitter {
 
   _cleanupOffscreenPages(force = false) {
     if (this.debug) console.log('[PDF-A-go-go Debug] Running memory cleanup');
-    
+
     const visiblePages = Array.from(this._visiblePages);
     const start = Math.min(...visiblePages);
     const end = Math.max(...visiblePages);
-    
+
     // Keep a buffer of pages in each direction (smaller on mobile)
     const buffer = this.isMobile ? 1 : 2;
     const keepRange = new Set();
@@ -628,15 +749,15 @@ export class ScrollablePdfViewer extends EventEmitter {
         keepRange.add(i);
       }
     }
-    
+
     Object.keys(this.pageCanvases).forEach(pageNum => {
       pageNum = parseInt(pageNum);
       if (!keepRange.has(pageNum + 1) || force) {
         const canvas = this.pageCanvases[pageNum];
-        
+
         if (canvas && canvas.getContext) {
           const ctx = canvas.getContext('2d');
-          
+
           // Measure memory before cleanup
           if (this.debug) {
             const memoryBefore = canvas.width * canvas.height * 4;
@@ -645,14 +766,14 @@ export class ScrollablePdfViewer extends EventEmitter {
               timestamp: Date.now()
             };
           }
-          
+
           // Clear canvas and reduce its size
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           canvas.width = canvas.height = 32; // Minimal size to maintain layout
-          
+
           // Remove from render queue if present
           this.renderQueue = this.renderQueue.filter(item => item.ndx !== pageNum);
-          
+
           if (this.debug) {
             console.log(`[PDF-A-go-go Debug] Cleaned up page ${pageNum + 1}, freed ~${Math.round(this.metrics.memoryUsage[pageNum].freed / 1024 / 1024)}MB`);
           }
@@ -684,18 +805,18 @@ export class ScrollablePdfViewer extends EventEmitter {
     if (!this.debug || !this.debugElement) return;
 
     const now = Date.now();
-    const timeSinceStart = this.metrics.initialRenderEnd ? 
-      (this.metrics.initialRenderEnd - this.metrics.initialRenderStart).toFixed(2) : 
+    const timeSinceStart = this.metrics.initialRenderEnd ?
+      (this.metrics.initialRenderEnd - this.metrics.initialRenderStart).toFixed(2) :
       (now - this.metrics.initialRenderStart).toFixed(2);
 
-    const avgLowResTime = Object.values(this.metrics.pageRenderTimes).length ? 
-      (Object.values(this.metrics.pageRenderTimes).reduce((a, b) => a + b, 0) / 
-       Object.values(this.metrics.pageRenderTimes).length).toFixed(2) : 
+    const avgLowResTime = Object.values(this.metrics.pageRenderTimes).length ?
+      (Object.values(this.metrics.pageRenderTimes).reduce((a, b) => a + b, 0) /
+       Object.values(this.metrics.pageRenderTimes).length).toFixed(2) :
       'N/A';
 
-    const avgHighResTime = Object.values(this.metrics.highResUpgradeTimes).length ? 
-      (Object.values(this.metrics.highResUpgradeTimes).reduce((a, b) => a + b, 0) / 
-       Object.values(this.metrics.highResUpgradeTimes).length).toFixed(2) : 
+    const avgHighResTime = Object.values(this.metrics.highResUpgradeTimes).length ?
+      (Object.values(this.metrics.highResUpgradeTimes).reduce((a, b) => a + b, 0) /
+       Object.values(this.metrics.highResUpgradeTimes).length).toFixed(2) :
       'N/A';
 
     const totalMemoryFreed = Object.values(this.metrics.memoryUsage)
