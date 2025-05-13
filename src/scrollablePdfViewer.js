@@ -13,7 +13,7 @@ class RenderQueue {
     } else {
       this.queue.push(task);
     }
-    
+
     if (!this.isProcessing) {
       this.process();
     }
@@ -58,12 +58,12 @@ export class ScrollablePdfViewer extends EventEmitter {
     this.currentPage = 0;
     this.pageCanvases = {};
     this.renderQueue = new RenderQueue();
-    
+
     // Device detection
     this.isMobile = window.innerWidth <= 768;
     this.maxCachedPages = this.isMobile ? 3 : 5;
     this.visibleRange = this.isMobile ? 1 : 2; // Pages to render around current view
-    
+
     this.scrollContainer = document.createElement("div");
     this.scrollContainer.className = "pdfagogo-scroll-container";
     this.app.appendChild(this.scrollContainer);
@@ -108,7 +108,7 @@ export class ScrollablePdfViewer extends EventEmitter {
     this._setupScrollHandler();
     this._setupGrabAndScroll();
     this._setupWheelScrollHandler();
-    
+
     // Memory management
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
@@ -129,36 +129,62 @@ export class ScrollablePdfViewer extends EventEmitter {
       console.log('[PDF-A-go-go Debug] Starting initial render');
     }
 
-    // First pass: Create minimal canvas elements for all pages
+    // Create an off-screen container for initial setup
+    const offscreenContainer = document.createElement('div');
+    offscreenContainer.style.position = 'absolute';
+    offscreenContainer.style.visibility = 'hidden';
+    offscreenContainer.style.pointerEvents = 'none';
+    offscreenContainer.style.left = '-9999px';
+    offscreenContainer.style.top = '0';
+    offscreenContainer.style.zIndex = '-1';
+    offscreenContainer.className = 'pdfagogo-pages-container';
+    offscreenContainer.style.display = 'flex';
+    offscreenContainer.style.flexDirection = 'row';
+    offscreenContainer.style.alignItems = 'center';
+    offscreenContainer.style.minWidth = '100%';
+    offscreenContainer.style.height = '100%';
+    this.app.appendChild(offscreenContainer);
+
+    // First pass: Create placeholder canvases for all pages
+    const pageSetupPromises = [];
     for (let i = 0; i < this.pageCount; i++) {
       const wrapper = document.createElement('div');
       wrapper.className = 'pdfagogo-page-wrapper';
-      
+
       const canvas = document.createElement("canvas");
       canvas.className = "pdfagogo-page-canvas";
       canvas.setAttribute("tabindex", "0");
       canvas.setAttribute("data-page", i + 1);
       canvas.setAttribute("data-resolution", "placeholder");
-      
+
       wrapper.appendChild(canvas);
       this.pageCanvases[i] = canvas;
-      this.pagesContainer.appendChild(wrapper);
+      offscreenContainer.appendChild(wrapper);
 
-      // Set initial placeholder dimensions
-      await this._setPageDimensions(i);
+      // Calculate dimensions off-screen
+      pageSetupPromises.push(this._setPageDimensions(i));
     }
+
+    // Wait for all page dimensions to be calculated
+    await Promise.all(pageSetupPromises);
+
+    // Move all prepared pages to the visible container at once
+    while (offscreenContainer.firstChild) {
+      this.pagesContainer.appendChild(offscreenContainer.firstChild);
+    }
+    this.app.removeChild(offscreenContainer);
 
     // Second pass: Render only visible pages
     await this._updateVisiblePages();
     const visiblePages = Array.from(this._visiblePages);
-    
-    // Render visible pages in low res
+
+    // Render visible pages in high res
     const renderPromises = [];
     for (const pageNum of visiblePages) {
       renderPromises.push(
         new Promise(resolve => {
           this.renderQueue.add(
-            () => this._renderPageWithResolution(pageNum - 1, 'low', resolve),
+            () => this._renderPageWithResolution(pageNum - 1, resolve),
             true // Priority render for visible pages
           );
         })
@@ -172,11 +198,7 @@ export class ScrollablePdfViewer extends EventEmitter {
       console.log(`[PDF-A-go-go Debug] Initial render complete in ${this.metrics.initialRenderEnd - this.metrics.initialRenderStart}ms`);
     }
 
-    // Set a short timeout before triggering high-res renders
-    setTimeout(() => {
-      this.initialRenderComplete = true;
-      this._upgradeVisiblePagesToHighRes();
-    }, 100);
+    this.initialRenderComplete = true;
   }
 
   async _setPageDimensions(ndx) {
@@ -186,37 +208,62 @@ export class ScrollablePdfViewer extends EventEmitter {
           resolve();
           return;
         }
-        
+
         const canvas = this.pageCanvases[ndx];
         const wrapper = canvas.parentElement;
         const targetHeight = this._getPageHeight();
         const aspect = pg.width / pg.height;
         const width = targetHeight * aspect;
 
-        wrapper.style.width = width + "px";
-        wrapper.style.height = targetHeight + "px";
-        canvas.style.width = width + "px";
-        canvas.style.height = targetHeight + "px";
+        // Batch style changes to minimize reflows
+        const styles = {
+          wrapper: {
+            width: width + "px",
+            height: targetHeight + "px"
+          },
+          canvas: {
+            width: width + "px",
+            height: targetHeight + "px"
+          }
+        };
 
-        // Set minimal actual dimensions for placeholder
+        // Apply all style changes at once
+        Object.assign(wrapper.style, styles.wrapper);
+        Object.assign(canvas.style, styles.canvas);
+
+        // Set minimal actual dimensions for placeholder (doesn't trigger reflow)
         canvas.width = 32;
         canvas.height = 32;
-        
+
         resolve();
       });
     });
   }
 
-  _renderPageWithResolution(ndx, resolution, callback = null) {
+  _renderPageWithResolution(ndx, callback = null) {
     const canvas = this.pageCanvases[ndx];
     if (!canvas) return;
 
     const startTime = this.debug ? performance.now() : 0;
-    const baseScale = resolution === 'high' ? 
-      (this.options.scale || 1.8) : 
-      (this.isMobile ? 0.15 : 0.25);
-    
-    const scale = this.isMobile ? baseScale * 0.5 : baseScale;
+    const scale = this.options.scale || window.devicePixelRatio || 1.8;
+
+    // Add visual debug indicator for rendering start
+    if (this.debug) {
+      console.log(`%c🎨 Rendering page ${ndx + 1}`, 'color: #4CAF50; font-weight: bold;');
+      const debugOverlay = document.createElement('div');
+      debugOverlay.style.position = 'absolute';
+      debugOverlay.style.top = '0';
+      debugOverlay.style.right = '0';
+      debugOverlay.style.background = '#4CAF50';
+      debugOverlay.style.color = 'white';
+      debugOverlay.style.padding = '4px 8px';
+      debugOverlay.style.borderRadius = '0 8px 0 8px';
+      debugOverlay.style.fontSize = '12px';
+      debugOverlay.style.zIndex = '100';
+      debugOverlay.textContent = `Rendering ${ndx + 1}`;
+      canvas.parentElement.appendChild(debugOverlay);
+      setTimeout(() => debugOverlay.remove(), 1000);
+    }
 
     this.book.getPage(ndx, (err, pg) => {
       if (err) {
@@ -228,72 +275,55 @@ export class ScrollablePdfViewer extends EventEmitter {
       const aspect = pg.width / pg.height;
       const width = targetHeight * aspect;
 
-      let wrapper = canvas.parentElement;
-      wrapper.style.width = width + "px";
-      wrapper.style.height = targetHeight + "px";
+      // Prepare all dimension changes
+      const dimensions = {
+        wrapper: {
+          width: width + "px",
+          height: targetHeight + "px"
+        },
+        canvas: {
+          width: width + "px",
+          height: targetHeight + "px"
+        }
+      };
 
-      canvas.style.width = width + "px";
-      canvas.style.height = targetHeight + "px";
-      canvas.width = width * scale;
-      canvas.height = targetHeight * scale;
+      // Create off-screen canvas for rendering
+      const offscreenCanvas = document.createElement('canvas');
+      offscreenCanvas.width = width * scale;
+      offscreenCanvas.height = targetHeight * scale;
 
-      const ctx = canvas.getContext("2d", {
+      const ctx = offscreenCanvas.getContext("2d", {
         alpha: false,
         willReadFrequently: false
       });
 
-      if (this.isMobile) {
-        ctx.imageSmoothingEnabled = false;
-        ctx.imageSmoothingQuality = 'low';
-      }
-
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // ctx.fillStyle = '#fff';
+      // ctx.fillRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
 
       if (pg.img) {
-        ctx.drawImage(pg.img, 0, 0, canvas.width, canvas.height);
+        ctx.drawImage(pg.img, 0, 0, offscreenCanvas.width, offscreenCanvas.height);
       }
 
-      canvas.setAttribute('data-resolution', resolution);
+      // Apply all style changes at once
+      const wrapper = canvas.parentElement;
+      Object.assign(wrapper.style, dimensions.wrapper);
+      Object.assign(canvas.style, dimensions.canvas);
+
+      // Transfer the rendered content to the visible canvas
+      canvas.width = offscreenCanvas.width;
+      canvas.height = offscreenCanvas.height;
+      canvas.getContext('2d').drawImage(offscreenCanvas, 0, 0);
 
       if (this.debug) {
         const endTime = performance.now();
         const duration = endTime - startTime;
-        if (resolution === 'high') {
-          this.metrics.highResUpgradeTimes[ndx] = duration;
-          this.metrics.totalHighResUpgrades++;
-        } else {
-          this.metrics.pageRenderTimes[ndx] = duration;
-          this.metrics.totalPagesRendered++;
-        }
+        this.metrics.highResUpgradeTimes[ndx] = duration;
+        this.metrics.totalHighResUpgrades++;
         this._updateDebugInfo();
+        console.log(`%c✨ Rendered page ${ndx + 1} in ${duration.toFixed(1)}ms`, 'color: #4CAF50; font-weight: bold;');
       }
 
       if (callback) callback();
-    });
-  }
-
-  _upgradeVisiblePagesToHighRes() {
-    if (!this.initialRenderComplete) return;
-
-    const visiblePages = Array.from(this._visiblePages);
-    const currentPage = this.currentPage;
-
-    // Sort pages by distance from current page
-    visiblePages.sort((a, b) => Math.abs(a - currentPage - 1) - Math.abs(b - currentPage - 1));
-
-    // Queue high-res renders for visible pages
-    visiblePages.forEach(pageNum => {
-      const canvas = this.pageCanvases[pageNum - 1];
-      if (canvas) {
-        const currentRes = canvas.getAttribute('data-resolution');
-        if (currentRes !== 'high') {
-          this.renderQueue.add(
-            () => this._renderPageWithResolution(pageNum - 1, 'high'),
-            pageNum === currentPage + 1 // Priority for current page
-          );
-        }
-      }
     });
   }
 
@@ -304,13 +334,17 @@ export class ScrollablePdfViewer extends EventEmitter {
     let maxVisiblePage = null;
     let maxVisibleRatio = 0;
 
+    // Extend the visible area to include pages that are nearly visible
+    const extendedLeft = containerRect.left - containerRect.width * 0.5;
+    const extendedRight = containerRect.right + containerRect.width * 0.5;
+
     const wrappers = container.querySelectorAll('.pdfagogo-page-wrapper');
     wrappers.forEach(wrapper => {
       const pageNum = parseInt(wrapper.querySelector('canvas')?.getAttribute('data-page'), 10);
       if (!pageNum) return;
 
       const rect = wrapper.getBoundingClientRect();
-      if (rect.right > containerRect.left - 100 && rect.left < containerRect.right + 100) {
+      if (rect.right > extendedLeft && rect.left < extendedRight) {
         visiblePages.add(pageNum);
 
         const visibleWidth = Math.min(rect.right, containerRect.right) -
@@ -336,16 +370,17 @@ export class ScrollablePdfViewer extends EventEmitter {
     // Check if visible pages changed
     const oldVisible = Array.from(this._visiblePages).sort().join(',');
     const newVisible = Array.from(visiblePages).sort().join(',');
-    
+
     if (oldVisible !== newVisible) {
       this._visiblePages = visiblePages;
       this.emit("visiblePages", Array.from(visiblePages));
-      
+
       if (this.initialRenderComplete) {
-        // Ensure high-res upgrades happen after visibility changes
-        requestAnimationFrame(() => {
-          this._upgradeVisiblePagesToHighRes();
-        });
+        // Render newly visible pages in high resolution
+        const newPages = Array.from(visiblePages).filter(pageNum => !oldVisible.includes(pageNum.toString()));
+        for (const pageNum of newPages) {
+          this.renderQueue.add(() => this._renderPageWithResolution(pageNum - 1));
+        }
       }
     }
   }
@@ -372,7 +407,25 @@ export class ScrollablePdfViewer extends EventEmitter {
         if (canvas && canvas.getContext) {
           const ctx = canvas.getContext('2d');
           const memoryBefore = canvas.width * canvas.height * 4;
-          
+
+          // Add visual debug indicator for cleanup
+          if (this.debug) {
+            console.log(`%c🗑️ Releasing page ${pageNum + 1}`, 'color: #F44336; font-weight: bold;');
+            const debugOverlay = document.createElement('div');
+            debugOverlay.style.position = 'absolute';
+            debugOverlay.style.top = '0';
+            debugOverlay.style.right = '0';
+            debugOverlay.style.background = '#F44336';
+            debugOverlay.style.color = 'white';
+            debugOverlay.style.padding = '4px 8px';
+            debugOverlay.style.borderRadius = '0 8px 0 8px';
+            debugOverlay.style.fontSize = '12px';
+            debugOverlay.style.zIndex = '100';
+            debugOverlay.textContent = `Releasing ${pageNum + 1}`;
+            canvas.parentElement.appendChild(debugOverlay);
+            setTimeout(() => debugOverlay.remove(), 1000);
+          }
+
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           canvas.width = canvas.height = 32;
           canvas.setAttribute('data-resolution', 'placeholder');
@@ -382,7 +435,8 @@ export class ScrollablePdfViewer extends EventEmitter {
               freed: memoryBefore,
               timestamp: Date.now()
             };
-            console.log(`[PDF-A-go-go Debug] Cleaned up page ${pageNum + 1}`);
+            console.log(`%c♻️ Released page ${pageNum + 1} (Freed: ${(memoryBefore / 1024 / 1024).toFixed(1)}MB)`,
+              'color: #F44336; font-weight: bold;');
           }
         }
       }
@@ -390,7 +444,7 @@ export class ScrollablePdfViewer extends EventEmitter {
 
     // Clear render queue for off-screen pages
     this.renderQueue.clear();
-    
+
     // Re-queue visible pages if needed
     this._updateVisiblePages();
   }
@@ -414,54 +468,52 @@ export class ScrollablePdfViewer extends EventEmitter {
   async _handleResize() {
     this.initialRenderComplete = false;
     this.isMobile = window.innerWidth <= 768;
-    
+
     // Update dimensions for all pages
     const resizePromises = [];
     for (let i = 0; i < this.pageCount; i++) {
       resizePromises.push(this._setPageDimensions(i));
     }
-    
+
     await Promise.all(resizePromises);
-    
+
     // Clear the render queue
     this.renderQueue.clear();
-    
+
     // Update visible pages and re-render them
     await this._updateVisiblePages();
     const visiblePages = Array.from(this._visiblePages);
-    
+
     // Render visible pages in low res
     const renderPromises = [];
     for (const pageNum of visiblePages) {
       renderPromises.push(
         new Promise(resolve => {
           this.renderQueue.add(
-            () => this._renderPageWithResolution(pageNum - 1, 'low', resolve),
+            () => this._renderPageWithResolution(pageNum - 1, resolve),
             true // Priority render for visible pages
           );
         })
       );
     }
-    
+
     await Promise.all(renderPromises);
     this.initialRenderComplete = true;
-    
+
     // Queue high-res renders for visible pages
     visiblePages.forEach(pageNum => {
       const canvas = this.pageCanvases[pageNum - 1];
-      if (canvas && canvas.getAttribute('data-resolution') === 'low') {
-        this.renderQueue.add(() => this._renderPageWithResolution(pageNum - 1, 'high'));
-      }
+      this.renderQueue.add(() => this._renderPageWithResolution(pageNum - 1));
     });
   }
 
   _setupScrollHandler() {
     let scrollTimeout;
     let lastScrollTime = Date.now();
-    
+
     this.scrollContainer.addEventListener("scroll", () => {
       const now = Date.now();
-      
+
       // Clear any existing timeout
       if (scrollTimeout) {
         clearTimeout(scrollTimeout);
@@ -476,9 +528,6 @@ export class ScrollablePdfViewer extends EventEmitter {
       // Set a new timeout for final update
       scrollTimeout = setTimeout(() => {
         this._updateVisiblePages();
-        if (this.initialRenderComplete) {
-          this._upgradeVisiblePagesToHighRes();
-        }
         scrollTimeout = null;
       }, 100);
     });
@@ -510,7 +559,7 @@ export class ScrollablePdfViewer extends EventEmitter {
     let lastX;
     let lastTime;
     let animationFrame;
-    
+
     const momentum = typeof this.options.momentum === 'number' ? this.options.momentum : 1.5;
 
     container.style.cursor = 'grab';
@@ -519,7 +568,7 @@ export class ScrollablePdfViewer extends EventEmitter {
       isDown = true;
       container.style.cursor = 'grabbing';
       container.classList.add('grabbing');
-      
+
       startX = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
       scrollLeft = container.scrollLeft;
       lastX = startX;
@@ -540,7 +589,7 @@ export class ScrollablePdfViewer extends EventEmitter {
       const x = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
       const now = Date.now();
       const dt = now - lastTime;
-      
+
       if (dt > 0) {
         const dx = x - lastX;
         velocity = dx / dt; // pixels per millisecond
@@ -563,14 +612,14 @@ export class ScrollablePdfViewer extends EventEmitter {
         const startVelocity = velocity * momentum;
         const startTime = Date.now();
         const startScroll = container.scrollLeft;
-        
+
         const animate = () => {
           const elapsed = Date.now() - startTime;
           const deceleration = 0.001; // pixels per ms^2
           const remaining = startVelocity * Math.exp(-deceleration * elapsed);
 
           if (Math.abs(remaining) > 0.01 && elapsed < 500) {
-            container.scrollLeft = startScroll - (startVelocity / deceleration) * 
+            container.scrollLeft = startScroll - (startVelocity / deceleration) *
               (1 - Math.exp(-deceleration * elapsed));
             animationFrame = requestAnimationFrame(animate);
           }
@@ -601,7 +650,7 @@ export class ScrollablePdfViewer extends EventEmitter {
     this.scrollContainer.addEventListener('wheel', (e) => {
       const now = Date.now();
       const dt = now - lastWheelTime;
-      
+
       // Cancel any existing animation
       if (wheelAnimationFrame) {
         cancelAnimationFrame(wheelAnimationFrame);
@@ -621,27 +670,27 @@ export class ScrollablePdfViewer extends EventEmitter {
       // If it's primarily horizontal scrolling or touchpad gesture
       if (Math.abs(deltaX) > Math.abs(deltaY) || e.deltaMode === 0) {
         e.preventDefault();
-        
+
         // Calculate new velocity
         const delta = deltaX * momentum;
         wheelVelocity = dt > 0 ? delta / dt : 0;
-        
+
         // Apply immediate scroll
         this.scrollContainer.scrollLeft += delta;
-        
+
         // Apply momentum if the scroll was fast enough
         if (Math.abs(wheelVelocity) > 0.1) {
           const startVelocity = wheelVelocity;
           const startTime = now;
           const startScroll = this.scrollContainer.scrollLeft;
-          
+
           const animate = () => {
             const elapsed = Date.now() - startTime;
             const deceleration = 0.002; // pixels per ms^2
             const remaining = startVelocity * Math.exp(-deceleration * elapsed);
 
             if (Math.abs(remaining) > 0.01 && elapsed < 300) {
-              this.scrollContainer.scrollLeft = startScroll + 
+              this.scrollContainer.scrollLeft = startScroll +
                 (startVelocity / deceleration) * (1 - Math.exp(-deceleration * elapsed));
               wheelAnimationFrame = requestAnimationFrame(animate);
             }
@@ -658,26 +707,17 @@ export class ScrollablePdfViewer extends EventEmitter {
     const canvas = this.pageCanvases[ndx];
     if (!canvas) return;
 
-    // Always start with low res, then upgrade if visible and initial render is complete
-    this._renderPageWithResolution(ndx, 'low', () => {
-      if (this.initialRenderComplete && this._visiblePages.has(ndx + 1)) {
-        setTimeout(() => {
-          this._renderPageWithResolution(ndx, 'high');
-        }, 200);
-      }
-    });
+    this._renderPageWithResolution(ndx);
   }
 
   // Add a method to get performance metrics
   getPerformanceMetrics() {
     if (!this.debug) return null;
 
-    const avgLowResTime = Object.values(this.metrics.pageRenderTimes).reduce((a, b) => a + b, 0) / this.metrics.totalPagesRendered;
     const avgHighResTime = Object.values(this.metrics.highResUpgradeTimes).reduce((a, b) => a + b, 0) / this.metrics.totalHighResUpgrades;
 
     return {
       initialRenderTime: this.metrics.initialRenderEnd - this.metrics.initialRenderStart,
-      averageLowResRenderTime: avgLowResTime,
       averageHighResRenderTime: avgHighResTime,
       totalPagesRendered: this.metrics.totalPagesRendered,
       totalHighResUpgrades: this.metrics.totalHighResUpgrades,
@@ -730,7 +770,6 @@ export class ScrollablePdfViewer extends EventEmitter {
 
     this.debugElement.innerHTML = `
       <div class="timing">Initial Render: ${timeSinceStart}ms</div>
-      <div class="timing">Avg Low-Res: ${avgLowResTime}ms</div>
       <div class="timing">Avg High-Res: ${avgHighResTime}ms</div>
       <div>Pages Rendered: ${this.metrics.totalPagesRendered}</div>
       <div>High-Res Updates: ${this.metrics.totalHighResUpgrades}</div>
@@ -790,17 +829,4 @@ export class ScrollablePdfViewer extends EventEmitter {
       console.log(`[PDF-A-go-go Debug] Navigated to page ${pageNum + 1}`);
     }
   }
-}
-
-// Utility function to render a PDF page to a canvas with scaling
-function renderPdfPageToCanvas(canvas, pg, targetHeight, scale) {
-  const aspect = pg.width / pg.height;
-  const height = targetHeight;
-  const width = height * aspect;
-  canvas.width = width * scale;
-  canvas.height = height * scale;
-  canvas.style.height = height + "px";
-  canvas.style.width = width + "px";
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(pg.img, 0, 0, width * scale, height * scale);
 }

@@ -181,8 +181,6 @@ function init(book, id, opts, cb) {
             });
         },
       };
-      // Pass scale to ScrollablePdfViewer
-      // featureOptions.scale = 2;
       init(book, "pdfagogo-container", featureOptions, function (err, v) {
         removeLoadingBar();
         if (err) {
