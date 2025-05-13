@@ -205,6 +205,9 @@ export class ScrollablePdfViewer extends EventEmitter {
       setTimeout(() => debugOverlay.remove(), 1000);
     }
 
+    // Get highlights for this page from global state
+    const highlights = window.__pdfagogo__highlights?.[ndx] || [];
+
     this.book.getPage(ndx, (err, pg) => {
       if (err) {
         if (callback) callback();
@@ -244,7 +247,7 @@ export class ScrollablePdfViewer extends EventEmitter {
       }
 
       if (callback) callback();
-    });
+    }, highlights);
   }
 
   _updateVisiblePages() {
