@@ -480,16 +480,16 @@ export class ScrollablePdfViewer extends EventEmitter {
       }
 
       // Update visible pages immediately if enough time has passed
-      if (now - lastScrollTime > 32) { // ~30fps
-        this._updateVisiblePages();
-        lastScrollTime = now;
-      }
+      // if (now - lastScrollTime > 32) { // ~30fps
+      //   this._updateVisiblePages();
+      //   lastScrollTime = now;
+      // }
 
-      // Set a new timeout for final update
-      scrollTimeout = setTimeout(() => {
-        this._updateVisiblePages();
-        scrollTimeout = null;
-      }, 100);
+      // // Set a new timeout for final update
+      // scrollTimeout = setTimeout(() => {
+      //   this._updateVisiblePages();
+      //   scrollTimeout = null;
+      // }, 100);
     });
   }
 
