@@ -291,6 +291,7 @@ export class ScrollablePdfViewer extends EventEmitter {
   }
 
   _updateVisiblePages() {
+    console.log("Updating visible pages");
     const container = this.scrollContainer;
     const containerRect = container.getBoundingClientRect();
     const visiblePages = new Set();
@@ -308,11 +309,11 @@ export class ScrollablePdfViewer extends EventEmitter {
 
       const rect = wrapper.getBoundingClientRect();
       if (rect.right > extendedLeft && rect.left < extendedRight) {
-        visiblePages.add(pageNum);
 
         const visibleWidth = Math.min(rect.right, containerRect.right) -
                            Math.max(rect.left, containerRect.left);
         const percentVisible = visibleWidth / rect.width;
+        visiblePages.add(pageNum);
 
         if (percentVisible > maxVisibleRatio) {
           maxVisibleRatio = percentVisible;
@@ -461,7 +462,7 @@ export class ScrollablePdfViewer extends EventEmitter {
 
     // Queue high-res renders for visible pages
     visiblePages.forEach(pageNum => {
-      const canvas = this.pageCanvases[pageNum - 1];
+      // const canvas = this.pageCanvases[pageNum - 1];
       this.renderQueue.add(() => this._renderPage(pageNum - 1));
     });
   }
@@ -663,6 +664,7 @@ export class ScrollablePdfViewer extends EventEmitter {
   }
 
   rerenderPage(ndx) {
+    console.log("rerenderPage",ndx);
     const canvas = this.pageCanvases[ndx];
     if (!canvas) return;
 

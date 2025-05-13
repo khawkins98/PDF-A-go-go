@@ -463,6 +463,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     console.log('initialRenderComplete');
     goToHashPage();
   });
+
   // Listen for hash changes
   window.addEventListener("hashchange", goToHashPage);
   // If no hash, use defaultPage from options
@@ -548,9 +549,10 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       // Only redraw after resizing ends
       // Store the current page index so we can restore the scroll position after redraw
       let currentPage = (typeof viewer.showNdx === 'number') ? viewer.showNdx : (viewer.currentPage || 0);
-      if (typeof viewer?._resizeAllPages === 'function') {
-        await viewer._resizeAllPages();
-      }
+
+      // Trigger window resize event to redraw pages at new dimensions
+      window.dispatchEvent(new Event('resize'));
+
       // Restore the scroll position to the same page after resizing
       if (typeof viewer?.go_to_page === 'function') {
         viewer.go_to_page(currentPage);
