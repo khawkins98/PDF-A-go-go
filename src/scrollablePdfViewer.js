@@ -156,10 +156,6 @@ export class ScrollablePdfViewer extends EventEmitter {
       wrapper.appendChild(canvas);
       this.pageCanvases[i] = canvas;
       offscreenContainer.appendChild(wrapper);
-
-      // Calculate dimensions off-screen
-      // This is bad for performance?
-      // pageSetupPromises.push(this._setPageDimensions(i));
     }
 
     // Wait for all page dimensions to be calculated
@@ -183,45 +179,6 @@ export class ScrollablePdfViewer extends EventEmitter {
       console.log(`[PDF-A-go-go Debug] Initial render complete in ${this.metrics.initialRenderEnd - this.metrics.initialRenderStart}ms`);
     }
   }
-
-  // async _setPageDimensions(ndx) {
-  //   return new Promise((resolve) => {
-  //     this.book.getPage(ndx, (err, pg) => {
-  //       if (err) {
-  //         resolve();
-  //         return;
-  //       }
-
-  //       const canvas = this.pageCanvases[ndx];
-  //       const wrapper = canvas.parentElement;
-  //       const targetHeight = this._getPageHeight();
-  //       const aspect = pg.width / pg.height;
-  //       const width = targetHeight * aspect;
-
-  //       // Batch style changes to minimize reflows
-  //       const styles = {
-  //         wrapper: {
-  //           width: width + "px",
-  //           height: targetHeight + "px"
-  //         },
-  //         canvas: {
-  //           width: width + "px",
-  //           height: targetHeight + "px"
-  //         }
-  //       };
-
-  //       // Apply all style changes at once
-  //       Object.assign(wrapper.style, styles.wrapper);
-  //       Object.assign(canvas.style, styles.canvas);
-
-  //       // Set minimal actual dimensions for placeholder (doesn't trigger reflow)
-  //       canvas.width = 32;
-  //       canvas.height = 32;
-
-  //       resolve();
-  //     });
-  //   });
-  // }
 
   _renderPage(ndx, callback = null) {
     const canvas = this.pageCanvases[ndx];
@@ -519,6 +476,8 @@ export class ScrollablePdfViewer extends EventEmitter {
     let lastX;
     let lastTime;
     let animationFrame;
+    let lastY = null;
+    let startY = null;
 
     const momentum = typeof this.options.momentum === 'number' ? this.options.momentum : 1.5;
 
@@ -535,6 +494,12 @@ export class ScrollablePdfViewer extends EventEmitter {
       lastTime = Date.now();
       velocity = 0;
 
+      // Initialize touch Y position on start
+      if (e.type.startsWith('touch')) {
+        startY = e.touches[0].pageY;
+        lastY = startY;
+      }
+
       // Cancel any ongoing animation
       if (animationFrame) {
         cancelAnimationFrame(animationFrame);
@@ -549,6 +514,22 @@ export class ScrollablePdfViewer extends EventEmitter {
       const x = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
       const now = Date.now();
       const dt = now - lastTime;
+
+      // Track vertical movement for touch events
+      if (e.type.startsWith('touch')) {
+        const touchY = e.touches[0].pageY;
+        const verticalDelta = touchY - lastY;
+
+        // If vertical movement exceeds threshold, allow page scrolling
+        if (Math.abs(verticalDelta) > 3) {
+          window.scrollBy(0, -verticalDelta);
+          if (this.debug) {
+            console.log(`Scrolling page vertically by ${verticalDelta}px`);
+          }
+        }
+
+        lastY = touchY;
+      }
 
       if (dt > 0) {
         const dx = x - lastX;
@@ -628,7 +609,11 @@ export class ScrollablePdfViewer extends EventEmitter {
       }
 
       // If it's primarily horizontal scrolling or touchpad gesture
-      if (Math.abs(deltaX) > Math.abs(deltaY) || e.deltaMode === 0) {
+      // if (Math.abs(deltaX) > Math.abs(deltaY) || e.deltaMode === 0) {
+
+      // Only handle horizontal scrolling here - let vertical scroll pass through
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+
         e.preventDefault();
 
         // Calculate new velocity
