@@ -165,12 +165,12 @@
   position: relative;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
-  touch-action: pan-x pinch-zoom;
   will-change: scroll-position, transform;
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   perspective: 1000px;
 }
+
 @media (min-width: 768px) {
   .pdfagogo-scroll-container {
     padding-right: 1rem;

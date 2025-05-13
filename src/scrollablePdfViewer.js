@@ -205,6 +205,9 @@ export class ScrollablePdfViewer extends EventEmitter {
       setTimeout(() => debugOverlay.remove(), 1000);
     }
 
+    // Get highlights for this page from global state
+    const highlights = window.__pdfagogo__highlights?.[ndx] || [];
+
     this.book.getPage(ndx, (err, pg) => {
       if (err) {
         if (callback) callback();
@@ -244,7 +247,7 @@ export class ScrollablePdfViewer extends EventEmitter {
       }
 
       if (callback) callback();
-    });
+    }, highlights);
   }
 
   _updateVisiblePages() {
@@ -515,22 +518,6 @@ export class ScrollablePdfViewer extends EventEmitter {
       const now = Date.now();
       const dt = now - lastTime;
 
-      // Track vertical movement for touch events
-      if (e.type.startsWith('touch')) {
-        const touchY = e.touches[0].pageY;
-        const verticalDelta = touchY - lastY;
-
-        // If vertical movement exceeds threshold, allow page scrolling
-        if (Math.abs(verticalDelta) > 3) {
-          window.scrollBy(0, -verticalDelta);
-          if (this.debug) {
-            console.log(`Scrolling page vertically by ${verticalDelta}px`);
-          }
-        }
-
-        lastY = touchY;
-      }
-
       if (dt > 0) {
         const dx = x - lastX;
         velocity = dx / dt; // pixels per millisecond
@@ -576,10 +563,10 @@ export class ScrollablePdfViewer extends EventEmitter {
     container.addEventListener('mouseleave', onEnd);
 
     // Touch events
-    container.addEventListener('touchstart', onStart, { passive: true });
-    container.addEventListener('touchmove', onMove, { passive: false });
-    container.addEventListener('touchend', onEnd);
-    container.addEventListener('touchcancel', onEnd);
+    // container.addEventListener('touchstart', onStart, { passive: true });
+    // container.addEventListener('touchmove', onMove, { passive: false });
+    // container.addEventListener('touchend', onEnd);
+    // container.addEventListener('touchcancel', onEnd);
   }
 
   _setupWheelScrollHandler() {

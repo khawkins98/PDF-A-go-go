@@ -517,7 +517,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       document.body.style.cursor = 'ns-resize';
       document.addEventListener('mousemove', onMouseMove);
       document.addEventListener('mouseup', onMouseUp);
-      document.addEventListener('touchmove', onMouseMove, { passive: false });
+      // document.addEventListener('touchmove', onMouseMove, { passive: false });
       // document.addEventListener('touchend', onMouseUp);
       e.preventDefault();
     }
@@ -542,10 +542,10 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     async function onMouseUp(e) {
       isResizing = false;
       document.body.style.cursor = '';
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-      document.removeEventListener('touchmove', onMouseMove);
-      document.removeEventListener('touchend', onMouseUp);
+      // document.removeEventListener('mousemove', onMouseMove);
+      // document.removeEventListener('mouseup', onMouseUp);
+      // document.removeEventListener('touchmove', onMouseMove);
+      // document.removeEventListener('touchend', onMouseUp);
       // Only redraw after resizing ends
       // Store the current page index so we can restore the scroll position after redraw
       let currentPage = (typeof viewer.showNdx === 'number') ? viewer.showNdx : (viewer.currentPage || 0);
