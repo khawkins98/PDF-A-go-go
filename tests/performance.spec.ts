@@ -162,8 +162,7 @@ test.describe('PDF-A-go-go Performance Tests', () => {
       // Log all results
       console.log('Desktop Performance Results (HiDPI):');
       console.log('Initial Render Time:', metrics['Initial Render'], 'ms');
-      console.log('Average Low-Res Render:', metrics['Avg Low-Res'], 'ms');
-      console.log('Average High-Res Render:', metrics['Avg High-Res'], 'ms');
+      console.log('Average Render:', metrics['Avg High-Res'], 'ms');
       console.log('Average CPU Usage:', avgCpuUsage.toFixed(2), '%');
       console.log('Peak CPU Usage:', peakCpuUsage.toFixed(2), '%');
       console.log('Scroll Duration:', scrollMetrics.duration, 'ms');
@@ -237,8 +236,7 @@ test.describe('PDF-A-go-go Performance Tests', () => {
       // Log all results
       console.log('Mobile Performance Results (Throttled, HiDPI):');
       console.log('Initial Render Time:', metrics['Initial Render'], 'ms');
-      console.log('Average Low-Res Render:', metrics['Avg Low-Res'], 'ms');
-      console.log('Average High-Res Render:', metrics['Avg High-Res'], 'ms');
+      console.log('Average Render:', metrics['Avg High-Res'], 'ms');
       console.log('Average CPU Usage:', avgCpuUsage.toFixed(2), '%');
       console.log('Peak CPU Usage:', peakCpuUsage.toFixed(2), '%');
       console.log('Scroll Duration:', scrollMetrics.duration, 'ms');
