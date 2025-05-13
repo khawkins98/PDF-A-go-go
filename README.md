@@ -112,6 +112,40 @@ To set up a local development environment:
 - Please follow the code style and add comments where helpful.
 - Open a pull request with a clear description of your changes.
 
+## Testing
+
+PDF-A-go-go includes automated performance tests using Playwright. These tests measure:
+- Initial render time
+- Low and high resolution render times
+- CPU usage
+- Mobile performance (with CPU throttling)
+
+To run the tests:
+
+```bash
+# Install dependencies
+npm install
+
+# Run tests (this will automatically start the dev server)
+npm test
+
+# Run tests with debugging enabled
+npm run test:debug
+```
+
+The test suite includes:
+- Desktop performance testing with standard viewport (1280x800)
+- Mobile performance testing with:
+  - Reduced viewport (375x667)
+  - CPU throttling (4x slowdown)
+  - Extended timeouts for mobile conditions
+
+Performance thresholds are set to:
+- Desktop: Initial render < 5s, Average CPU < 80%
+- Mobile: Initial render < 10s, Average CPU < 90%
+
+The development server runs on port 9000 by default (http://localhost:9000).
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
