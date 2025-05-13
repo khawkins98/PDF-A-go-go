@@ -460,7 +460,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
   }
   // Wait for initial render before going to hash page
   viewer.on('initialRenderComplete', () => {
-    // console.log('initialRenderComplete');
+    console.log('initialRenderComplete');
     goToHashPage();
   });
   // Listen for hash changes

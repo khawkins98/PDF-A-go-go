@@ -94,13 +94,9 @@ export class ScrollablePdfViewer extends EventEmitter {
     }
 
     this._visiblePages = new Set();
-    this.initialRenderComplete = false;
 
     this._setupEventHandlers();
-    this._initializePages().then(() => {
-      this.initialRenderComplete = true;
-      this.emit('initialRenderComplete');
-    });
+    this._initializePages();
   }
 
   _setupEventHandlers() {
@@ -162,7 +158,8 @@ export class ScrollablePdfViewer extends EventEmitter {
       offscreenContainer.appendChild(wrapper);
 
       // Calculate dimensions off-screen
-      pageSetupPromises.push(this._setPageDimensions(i));
+      // This is bad for performance?
+      // pageSetupPromises.push(this._setPageDimensions(i));
     }
 
     // Wait for all page dimensions to be calculated
@@ -178,69 +175,55 @@ export class ScrollablePdfViewer extends EventEmitter {
     await this._updateVisiblePages();
     const visiblePages = Array.from(this._visiblePages);
 
-    // Render visible pages in high res
-    const renderPromises = [];
-    for (const pageNum of visiblePages) {
-      renderPromises.push(
-        new Promise(resolve => {
-          this.renderQueue.add(
-            () => this._renderPageWithResolution(pageNum - 1, resolve),
-            true // Priority render for visible pages
-          );
-        })
-      );
-    }
-
-    await Promise.all(renderPromises);
+    // Emit initialRenderComplete event
+    this.emit('initialRenderComplete');
 
     if (this.debug) {
       this.metrics.initialRenderEnd = performance.now();
       console.log(`[PDF-A-go-go Debug] Initial render complete in ${this.metrics.initialRenderEnd - this.metrics.initialRenderStart}ms`);
     }
-
-    this.initialRenderComplete = true;
   }
 
-  async _setPageDimensions(ndx) {
-    return new Promise((resolve) => {
-      this.book.getPage(ndx, (err, pg) => {
-        if (err) {
-          resolve();
-          return;
-        }
+  // async _setPageDimensions(ndx) {
+  //   return new Promise((resolve) => {
+  //     this.book.getPage(ndx, (err, pg) => {
+  //       if (err) {
+  //         resolve();
+  //         return;
+  //       }
 
-        const canvas = this.pageCanvases[ndx];
-        const wrapper = canvas.parentElement;
-        const targetHeight = this._getPageHeight();
-        const aspect = pg.width / pg.height;
-        const width = targetHeight * aspect;
+  //       const canvas = this.pageCanvases[ndx];
+  //       const wrapper = canvas.parentElement;
+  //       const targetHeight = this._getPageHeight();
+  //       const aspect = pg.width / pg.height;
+  //       const width = targetHeight * aspect;
 
-        // Batch style changes to minimize reflows
-        const styles = {
-          wrapper: {
-            width: width + "px",
-            height: targetHeight + "px"
-          },
-          canvas: {
-            width: width + "px",
-            height: targetHeight + "px"
-          }
-        };
+  //       // Batch style changes to minimize reflows
+  //       const styles = {
+  //         wrapper: {
+  //           width: width + "px",
+  //           height: targetHeight + "px"
+  //         },
+  //         canvas: {
+  //           width: width + "px",
+  //           height: targetHeight + "px"
+  //         }
+  //       };
 
-        // Apply all style changes at once
-        Object.assign(wrapper.style, styles.wrapper);
-        Object.assign(canvas.style, styles.canvas);
+  //       // Apply all style changes at once
+  //       Object.assign(wrapper.style, styles.wrapper);
+  //       Object.assign(canvas.style, styles.canvas);
 
-        // Set minimal actual dimensions for placeholder (doesn't trigger reflow)
-        canvas.width = 32;
-        canvas.height = 32;
+  //       // Set minimal actual dimensions for placeholder (doesn't trigger reflow)
+  //       canvas.width = 32;
+  //       canvas.height = 32;
 
-        resolve();
-      });
-    });
-  }
+  //       resolve();
+  //     });
+  //   });
+  // }
 
-  _renderPageWithResolution(ndx, callback = null) {
+  _renderPage(ndx, callback = null) {
     const canvas = this.pageCanvases[ndx];
     if (!canvas) return;
 
@@ -275,44 +258,24 @@ export class ScrollablePdfViewer extends EventEmitter {
       const aspect = pg.width / pg.height;
       const width = targetHeight * aspect;
 
-      // Prepare all dimension changes
-      const dimensions = {
-        wrapper: {
-          width: width + "px",
-          height: targetHeight + "px"
-        },
-        canvas: {
-          width: width + "px",
-          height: targetHeight + "px"
-        }
-      };
+      // Set canvas dimensions and styles in one go
+      const wrapper = canvas.parentElement;
+      wrapper.style.width = width + "px";
+      wrapper.style.height = targetHeight + "px";
+      canvas.style.width = width + "px";
+      canvas.style.height = targetHeight + "px";
+      canvas.width = width * scale;
+      canvas.height = targetHeight * scale;
 
-      // Create off-screen canvas for rendering
-      const offscreenCanvas = document.createElement('canvas');
-      offscreenCanvas.width = width * scale;
-      offscreenCanvas.height = targetHeight * scale;
-
-      const ctx = offscreenCanvas.getContext("2d", {
+      // Render directly to the canvas
+      const ctx = canvas.getContext("2d", {
         alpha: false,
-        willReadFrequently: false
+        willReadFrequently: true
       });
 
-      // ctx.fillStyle = '#fff';
-      // ctx.fillRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
-
       if (pg.img) {
-        ctx.drawImage(pg.img, 0, 0, offscreenCanvas.width, offscreenCanvas.height);
+        ctx.drawImage(pg.img, 0, 0, canvas.width, canvas.height);
       }
-
-      // Apply all style changes at once
-      const wrapper = canvas.parentElement;
-      Object.assign(wrapper.style, dimensions.wrapper);
-      Object.assign(canvas.style, dimensions.canvas);
-
-      // Transfer the rendered content to the visible canvas
-      canvas.width = offscreenCanvas.width;
-      canvas.height = offscreenCanvas.height;
-      canvas.getContext('2d').drawImage(offscreenCanvas, 0, 0);
 
       if (this.debug) {
         const endTime = performance.now();
@@ -375,12 +338,10 @@ export class ScrollablePdfViewer extends EventEmitter {
       this._visiblePages = visiblePages;
       this.emit("visiblePages", Array.from(visiblePages));
 
-      if (this.initialRenderComplete) {
-        // Render newly visible pages in high resolution
-        const newPages = Array.from(visiblePages).filter(pageNum => !oldVisible.includes(pageNum.toString()));
-        for (const pageNum of newPages) {
-          this.renderQueue.add(() => this._renderPageWithResolution(pageNum - 1));
-        }
+      // Render newly visible pages in high resolution
+      const newPages = Array.from(visiblePages).filter(pageNum => !oldVisible.includes(pageNum.toString()));
+      for (const pageNum of newPages) {
+        this.renderQueue.add(() => this._renderPage(pageNum - 1));
       }
     }
   }
@@ -466,14 +427,13 @@ export class ScrollablePdfViewer extends EventEmitter {
   }
 
   async _handleResize() {
-    this.initialRenderComplete = false;
     this.isMobile = window.innerWidth <= 768;
 
     // Update dimensions for all pages
     const resizePromises = [];
-    for (let i = 0; i < this.pageCount; i++) {
-      resizePromises.push(this._setPageDimensions(i));
-    }
+    // for (let i = 0; i < this.pageCount; i++) {
+    //   resizePromises.push(this._setPageDimensions(i));
+    // }
 
     await Promise.all(resizePromises);
 
@@ -485,25 +445,24 @@ export class ScrollablePdfViewer extends EventEmitter {
     const visiblePages = Array.from(this._visiblePages);
 
     // Render visible pages in low res
-    const renderPromises = [];
-    for (const pageNum of visiblePages) {
-      renderPromises.push(
-        new Promise(resolve => {
-          this.renderQueue.add(
-            () => this._renderPageWithResolution(pageNum - 1, resolve),
-            true // Priority render for visible pages
-          );
-        })
-      );
-    }
+    // const renderPromises = [];
+    // for (const pageNum of visiblePages) {
+    //   renderPromises.push(
+    //     new Promise(resolve => {
+    //       this.renderQueue.add(
+    //         () => this._renderPage(pageNum - 1, resolve),
+    //         true // Priority render for visible pages
+    //       );
+    //     })
+    //   );
+    // }
 
-    await Promise.all(renderPromises);
-    this.initialRenderComplete = true;
+    // await Promise.all(renderPromises);
 
     // Queue high-res renders for visible pages
     visiblePages.forEach(pageNum => {
       const canvas = this.pageCanvases[pageNum - 1];
-      this.renderQueue.add(() => this._renderPageWithResolution(pageNum - 1));
+      this.renderQueue.add(() => this._renderPage(pageNum - 1));
     });
   }
 
@@ -707,7 +666,7 @@ export class ScrollablePdfViewer extends EventEmitter {
     const canvas = this.pageCanvases[ndx];
     if (!canvas) return;
 
-    this._renderPageWithResolution(ndx);
+    this._renderPage(ndx);
   }
 
   // Add a method to get performance metrics
