@@ -121,9 +121,16 @@ function init(book, id, opts, cb) {
   }
 
   // Load PDF with progress
-  loadPdfWithProgress(featureOptions.pdfUrl, (progress) => {
-    updateLoadingBar(progressBar, progress);
-  })
+  loadPdfWithProgress(
+    featureOptions.pdfUrl, 
+    (progress) => {
+      updateLoadingBar(progressBar, progress);
+    },
+    {
+      container: pdfagogoContainer,
+      downloadTimeout: parseInt(pdfagogoContainer.dataset.downloadTimeout, 10) || 30000
+    }
+  )
     .then(async function (loadedPdf) {
       pdf = loadedPdf;
       const book = {
