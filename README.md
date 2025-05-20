@@ -31,6 +31,7 @@ This project is very fresh (rolled on 6 May 2025). I may yet publish to npm or c
 - 📑 Page selector and navigation controls
 - 🔍 Basic search within PDFs
 - ⬇️ Download PDF button
+- 🌐 Smart handling of HTML-wrapped PDF downloads
 - 🛠️ Based on [pdf.js](https://github.com/mozilla/pdf.js)
 
 ## Usage and features
@@ -68,19 +69,48 @@ Set options via data attributes on the container:
   - **Note:** Disabling WebGL (the default) seems to be more performant in most browsers.
 - `data-momentum` (number): Controls the speed of grab-and-scroll (momentum) for fast navigation. Default is 1. Higher values allow faster scrolling when dragging the document horizontally.
 
+## HTML Download Handler
+
+Note this is an advanced feature and may require some customisation or adaptation.
+
+PDF-A-go-go includes smart handling for cases where a PDF URL initially returns an HTML page that triggers the actual PDF download. This is common with institutional repositories, document management systems, and academic websites.
+
+When such a case is detected, PDF-A-go-go will:
+
+1. Display the HTML page in an iframe
+2. Monitor for PDF download links or triggers
+3. Automatically handle the PDF download once detected
+4. Display the PDF in the viewer
+
+To configure the HTML download handler behavior, use these options:
+
+```html
+<div class="pdfagogo-container"
+     data-pdf-url="https://example.com/document/download"
+     data-download-timeout="30000"
+     ...></div>
+```
+
+Options:
+
+- `data-download-timeout` (number): Time in milliseconds to wait for PDF download to start (default: 30000)
+
+You can see this in action in the [HTML download example](html-download-example.html).
+
 
 ## Performance Monitoring
 
 PDF-A-go-go includes a debug mode that provides detailed performance metrics for PDF loading and rendering. To enable debug mode, add the `data-debug="true"` attribute to your container:
 
 ```html
-<div class="pdfagogo-container" 
+<div class="pdfagogo-container"
      data-pdf-url="./example.pdf"
      data-debug="true"
      ...></div>
 ```
 
 When debug mode is enabled, the following metrics are logged to the console:
+
 - Initial render time for all pages
 - Individual page render times (both low and high resolution)
 - Average render times for low and high resolution pages
@@ -95,6 +125,7 @@ console.log(metrics);
 ```
 
 The metrics object includes:
+
 - `initialRenderTime`: Time taken for initial render of all pages (ms)
 - `averageLowResRenderTime`: Average time to render a page in low resolution (ms)
 - `averageHighResRenderTime`: Average time to upgrade a page to high resolution (ms)
@@ -116,6 +147,7 @@ To set up a local development environment:
 ## Testing
 
 PDF-A-go-go includes automated performance tests using Playwright. These tests measure:
+
 - Initial render time
 - Low and high resolution render times
 - CPU usage
@@ -135,6 +167,7 @@ npm run test:debug
 ```
 
 The test suite includes:
+
 - Desktop performance testing with standard viewport (1280x800)
 - Mobile performance testing with:
   - Reduced viewport (375x667)
@@ -142,6 +175,7 @@ The test suite includes:
   - Extended timeouts for mobile conditions
 
 Performance thresholds are set to:
+
 - Desktop: Initial render < 5s, Average CPU < 80%
 - Mobile: Initial render < 10s, Average CPU < 90%
 
