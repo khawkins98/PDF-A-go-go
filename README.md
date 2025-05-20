@@ -68,6 +68,7 @@ Set options via data attributes on the container:
   - **Note:** Disabling WebGL (the default) seems to be more performant in most browsers.
 - `data-momentum` (number): Controls the speed of grab-and-scroll (momentum) for fast navigation. Default is 1. Higher values allow faster scrolling when dragging the document horizontally.
 
+
 ## Performance Monitoring
 
 PDF-A-go-go includes a debug mode that provides detailed performance metrics for PDF loading and rendering. To enable debug mode, add the `data-debug="true"` attribute to your container:

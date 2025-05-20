@@ -36,6 +36,8 @@ const base = {
         { from: 'src/pdf-a-go-go.css', to: 'pdf-a-go-go.css' },
         { from: 'src/index.html', to: 'index.html' },
         { from: 'src/double-spread.html', to: 'double-spread.html' },
+        { from: 'src/html-download-example.html', to: 'html-download-example.html' },
+        { from: 'src/html-download-example-iframe.html', to: 'html-download-example-iframe.html' },
         { from: 'src/example.pdf', to: 'example.pdf' },
         { from: 'src/example_spread.pdf', to: 'example_spread.pdf' },
         { from: 'src/tests', to: 'tests' }
