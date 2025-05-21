@@ -14,6 +14,7 @@ This project is very fresh (rolled on 6 May 2025). I may yet publish to npm or c
 
 - [Basic demo](https://khawkins98.github.io/PDF-A-go-go/)
 - [Large double spread demo](https://khawkins98.github.io/PDF-A-go-go/double-spread.html#pdf-page=10) (12MB PDF)
+- [Load iFrame with meta redirect](https://khawkins98.github.io/PDF-A-go-go/html-download-example.html)
 
 ## Features
 
@@ -75,6 +76,10 @@ Set options via data attributes on the container:
 
 Note this is an advanced feature and may require some customisation or adaptation. It is quite experimental. See more in https://github.com/khawkins98/PDF-A-go-go/pull/7
 
+- This currently has only been tested against iframes using meta redirects
+- CORS must be set correctly (this is best used when the source and target page are the same)
+- This may change to support user-based navigation to a PDF link and intercepting of the PDF load
+
 ---
 
 PDF-A-go-go includes smart handling for cases where a PDF URL initially returns an HTML page that triggers the actual PDF download. This is common with institutional repositories, document management systems, and academic websites.
@@ -99,7 +104,7 @@ Options:
 
 - `data-download-timeout` (number): Time in milliseconds to wait for PDF download to start (default: 30000)
 
-You can see this in action in the [HTML download example](html-download-example.html).
+You can see this in action in the [HTML download example](//khawkins98.github.io/PDF-A-go-go/html-download-example.html).
 
 
 ## Performance Monitoring
