@@ -71,7 +71,11 @@ Set options via data attributes on the container:
 
 ## HTML Download Handler
 
-Note this is an advanced feature and may require some customisation or adaptation.
+---
+
+Note this is an advanced feature and may require some customisation or adaptation. It is quite experimental. See more in https://github.com/khawkins98/PDF-A-go-go/pull/7
+
+---
 
 PDF-A-go-go includes smart handling for cases where a PDF URL initially returns an HTML page that triggers the actual PDF download. This is common with institutional repositories, document management systems, and academic websites.
 
