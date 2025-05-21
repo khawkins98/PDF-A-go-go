@@ -470,39 +470,56 @@ export class ScrollablePdfViewer extends EventEmitter {
     return this.scrollContainer.clientHeight || 600;
   }
 
+  /**
+   * Enables grab-and-scroll functionality for the PDF viewer.
+   *
+   * Velocity Calculation:
+   * - During dragging, the last few mouse positions and timestamps are recorded.
+   * - On drag end, velocity is calculated as the difference in X position between the first and last recorded points, divided by the time between them.
+   * - This velocity is then used to apply inertia (momentum) scrolling, simulating a natural flick effect.
+   * - The strength of the inertia can be controlled via the `dragMomentum` property.
+   *
+   * To adjust the momentum/inertia, set `this.dragMomentum` (default: 1.5).
+   */
   _setupGrabAndScroll() {
     const container = this.scrollContainer;
     let isDown = false;
     let startX;
     let scrollLeft;
-    let velocity = 0;
-    let lastX;
-    let lastTime;
+    let positions = [];
     let animationFrame;
-    let lastY = null;
-    let startY = null;
-
-    const momentum = typeof this.options.momentum === 'number' ? this.options.momentum : 1.5;
+    const momentum = typeof this.options.momentum === 'number' ? this.options.momentum : 0.3;
 
     container.style.cursor = 'grab';
+
+    const recordPosition = (x) => {
+      const now = Date.now();
+      positions.push({ x, time: now });
+      // Keep only the last 5 positions
+      if (positions.length > 5) positions.shift();
+    };
+
+    /**
+     * Calculate velocity for inertia scrolling.
+     * Uses the first and last recorded positions to determine average velocity over the drag.
+     * @returns {number} Velocity in pixels per millisecond
+     */
+    const getVelocity = () => {
+      if (positions.length < 2) return 0;
+      const first = positions[0];
+      const last = positions[positions.length - 1];
+      const dx = last.x - first.x;
+      const dt = last.time - first.time;
+      return dt > 0 ? dx / dt : 0;
+    };
 
     const onStart = (e) => {
       isDown = true;
       container.style.cursor = 'grabbing';
       container.classList.add('grabbing');
-
       startX = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
       scrollLeft = container.scrollLeft;
-      lastX = startX;
-      lastTime = Date.now();
-      velocity = 0;
-
-      // Initialize touch Y position on start
-      if (e.type.startsWith('touch')) {
-        startY = e.touches[0].pageY;
-        lastY = startY;
-      }
-
+      positions = [{ x: startX, time: Date.now() }];
       // Cancel any ongoing animation
       if (animationFrame) {
         cancelAnimationFrame(animationFrame);
@@ -513,20 +530,10 @@ export class ScrollablePdfViewer extends EventEmitter {
     const onMove = (e) => {
       if (!isDown) return;
       e.preventDefault();
-
       const x = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
-      const now = Date.now();
-      const dt = now - lastTime;
-
-      if (dt > 0) {
-        const dx = x - lastX;
-        velocity = dx / dt; // pixels per millisecond
-        const walk = dx * momentum;
-        container.scrollLeft = scrollLeft - walk;
-        scrollLeft = container.scrollLeft;
-        lastX = x;
-        lastTime = now;
-      }
+      recordPosition(x);
+      const walk = x - startX;
+      container.scrollLeft = scrollLeft - walk;
     };
 
     const onEnd = () => {
@@ -534,21 +541,18 @@ export class ScrollablePdfViewer extends EventEmitter {
       isDown = false;
       container.style.cursor = 'grab';
       container.classList.remove('grabbing');
-
+      const velocity = getVelocity();
       // Apply inertia if velocity is significant
       if (Math.abs(velocity) > 0.2) {
-        const startVelocity = velocity * momentum;
+        const startVelocity = velocity * momentum * 16; // 16ms per frame
         const startTime = Date.now();
         const startScroll = container.scrollLeft;
-
         const animate = () => {
           const elapsed = Date.now() - startTime;
-          const deceleration = 0.001; // pixels per ms^2
+          const deceleration = 0.002; // pixels per ms^2
           const remaining = startVelocity * Math.exp(-deceleration * elapsed);
-
           if (Math.abs(remaining) > 0.01 && elapsed < 500) {
-            container.scrollLeft = startScroll - (startVelocity / deceleration) *
-              (1 - Math.exp(-deceleration * elapsed));
+            container.scrollLeft = startScroll - (startVelocity / deceleration) * (1 - Math.exp(-deceleration * elapsed));
             animationFrame = requestAnimationFrame(animate);
           }
         };
