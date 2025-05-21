@@ -88,26 +88,50 @@ export class HTMLDownloadHandler extends EventTarget {
                      url.toLowerCase().includes('document');
             }
 
-            // Function to parse meta refresh content for delay and URL using string split
+            /**
+             * Parses the content attribute of a meta refresh tag to extract the delay and URL.
+             * This function uses a simple string split approach for robustness.
+             *
+             * Handles common meta refresh formats, for example:
+             *   "5; url=http://example.com/file.pdf"
+             *   "0;URL='/file.pdf'"
+             *   "3; url=\"/path/to/file.pdf?foo=bar\""
+             *
+             * @param {string} content - The content attribute from a meta refresh tag.
+             * @returns {{delay: number, url: string}|null} An object with the delay (in seconds) and the URL, or null if parsing fails.
+             */
             function parseMetaRefresh(content) {
-              // Example: "5; url=http://example.com/file.pdf"
+              // Return null if content is empty or undefined
               if (!content) return null;
+
+              // Split the content string on semicolons
               const parts = content.split(';');
               if (parts.length < 2) return null;
 
-              // First part: delay (seconds)
+              // The first part should be the delay in seconds (e.g., "5")
               const delay = parseInt(parts[0].trim(), 10) || 0;
 
-              // Second part: url=...
-              const urlPart = parts.slice(1).join(';').trim(); // in case there are extra semicolons in the URL
+              // The rest (joined in case the URL contains semicolons) should contain "url="
+              // This allows for URLs with semicolons in query strings or fragments
+              const urlPart = parts.slice(1).join(';').trim();
+
+              // Extract the URL after "url=", allowing for optional quotes and whitespace
+              // Example matches: url=http://..., url='/file.pdf', url="file.pdf"
               const urlMatch = urlPart.match(/url\s*=\s*['"]?([^'"]+)['"]?/i);
               if (!urlMatch) return null;
 
+              // The actual URL, trimmed of whitespace
               const url = urlMatch[1].trim();
+
+              // Return the delay and URL as an object
               return { delay, url };
             }
 
-            // Function to check meta refresh tags
+            /**
+             * Scans the content of the iframe for meta refresh tags and, if found,
+             * extracts the delay and URL, removes the meta tag to prevent native redirect,
+             * and posts a message to the parent after the specified delay.
+             */
             function checkMetaRefresh() {
               const frame = document.getElementById('contentFrame');
               if (!frame || !frame.contentDocument) return;
@@ -118,14 +142,14 @@ export class HTMLDownloadHandler extends EventTarget {
                   const result = parseMetaRefresh(meta.content);
                   console.log('metaRefresh', result, meta);
                   if (result && result.url) {
-                    // Convert relative URL to absolute
+                    // Convert relative URL to absolute using a temporary anchor element
                     const link = document.createElement('a');
                     link.href = result.url;
 
-                    // Remove the meta refresh tag to prevent native redirect
+                    // Remove the meta refresh tag to prevent the browser from performing a native redirect
                     meta.parentNode.removeChild(meta);
 
-                    // Respect the delay before posting the message
+                    // Wait for the specified delay before notifying the parent window
                     setTimeout(() => {
                       window.parent.postMessage({
                         type: 'potentialPdfUrl',
@@ -183,6 +207,7 @@ export class HTMLDownloadHandler extends EventTarget {
 
       // Listen for messages from the proxy iframe
       const messageHandler = async (event) => {
+        console.log('messageHandler', event.data);
         if (event.data.type === 'potentialPdfUrl') {
             console.log('potentialPdfUrl', event.data.url, event.data.source);
           const isPdf = await checkUrlAndDownload(event.data.url);
