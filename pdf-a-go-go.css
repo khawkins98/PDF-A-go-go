@@ -356,3 +356,59 @@
 .pdfagogo-debug-info .memory {
   color: #ff9900;
 }
+
+/* HTML Download Handler styles */
+.pdfagogo-html-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+.pdfagogo-html-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 20px;
+  z-index: 2;
+  border-bottom: 1px solid #ddd;
+}
+
+.pdfagogo-html-loading-content {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.pdfagogo-html-loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #3498db;
+  border-radius: 50%;
+  animation: pdfagogo-spin 1s linear infinite;
+}
+
+.pdfagogo-html-loading-text {
+  flex: 1;
+  font-size: 16px;
+  color: #333;
+}
+
+.pdfagogo-html-loading-subtext {
+  font-size: 14px;
+  color: #666;
+  margin-top: 5px;
+}
+
+@keyframes pdfagogo-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
