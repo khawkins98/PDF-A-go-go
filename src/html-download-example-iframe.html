@@ -1,0 +1,96 @@
+<!-- This is an example the HTML page that is returned by example iframe handler -->
+<!-- We do this hear to avoid CORS complexities, you should ensue your content material is on the same domain or has appropriate cors -->
+<!DOCTYPE html>
+<html
+  lang="en"
+  dir="ltr"
+  prefix="content: http://purl.org/rss/1.0/modules/content/  dc: http://purl.org/dc/terms/  foaf: http://xmlns.com/foaf/0.1/  og: http://ogp.me/ns#  rdfs: http://www.w3.org/2000/01/rdf-schema#  schema: http://schema.org/  sioc: http://rdfs.org/sioc/ns#  sioct: http://rdfs.org/sioc/types#  skos: http://www.w3.org/2004/02/skos/core#  xsd: http://www.w3.org/2001/XMLSchema# "
+>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="vf:page-type" content="category;download" />
+    <title>
+      [file] GAR Special Report 2024: Forensic Insights for Future Resilience - Learning from Past Disasters (100220)
+    </title>
+    <meta http-equiv="refresh" content="3; url=example_spread.pdf" />
+    <!-- <meta http-equiv="refresh" content="3; url=https://www.undrr.org/media/100220/download?startDownload=20250516" /> -->
+  </head>
+  <body>
+    <style type="text/css">
+      @import url("https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@200&amp;amp;family=Roboto:wght@400;700&amp;amp;display=swap");
+      body {
+        font-family: "Roboto", sans-serif;
+        background: #dde8f0;
+        margin: 0;
+      }
+      .undrr-interstitial--inner-content {
+        background: #fff;
+        padding: 2rem 1.5rem 1rem;
+        max-width: 900px;
+        margin: 2rem auto;
+      }
+      h1 {
+        color: #004f91;
+        font-size: 0.9rem;
+        padding: 0;
+        margin: 0;
+      }
+      h2 {
+        padding-top: 0;
+        margin-top: 0.5rem;
+      }
+      code {
+        font-family: "Roboto Mono", monospace;
+      }
+      pre {
+        margin: 0;
+        padding: 0.5rem 1rem;
+        background: #eee;
+        display: inline-block;
+      }
+      hr {
+        border: 0;
+        border-top: 1px solid #ccc;
+        margin: 2rem 0 0.5rem;
+      }
+      .undrr-logo {
+        background: url(https://www.undrr.org/sites/default/files/2023-04/undrr-logo-blue.svg)
+          no-repeat left center;
+        max-width: 350px;
+        min-width: 200px;
+        min-height: 80px;
+      }
+    </style>
+    <article class="undrr-interstitial--inner-content">
+      <h1>Document download</h1>
+      <h2>Your download will begin automatically.</h2>
+      <p>
+        If the download does not begin,
+        <a class="download-direct-link" href="#" target="_blank"
+          >please click here to download directly</a
+        >.
+      </p>
+      <hr />
+      <p><small>This website is operated by</small></p>
+      <div class="undrr-logo">&nbsp;</div>
+    </article>
+    <script
+      type="text/javascript"
+      src="//www.undrr.org/modules/custom/undrr_custom/js/google_analytics_enhancements.js?update=20230418"
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <script>
+      // set fallback download link
+      // https://drupal-testing.preventionweb.net/media/87206/download?startDownload=20250516
+      var mediaId = window.location.href.replace(/\/$/, "");
+      mediaId = mediaId.substr(mediaId.lastIndexOf("/") + 1);
+      var downloadLinkUrl =
+        "https://www.undrr.org/media/" +
+        mediaId +
+        "/download?startDownload=20250516";
+      var downloadLinkElement = document.querySelector(".download-direct-link");
+      downloadLinkElement.setAttribute("href", downloadLinkUrl);
+    </script>
+  </body>
+</html>
