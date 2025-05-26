@@ -135,55 +135,19 @@ function init(book, id, opts, cb) {
       pdf = loadedPdf;
       const book = {
         numPages: () => pdf.numPages,
-        getPage: (num, cb, highlights) => {
-          const pageNum = num + 1;
+        getPage: (pageIndex, cb) => {
+          const pageNum = pageIndex + 1;
           if (pageNum < 1 || pageNum > pdf.numPages) {
-            cb(new Error("Page out of range"));
+            cb(new Error("Page out of range. Requested: " + pageNum + " Total: " + pdf.numPages));
             return;
           }
           pdf
             .getPage(pageNum)
-            .then(async function (page) {
-              const scale = window.devicePixelRatio || 1.8;
-              const viewport = page.getViewport({ scale });
-              const canvas = document.createElement("canvas");
-              const context = canvas.getContext("2d");
-              canvas.width = viewport.width;
-              canvas.height = viewport.height;
-              await page.render({ canvasContext: context, viewport: viewport }).promise;
-              // Draw highlights if provided
-              if (Array.isArray(highlights) && highlights.length > 0) {
-                context.save();
-                const prevComp = context.globalCompositeOperation;
-                context.globalCompositeOperation = 'multiply';
-                context.globalAlpha = 1.0;
-                context.fillStyle = "rgba(255,255,0,1)";
-                for (const hl of highlights) {
-                  const rect = viewport.convertToViewportRectangle([
-                    hl.x,
-                    hl.y,
-                    hl.x + hl.width,
-                    hl.y + hl.height
-                  ]);
-                  const left = Math.min(rect[0], rect[2]);
-                  let top = Math.min(rect[1], rect[3]);
-                  top -= 8;
-                  const width = Math.abs(rect[2] - rect[0]);
-                  const height = Math.abs(rect[3] - rect[1]);
-                  context.fillRect(left, top, width, height);
-                }
-                context.globalCompositeOperation = prevComp;
-                context.restore();
-              }
-              cb(null, {
-                img: canvas,
-                width: viewport.width,
-                height: viewport.height,
-                getTextContent: () => page.getTextContent(),
-                getViewport: (opts) => page.getViewport(opts)
-              });
+            .then(function (pageProxy) {
+              cb(null, pageProxy);
             })
             .catch(function (err) {
+              console.error(`[pdfagogo.js] Error in book.getPage for pageNum ${pageNum}:`, err);
               cb(err);
             });
         },
