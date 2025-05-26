@@ -567,7 +567,7 @@ export class ScrollablePdfViewer extends EventEmitter {
     container.addEventListener('mouseleave', onEnd);
 
     // Touch events
-    // container.addEventListener('touchstart', onStart, { passive: true });
+    // container.addEventListener('touchstart', onStart, { passive: false });
     // container.addEventListener('touchmove', onMove, { passive: false });
     // container.addEventListener('touchend', onEnd);
     // container.addEventListener('touchcancel', onEnd);
