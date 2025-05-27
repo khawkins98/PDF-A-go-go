@@ -134,32 +134,42 @@ function init(book, id, opts, cb) {
     .then(async function (loadedPdf) {
       pdf = loadedPdf;
       const book = {
+        pdfDocument: pdf,
         numPages: () => pdf.numPages,
-        getPage: (pageIndex, cb) => {
-          const pageNum = pageIndex + 1;
-          if (pageNum < 1 || pageNum > pdf.numPages) {
-            cb(new Error("Page out of range. Requested: " + pageNum + " Total: " + pdf.numPages));
-            return;
-          }
-          pdf
-            .getPage(pageNum)
-            .then(function (pageProxy) {
-              cb(null, pageProxy);
-            })
-            .catch(function (err) {
-              console.error(`[pdfagogo.js] Error in book.getPage for pageNum ${pageNum}:`, err);
-              cb(err);
+        getPage: (pageNum) => {
+          return new Promise((resolve, reject) => {
+            if (pageNum < 1 || pageNum > pdf.numPages) {
+              const error = new Error(`Invalid page number requested: ${pageNum}. Total pages: ${pdf.numPages}`);
+              console.error(`[pdfagogo.js] book.getPage: ${error.message}`);
+              reject(error);
+              return;
+            }
+            pdf.getPage(pageNum).then(page => {
+              resolve(page);
+            }).catch(err => {
+              console.error(`[pdfagogo.js] book.getPage: Error getting page ${pageNum} from pdfDocument:`, err);
+              reject(err);
             });
+          });
+        },
+        destroy: () => {
+          // ... existing code ...
         },
       };
       init(book, "pdfagogo-container", featureOptions, function (err, v) {
         removeLoadingBar();
         if (err) {
-          showError("Failed to load PDF: " + err);
+          showError("Failed to initialize viewer: " + err);
           return;
         }
         viewer = v;
-        setupControls(pdfagogoContainer, featureOptions, viewer, book, pdf);
+        if (viewer && viewer.configManager) {
+          setupControls(pdfagogoContainer, viewer.configManager, viewer, book, pdf);
+        } else {
+          const criticalErrorMsg = "[pdfagogo.js] CRITICAL: Viewer initialized but ConfigManager is not available. UI setup aborted.";
+          console.error(criticalErrorMsg, {viewer});
+          showError(criticalErrorMsg);
+        }
       });
     })
     .catch(function (err) {

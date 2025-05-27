@@ -220,7 +220,7 @@
   right: 0;
   bottom: 0;
   overflow: hidden;
-  opacity: 0.2;
+  opacity: 0.8;
   line-height: 1.0;
   pointer-events: auto;
   mix-blend-mode: multiply;
@@ -262,6 +262,34 @@
   mix-blend-mode: normal;
   pointer-events: auto;
 }
+/* Search highlights */
+.pdfagogo-highlight {
+  position: absolute;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.pdfagogo-highlight-inner {
+  position: absolute;
+  background-color: yellow;
+  opacity: 0.4;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  border-radius: 2px;
+}
+
+.pdfagogo-highlight.current-match .pdfagogo-highlight-inner {
+  background-color: orange;
+  opacity: 0.6;
+}
+
+/* Optional: add a border or outline to the current-match *wrapper* for more emphasis */
+.pdfagogo-highlight.current-match {
+  box-shadow: 0 0 3px 1px orange;
+}
+
 /* For debugging */
 /* .pdfagogo-text-layer:hover span {
   color: rgba(0, 0, 0, 0.8);

@@ -1,13 +1,20 @@
 /**
- * UI helper functions for PDF-A-go-go.
+ * @file ui.js
+ * Provides UI helper functions and main control setup for the PDF viewer.
+ * This module is responsible for creating and managing the visual components
+ * of the viewer, such as toolbars, buttons, and loading indicators.
  */
 
 /**
  * Creates and inserts a loading progress bar inside the given container.
  * @param {HTMLElement} container - The container to insert the loading bar into.
- * @returns {HTMLProgressElement} The created progress bar element.
+ * @returns {HTMLProgressElement | null} The created progress bar element, or null if container is invalid.
  */
 export function createLoadingBar(container) {
+  if (!container || typeof container.appendChild !== 'function') {
+    console.error('[UI] Invalid container provided to createLoadingBar.');
+    return null;
+  }
   let loadingDiv = document.createElement("div");
   loadingDiv.className = "pdfagogo-loading";
   loadingDiv.style.maxWidth = "600px";
@@ -24,8 +31,8 @@ export function createLoadingBar(container) {
 
 /**
  * Updates the loading progress bar value and percent text.
- * @param {HTMLProgressElement} progressBar - The progress bar element.
- * @param {number|null} value - Progress value (0-1) or null for indeterminate.
+ * @param {HTMLProgressElement | null} progressBar - The progress bar element (returned by `createLoadingBar`).
+ * @param {number|null} value - Progress value (0-1). If null or not a number, the progress bar becomes indeterminate.
  */
 export function updateLoadingBar(progressBar, value) {
   if (!progressBar) return;
@@ -41,6 +48,7 @@ export function updateLoadingBar(progressBar, value) {
 
 /**
  * Removes the loading bar from the DOM.
+ * Finds the loading bar by its class and removes it from its parent.
  */
 export function removeLoadingBar() {
   const loadingDiv = document.querySelector(".pdfagogo-loading");
@@ -48,10 +56,12 @@ export function removeLoadingBar() {
 }
 
 /**
- * Shows an error message
+ * Shows an error message in place of the loading bar, or as a general error display.
+ * If a loading bar exists, its content is replaced. Otherwise, it might create a new error display (future enhancement).
  * @param {string} message - The error message to display.
+ * @param {HTMLElement} [container] - Optional. If provided and no loading bar exists, might create error in this container.
  */
-export function showError(message) {
+export function showError(message, container) {
   const loadingDiv = document.querySelector(".pdfagogo-loading");
   if (loadingDiv) {
     loadingDiv.innerHTML = `<div class="pdfagogo-loading-error">${message}</div>`;
@@ -61,13 +71,19 @@ export function showError(message) {
 /**
  * Sets up all main UI controls (search, navigation, page selector, accessibility, etc.)
  * and wires up their event listeners.
- * @param {HTMLElement} container - The main viewer container.
- * @param {Object} featureOptions - Feature toggles and options.
- * @param {Object} viewer - The viewer instance (after init).
- * @param {Object} book - The book object (with numPages, getPage).
- * @param {Object} pdf - The loaded PDF.js document.
+ *
+ * This function is responsible for dynamically creating the toolbar, search bar,
+ * navigation buttons, page indicators, hint zones for page flipping, and the resize grip.
+ * It uses the `ConfigManager` to determine which UI elements to show and how they behave.
+ * It also sets up event listeners for user interactions and for events from the viewer core (e.g., 'pagechanged').
+ *
+ * @param {HTMLElement} container - The main viewer container element where UI elements will be attached or related to.
+ * @param {import('./core/ConfigManager.js').ConfigManager} configManager - The configuration manager instance.
+ * @param {object} viewer - The main viewer instance (e.g., `ScrollablePdfViewer`). This object should have methods like `flip_forward`, `flip_back`, `go_to_page` and emit events like `pagechanged`, `initialRenderComplete`.
+ * @param {object} book - The PDF.js document object (usually `pdfDocument`), providing access to document properties like `numPages`.
+ * @param {object} pdf - An alias for the PDF.js document object, often used for convenience (can be the same as `book`).
  */
-export function setupControls(container, featureOptions, viewer, book, pdf) {
+export function setupControls(container, configManager, viewer, book, pdf) {
   // Remove any existing controls
   [
     "pdfagogo-search-controls",
@@ -76,12 +92,14 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     "pdfagogo-a11y-instructions",
   ].forEach((cls) => {
     const el = document.querySelector("." + cls);
-    if (el && el.parentNode) el.parentNode.removeChild(el);
+    if (el && el.parentNode) {
+      el.parentNode.removeChild(el);
+    }
   });
 
   // Search controls
   let searchControls, searchBox, searchBtn, searchResult, nextMatchBtn, prevMatchBtn;
-  if (featureOptions.showSearch) {
+  if (configManager.get('showSearch')) {
     searchControls = document.createElement("div");
     searchControls.className = "pdfagogo-search-controls";
     searchControls.innerHTML = `
@@ -89,7 +107,11 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       <button class="pdfagogo-search-btn">Search</button>
       <span class="pdfagogo-search-result"></span>
     `;
-    container.parentNode.insertBefore(searchControls, container);
+    if (container && container.parentNode) {
+      container.parentNode.insertBefore(searchControls, container);
+    } else {
+      console.error('[UI] Cannot append search controls: container or container.parentNode is null.', {container});
+    }
     searchBox = searchControls.querySelector(".pdfagogo-search-box");
     searchBtn = searchControls.querySelector(".pdfagogo-search-btn");
     searchResult = searchControls.querySelector(".pdfagogo-search-result");
@@ -102,13 +124,75 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     prevMatchBtn.className = "pdfagogo-prev-match-btn";
     searchControls.appendChild(prevMatchBtn);
     searchControls.appendChild(nextMatchBtn);
+
+    // Event listeners for search
+    if (searchBtn && searchBox) {
+      searchBtn.addEventListener("click", () => {
+        if (viewer && typeof viewer.search === 'function') {
+          viewer.search(searchBox.value);
+        }
+      });
+      searchBox.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          if (viewer && typeof viewer.search === 'function') {
+            viewer.search(searchBox.value);
+          }
+        }
+      });
+    }
+    if (nextMatchBtn) {
+      nextMatchBtn.addEventListener("click", () => {
+        if (viewer && typeof viewer.findNext === 'function') {
+          viewer.findNext();
+        }
+      });
+    }
+    if (prevMatchBtn) {
+      prevMatchBtn.addEventListener("click", () => {
+        if (viewer && typeof viewer.findPrevious === 'function') {
+          viewer.findPrevious();
+        }
+      });
+    }
+
+    // Listen to search events from the viewer to update UI
+    if (viewer && typeof viewer.on === 'function') {
+      viewer.on('searchupdated', (data) => {
+        if (searchResult) {
+          if (data.totalMatches > 0) {
+            searchResult.textContent = `Found ${data.totalMatches} matches. Displaying ${data.currentMatchIndex}.`;
+          } else if (data.query && data.query.length > 0) {
+            searchResult.textContent = "No matches found.";
+          } else {
+            searchResult.textContent = ""; // Cleared or initial state
+          }
+        }
+        if (nextMatchBtn) {
+          nextMatchBtn.disabled = data.totalMatches === 0 || data.currentMatchIndex >= data.totalMatches;
+        }
+        if (prevMatchBtn) {
+          prevMatchBtn.disabled = data.totalMatches === 0 || data.currentMatchIndex <= 1;
+        }
+      });
+      viewer.on('searchcleared', () => {
+        if (searchBox) searchBox.value = "";
+        if (searchResult) searchResult.textContent = "";
+        if (nextMatchBtn) nextMatchBtn.disabled = true;
+        if (prevMatchBtn) prevMatchBtn.disabled = true;
+      });
+       viewer.on('searchfailed', (data) => {
+        if (searchResult) {
+          searchResult.textContent = `Search failed: ${data.error || 'Unknown reason'}`;
+        }
+      });
+    }
   }
 
   // Main controls
   const controls = document.createElement("div");
   controls.className = "pdfagogo-controls";
   let controlsHTML = "";
-  if (featureOptions.showPrevNext) {
+  if (configManager.get('showPrevNext')) {
     controlsHTML +=
       '<button class="pdfagogo-prev" aria-label="Previous page">Previous</button>';
     controlsHTML +=
@@ -116,23 +200,36 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
   }
   controlsHTML +=
     '<button class="pdfagogo-share" aria-label="Share current page">Share</button>';
-  if (featureOptions.showDownload) {
+  if (configManager.get('showDownload')) {
     controlsHTML += '<button class="pdfagogo-download" aria-label="Download PDF">Download PDF</button>';
   }
-  if (featureOptions.showPageSelector) {
+  if (configManager.get('showPageSelector')) {
     controlsHTML +=
       '<input class="pdfagogo-goto-page" type="number" min="0" max="999" style="width:60px;" placeholder="Page #" aria-label="Go to page" />';
     controlsHTML += '<button class="pdfagogo-goto-btn">Go</button>';
   }
-  if (featureOptions.showCurrentPage) {
+  if (configManager.get('showCurrentPage')) {
     controlsHTML +=
       '<span class="pdfagogo-page-indicator" aria-live="polite"></span>';
   }
   controls.innerHTML = controlsHTML;
-  container.parentNode.insertBefore(
-    controls,
-    container.nextSibling
-  );
+  if (container && container.parentNode) {
+    container.parentNode.insertBefore(
+      controls, // This is the main controls div
+      container.nextSibling
+    );
+  } else {
+    console.error('[UI] Cannot append main controls: container or container.parentNode is null.', {container});
+  }
+
+  // Query essential elements NOW that they are in the DOM
+  const pageIndicatorElement = document.querySelector(".pdfagogo-page-indicator");
+  const prevButtonElement = document.querySelector(".pdfagogo-prev");
+  const nextButtonElement = document.querySelector(".pdfagogo-next");
+  const gotoPageInputElement = document.querySelector(".pdfagogo-goto-page");
+  const gotoButtonElement = document.querySelector(".pdfagogo-goto-btn"); // Query goto button as well
+  const shareButtonElement = document.querySelector(".pdfagogo-share");
+  const downloadButtonElement = document.querySelector(".pdfagogo-download");
 
   // Page announcement for screen readers
   let pageAnnouncement = document.querySelector(".pdfagogo-page-announcement");
@@ -146,10 +243,16 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     pageAnnouncement.style.height = "1px";
     pageAnnouncement.style.overflow = "hidden";
     pageAnnouncement.setAttribute("aria-live", "polite");
-    container.parentNode.insertBefore(
-      pageAnnouncement,
-      controls.nextSibling
-    );
+    // Ensure 'controls' element (main control bar) exists before trying to use it as a reference
+    const mainControlsElement = document.querySelector('.pdfagogo-controls');
+    if (container && container.parentNode && mainControlsElement && mainControlsElement.nextSibling) {
+        container.parentNode.insertBefore(pageAnnouncement, mainControlsElement.nextSibling);
+    } else if (container && container.parentNode) { // Fallback if mainControlsElement.nextSibling is an issue
+        console.warn('[UI] Could not find mainControlsElement.nextSibling, appending pageAnnouncement after container as fallback.');
+        container.parentNode.insertBefore(pageAnnouncement, container.nextSibling);
+    } else {
+        console.error('[UI] Cannot append pageAnnouncement: container or parentNode is invalid.', {container});
+    }
   }
 
   // Accessibility instructions
@@ -167,31 +270,141 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       - Use the buttons below for navigation, sharing, and searching.<br>
       - The current page is announced for screen readers.
     `;
-    container.parentNode.insertBefore(
-      a11yInstructions,
-      pageAnnouncement.nextSibling
-    );
+    const pageAnnouncementElement = document.querySelector('.pdfagogo-page-announcement');
+    if (container && container.parentNode && pageAnnouncementElement && pageAnnouncementElement.nextSibling) {
+        container.parentNode.insertBefore(a11yInstructions, pageAnnouncementElement.nextSibling);
+    } else if (container && container.parentNode) { // Fallback
+        console.warn('[UI] Could not find pageAnnouncementElement.nextSibling, appending a11yInstructions after container as fallback.');
+        container.parentNode.insertBefore(a11yInstructions, container.nextSibling);
+    } else {
+        console.error('[UI] Cannot append a11yInstructions: container or parentNode is invalid.', {container});
+    }
   }
 
   // Track the current page number using the 'seen' event
   let currentPage = 0;
 
-  // --- Event wiring and logic ---
+  // Dynamically add overlay hint zones for click navigation
+  let leftZone = document.querySelector('.pdfagogo-hint-left');
+  let rightZone = document.querySelector('.pdfagogo-hint-right');
+
+  if (container && typeof container.appendChild === 'function') {
+    if (!leftZone) {
+      leftZone = document.createElement("div");
+      leftZone.className = "pdfagogo-hint-zone pdfagogo-hint-left";
+      const leftArrow = document.createElement("span");
+      leftArrow.className = "pdfagogo-hint-arrow";
+      leftArrow.setAttribute("aria-hidden", "true");
+      leftArrow.innerHTML = "&#8592;";
+      leftZone.appendChild(leftArrow);
+      container.appendChild(leftZone);
+      leftZone.addEventListener("mouseenter", () => leftZone.classList.add("active"));
+      leftZone.addEventListener("mouseleave", () => leftZone.classList.remove("active"));
+      leftZone.addEventListener("click", () => viewer.flip_back());
+    } else {
+    }
+
+    if (!rightZone) {
+      rightZone = document.createElement("div");
+      rightZone.className = "pdfagogo-hint-zone pdfagogo-hint-right";
+      const rightArrow = document.createElement("span");
+      rightArrow.className = "pdfagogo-hint-arrow";
+      rightArrow.setAttribute("aria-hidden", "true");
+      rightArrow.innerHTML = "&#8594;";
+      rightZone.appendChild(rightArrow);
+      container.appendChild(rightZone);
+      rightZone.addEventListener("mouseenter", () => rightZone.classList.add("active"));
+      rightZone.addEventListener("mouseleave", () => rightZone.classList.remove("active"));
+      rightZone.addEventListener("click", () => viewer.flip_forward());
+    } else {
+    }
+  } else {
+    console.error('[UI] Hint zones NOT created because main container is invalid or missing appendChild method:', container);
+  }
+  // End of hint zone creation block
+
+  // Forward declaration for updateNavArrows as updatePageIndicator calls it.
+  let updateNavArrows = () => {};
+
+  function updatePageIndicator(data) { // data will be { currentPage, totalPages, origin }
+    if (pageIndicatorElement && data && typeof data.currentPage === 'number' && typeof data.totalPages === 'number') {
+      pageIndicatorElement.innerHTML = `Page: <b>${data.currentPage}</b> / ${data.totalPages}`;
+      // Update local currentPage for other UI elements if needed, e.g., share button
+      currentPage = data.currentPage -1; // Keep our internal currentPage 0-indexed
+    }
+    // Announce for screen readers
+    if (pageAnnouncement && data && typeof data.currentPage === 'number' && typeof data.totalPages === 'number') {
+      pageAnnouncement.textContent = `Page ${data.currentPage} of ${data.totalPages}`;
+    }
+    // Update gotoPageInput if it exists
+    if (gotoPageInputElement && data && typeof data.currentPage === 'number') {
+        gotoPageInputElement.value = data.currentPage;
+    }
+    updateNavArrows(); // Call after currentPage might have been updated.
+  }
+
+  // Update navigation arrows (prev/next buttons visibility/disabled state)
+  updateNavArrows = function() { // Assign to the forward-declared variable
+    if (!book) {
+      console.error('[UI] updateNavArrows: book object is not available! Cannot proceed.');
+      return;
+    }
+
+    if (!prevButtonElement && !nextButtonElement && configManager.get('showPrevNext')) {
+      console.warn('[UI] updateNavArrows: prevButtonElement or nextButtonElement (or both) not found. This may be normal if showPrevNext=false, or an issue if true.');
+    }
+
+    const totalPages = book.numPages();
+    const isFirstPage = currentPage === 0;
+    const isLastPage = totalPages > 0 && currentPage === totalPages - 1;
+
+    if (prevButtonElement) {
+        prevButtonElement.style.visibility = isFirstPage ? 'hidden' : '';
+    }
+    if (nextButtonElement) {
+        nextButtonElement.style.visibility = isLastPage ? 'hidden' : '';
+    }
+  }
+
+  // Initial update of page indicator and nav arrows
+  if (viewer && book) {
+    const initialPageToShow = (typeof viewer.currentPage === 'number' && viewer.currentPage >= 0) ? viewer.currentPage + 1 : 1;
+    const totalPages = book.numPages();
+    updatePageIndicator({ currentPage: initialPageToShow, totalPages: totalPages, origin: 'initialization' });
+  } else {
+     updateNavArrows(); // Still call to set initial state if viewer/book not ready for indicator
+  }
+
+  // Listen for page changes from the viewer (which gets it from PageManager via EventBus)
+  if (viewer && typeof viewer.on === 'function') {
+    viewer.on('pagechanged', (eventData) => {
+      updatePageIndicator(eventData);
+    });
+  }
 
   // Navigation buttons
-  const prevBtn = document.querySelector(".pdfagogo-prev");
-  const nextBtn = document.querySelector(".pdfagogo-next");
-  if (nextBtn) nextBtn.onclick = () => viewer.flip_forward();
-  if (prevBtn) prevBtn.onclick = () => viewer.flip_back();
-  if (!featureOptions.showPrevNext) {
-    if (prevBtn) prevBtn.style.display = "none";
-    if (nextBtn) nextBtn.style.display = "none";
+  if (configManager.get('showPrevNext') && prevButtonElement && nextButtonElement) {
+    prevButtonElement.addEventListener("click", () => {
+      console.log("[UI] Prev button clicked. Viewer available?", !!viewer);
+      if (viewer && typeof viewer.flip_back === 'function') {
+        viewer.flip_back();
+      } else {
+        console.error("[UI] Prev button: viewer or viewer.flip_back is not available.");
+      }
+    });
+    nextButtonElement.addEventListener("click", () => {
+      console.log("[UI] Next button clicked. Viewer available?", !!viewer);
+      if (viewer && typeof viewer.flip_forward === 'function') {
+        viewer.flip_forward();
+      } else {
+        console.error("[UI] Next button: viewer or viewer.flip_forward is not available.");
+      }
+    });
   }
 
   // Share button
-  const shareBtn = document.querySelector(".pdfagogo-share");
-  if (shareBtn)
-    shareBtn.onclick = () => {
+  if (shareButtonElement)
+    shareButtonElement.onclick = () => {
       const page = currentPage + 1;
       const shareUrl = `${window.location.origin}${window.location.pathname}#pdf-page=${page}`;
       navigator.clipboard.writeText(shareUrl);
@@ -199,11 +412,10 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     };
 
   // Download button
-  const downloadBtn = document.querySelector(".pdfagogo-download");
-  if (downloadBtn) {
-    downloadBtn.onclick = () => {
+  if (downloadButtonElement) {
+    downloadButtonElement.onclick = () => {
       const link = document.createElement('a');
-      link.href = featureOptions.pdfUrl;
+      link.href = configManager.get('pdfUrl');
       link.target = '_blank';
       document.body.appendChild(link);
       link.click();
@@ -212,8 +424,6 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
   }
 
   // Page selector
-  const gotoPageInput = document.querySelector(".pdfagogo-goto-page");
-  const gotoBtn = document.querySelector(".pdfagogo-goto-btn");
   function setPageByNumber(pageNum) {
     if (!viewer || !book) return;
     if (
@@ -230,211 +440,25 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       return;
     }
   }
-  if (gotoBtn)
-    gotoBtn.onclick = function () {
-      const val = gotoPageInput ? parseInt(gotoPageInput.value, 10) : NaN;
+  if (gotoButtonElement)
+    gotoButtonElement.onclick = function () {
+      const val = gotoPageInputElement ? parseInt(gotoPageInputElement.value, 10) : NaN;
       setPageByNumber(val);
     };
-  if (gotoPageInput && gotoBtn) {
-    gotoPageInput.addEventListener('keydown', function(e) {
+  if (gotoPageInputElement && gotoButtonElement) {
+    gotoPageInputElement.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' || e.keyCode === 13) {
-        gotoBtn.click();
+        gotoButtonElement.click();
       }
     });
   }
-  if (!featureOptions.showPageSelector) {
-    if (gotoPageInput) gotoPageInput.style.display = "none";
-    if (gotoBtn) gotoBtn.style.display = "none";
+  if (!configManager.get('showPageSelector')) {
+    if (gotoPageInputElement) gotoPageInputElement.style.display = "none";
+    if (gotoButtonElement) gotoButtonElement.style.display = "none";
   }
 
-  // Current page indicator
-  const pageIndicator = document.querySelector(
-    ".pdfagogo-page-indicator"
-  );
-  function updatePage(n) {
-    currentPage = parseInt(n);
-    const totalPages = book.numPages();
-    if (pageIndicator)
-      pageIndicator.textContent = `Page: ${currentPage} / ${totalPages}`;
-    if (pageAnnouncement)
-      pageAnnouncement.textContent = `Page ${currentPage} of ${totalPages}`;
-  }
-  viewer.on("seen", updatePage);
-  updatePage(0);
-  if (!featureOptions.showCurrentPage) {
-    if (pageIndicator) pageIndicator.style.display = "none";
-  }
-
-  // SEARCH FUNCTIONALITY
-  let matchPages = [];
-  let currentMatchIdx = 0;
-  let matchHighlights = {}; // {pageNum: [highlightBox, ...]}
-  let prevMatchPage = null; // Track previous match page index
-  async function searchPdf(query) {
-    matchPages = [];
-    currentMatchIdx = 0;
-    matchHighlights = {};
-    window.__pdfagogo__highlights = {};
-    for (let i = 0; i < pdf.numPages; i++) {
-      const page = await pdf.getPage(i + 1);
-      const textContent = await page.getTextContent();
-      const items = textContent.items;
-      const text = items.map((item) => item.str).join(" ").toLowerCase();
-      if (text.includes(query)) {
-        matchPages.push(i);
-        // Find bounding boxes for matches on this page
-        const boxes = [];
-        for (let j = 0; j < items.length; j++) {
-          const item = items[j];
-          const itemText = item.str.toLowerCase();
-          const idx = itemText.indexOf(query);
-          if (idx !== -1) {
-            const x = item.transform[4];
-            const y = item.transform[5] - (item.height || 10);
-            boxes.push({
-              x: x,
-              y: y,
-              width: item.width,
-              height: item.height || 10,
-            });
-          }
-        }
-        matchHighlights[i] = boxes;
-      }
-    }
-  }
-  function showMatch(idx) {
-    if (matchPages.length === 0) {
-      window.__pdfagogo__highlights = {};
-      return;
-    }
-    currentMatchIdx =
-      ((idx % matchPages.length) + matchPages.length) % matchPages.length; // wrap around
-    const pageNum = matchPages[currentMatchIdx] + 1; // 1-based
-    const pageIdx = matchPages[currentMatchIdx];
-    // Highlight only the current match
-    const highlights = matchHighlights[pageIdx] || [];
-    // Set global highlights for viewer
-    window.__pdfagogo__highlights = {};
-    window.__pdfagogo__highlights[pageIdx] = highlights;
-    setPageByNumber(pageNum);
-    // Only re-render the current and previous match pages
-    if (typeof viewer.rerenderPage === 'function') {
-      viewer.rerenderPage(pageIdx);
-      if (prevMatchPage !== null && prevMatchPage !== pageIdx) {
-        // Clear highlights for previous page and re-render
-        window.__pdfagogo__highlights[prevMatchPage] = [];
-        viewer.rerenderPage(prevMatchPage);
-      }
-      prevMatchPage = pageIdx;
-    } else if (typeof viewer._renderAllPages === 'function') {
-      viewer._renderAllPages();
-    } else if (typeof viewer.go_to_page === 'function') {
-      viewer.go_to_page(viewer.currentPage || 0);
-    }
-    if (searchResult)
-      searchResult.textContent = `Match ${currentMatchIdx + 1} of ${
-        matchPages.length
-      } (page ${pageNum})`;
-  }
-  if (searchBtn)
-    searchBtn.onclick = async function () {
-      const query = searchBox ? searchBox.value.trim().toLowerCase() : "";
-      if (!query) return;
-      if (searchResult) searchResult.textContent = "Searching...";
-      await searchPdf(query);
-      if (matchPages.length > 0) {
-        showMatch(0);
-      } else {
-        if (searchResult) searchResult.textContent = "Not found";
-      }
-    };
-  if (nextMatchBtn)
-    nextMatchBtn.onclick = function () {
-      if (matchPages.length > 0) {
-        showMatch(currentMatchIdx + 1);
-      }
-    };
-  if (prevMatchBtn)
-    prevMatchBtn.onclick = function () {
-      if (matchPages.length > 0) {
-        showMatch(currentMatchIdx - 1);
-      }
-    };
-  if (searchBox)
-    searchBox.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" && searchBtn) searchBtn.click();
-    });
-  if (!featureOptions.showSearch) {
-    if (searchControls) searchControls.style.display = "none";
-  }
-
-  // Keyboard navigation for accessibility
-  container.addEventListener("keydown", function (event) {
-    if (event.key === "ArrowLeft") {
-      viewer.flip_back();
-      event.preventDefault();
-    } else if (event.key === "ArrowRight") {
-      viewer.flip_forward();
-      event.preventDefault();
-    } else if (event.key === "+" || event.key === "=") {
-      // No zoom in scroll mode
-      event.preventDefault();
-    } else if (event.key === "-") {
-      // No zoom in scroll mode
-      event.preventDefault();
-    }
-  });
-
-  // Hide/show navigation arrows on first/last page
-  function updateNavArrows() {
-    if (!prevBtn || !nextBtn) return;
-    let isFirst, isLast;
-    isFirst = currentPage === 0;
-    isLast = currentPage >= pdf.numPages;
-    prevBtn.style.visibility = isFirst ? 'hidden' : '';
-    nextBtn.style.visibility = isLast ? 'hidden' : '';
-    setTimeout(() => {
-      const leftHint = document.querySelector('.pdfagogo-hint-left');
-      const rightHint = document.querySelector('.pdfagogo-hint-right');
-      if (leftHint) leftHint.style.display = isFirst ? 'none' : '';
-      if (rightHint) rightHint.style.display = isLast ? 'none' : '';
-    }, 100);
-  }
-  viewer.on("seen", updateNavArrows);
+  // Ensure nav arrows (including hints) are updated after potential creation
   updateNavArrows();
-
-  // Dynamically add overlay hint zones for click navigation
-  setTimeout(() => {
-    let leftZone = document.querySelector('.pdfagogo-hint-left');
-    let rightZone = document.querySelector('.pdfagogo-hint-right');
-    if (!leftZone) {
-      leftZone = document.createElement("div");
-      leftZone.className = "pdfagogo-hint-zone pdfagogo-hint-left";
-      const leftArrow = document.createElement("span");
-      leftArrow.className = "pdfagogo-hint-arrow";
-      leftArrow.setAttribute("aria-hidden", "true");
-      leftArrow.innerHTML = "&#8592;";
-      leftZone.appendChild(leftArrow);
-      container.appendChild(leftZone);
-    }
-    if (!rightZone) {
-      rightZone = document.createElement("div");
-      rightZone.className = "pdfagogo-hint-zone pdfagogo-hint-right";
-      const rightArrow = document.createElement("span");
-      rightArrow.className = "pdfagogo-hint-arrow";
-      rightArrow.setAttribute("aria-hidden", "true");
-      rightArrow.innerHTML = "&#8594;";
-      rightZone.appendChild(rightArrow);
-      container.appendChild(rightZone);
-    }
-    leftZone.addEventListener("mouseenter", () => leftZone.classList.add("active"));
-    leftZone.addEventListener("mouseleave", () => leftZone.classList.remove("active"));
-    rightZone.addEventListener("mouseenter", () => rightZone.classList.add("active"));
-    rightZone.addEventListener("mouseleave", () => rightZone.classList.remove("active"));
-    leftZone.addEventListener("click", () => viewer.flip_back());
-    rightZone.addEventListener("click", () => viewer.flip_forward());
-  }, 100);
 
   // --- Hash-based page navigation ---
   function getPageFromHash() {
@@ -448,33 +472,26 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     return null;
   }
   function goToHashPage() {
-    // console.log('goToHashPage');
     const pageNum = getPageFromHash();
     if (pageNum) {
       setTimeout(() => {
-        // console.log('goToHashPage', pageNum);
         setPageByNumber(pageNum);
         window.__pdfagogo__pageSetBy = 'hash';
       }, 200);
     }
   }
-  // Wait for initial render before going to hash page
   viewer.on('initialRenderComplete', () => {
-    console.log('initialRenderComplete');
     goToHashPage();
   });
-
-  // Listen for hash changes
   window.addEventListener("hashchange", goToHashPage);
-  // If no hash, use defaultPage from options
-  if (!getPageFromHash() && featureOptions.defaultPage) {
-    const defPage = parseInt(featureOptions.defaultPage, 10);
+  const defaultPageFromConfig = configManager.get('defaultPage');
+  if (!getPageFromHash() && defaultPageFromConfig) {
+    const defPage = parseInt(defaultPageFromConfig, 10);
     if (!isNaN(defPage) && defPage >= 1 && defPage <= pdf.numPages) {
       setPageByNumber(defPage);
       window.__pdfagogo__pageSetBy = 'defaultPage';
     }
   }
-  // When navigating to a page, update the hash
   const originalSetPageByNumber = setPageByNumber;
   setPageByNumber = function(pageNum) {
     if (!viewer || !pdf) return;
@@ -490,26 +507,39 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     window.location.hash = `pdf-page=${pageNum}`;
     originalSetPageByNumber(pageNum);
   };
+  // END OF HASH NAVIGATION //
 
-  // --- Resize grip feature: enabled by default, can be disabled with featureOptions.resize === false ---
-  if (featureOptions.showResizeGrip !== false) {
-    let resizeGrip = document.createElement("div");
-    resizeGrip.className = "pdfagogo-resize-grip";
+  // --- Resize grip feature ---
+  const showResizeGrip = configManager.get('showResizeGrip', true);
+
+  if (showResizeGrip !== false) {
+    let resizeGrip = document.querySelector('.pdfagogo-resize-grip'); // Check if it somehow already exists
+    if (!resizeGrip) {
+        resizeGrip = document.createElement("div");
+        resizeGrip.className = "pdfagogo-resize-grip";
+    } else {
+    }
+
     resizeGrip.setAttribute("tabindex", "0");
     resizeGrip.setAttribute("role", "separator");
     resizeGrip.setAttribute("aria-orientation", "vertical");
     resizeGrip.setAttribute("aria-label", "Resize PDF viewer");
     resizeGrip.setAttribute("title", "Drag to resize PDF viewer height");
-    container.appendChild(resizeGrip);
+
+    if (container && typeof container.appendChild === 'function') {
+      // Only append if it's not already a child of this container
+      if (resizeGrip.parentElement !== container) {
+        container.appendChild(resizeGrip);
+      } else {
+      }
+    } else {
+      console.error('[UI] Cannot append resize grip: container is invalid.', {container});
+    }
 
     let isResizing = false;
     let startY = 0;
     let startHeight = 0;
 
-    /**
-     * Handler for when the user starts dragging the resize grip.
-     * Sets up initial state and event listeners for mouse/touch move and up.
-     */
     function onMouseDown(e) {
       isResizing = true;
       startY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
@@ -517,50 +547,31 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       document.body.style.cursor = 'ns-resize';
       document.addEventListener('mousemove', onMouseMove);
       document.addEventListener('mouseup', onMouseUp);
-      // document.addEventListener('touchmove', onMouseMove, { passive: false });
-      // document.addEventListener('touchend', onMouseUp);
+      document.addEventListener('touchmove', onMouseMove, { passive: false });
+      document.addEventListener('touchend', onMouseUp);
       e.preventDefault();
     }
 
-    /**
-     * Handler for mouse/touch move events during resizing.
-     * Dynamically updates the container height as the user drags.
-     */
     function onMouseMove(e) {
       if (!isResizing) return;
       let clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
       let newHeight = startHeight + (clientY - startY);
-      newHeight = Math.max(200, newHeight); // Minimum height
+      newHeight = Math.max(200, newHeight);
       container.style.height = newHeight + 'px';
-      e.preventDefault();
     }
 
-    /**
-     * Handler for when the user releases the resize grip (mouse/touch up).
-     * Cleans up event listeners, redraws the PDF pages, and restores the scroll position to the current page.
-     */
     async function onMouseUp(e) {
+      if (!isResizing) return;
       isResizing = false;
       document.body.style.cursor = '';
-      // document.removeEventListener('mousemove', onMouseMove);
-      // document.removeEventListener('mouseup', onMouseUp);
-      // document.removeEventListener('touchmove', onMouseMove);
-      // document.removeEventListener('touchend', onMouseUp);
-      // Only redraw after resizing ends
-      // Store the current page index so we can restore the scroll position after redraw
-      let currentPage = (typeof viewer.showNdx === 'number') ? viewer.showNdx : (viewer.currentPage || 0);
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      document.removeEventListener('touchmove', onMouseMove);
+      document.removeEventListener('touchend', onMouseUp);
 
-      // Trigger window resize event to redraw pages at new dimensions
       window.dispatchEvent(new Event('resize'));
-
-      // Restore the scroll position to the same page after resizing
-      if (typeof viewer?.go_to_page === 'function') {
-        viewer.go_to_page(currentPage);
-      }
-      e.preventDefault();
     }
 
-    // Attach event listeners to the resize grip for mouse and touch support
     resizeGrip.addEventListener('mousedown', onMouseDown);
     resizeGrip.addEventListener('touchstart', onMouseDown, { passive: false });
   }

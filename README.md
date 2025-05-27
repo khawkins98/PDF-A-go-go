@@ -193,3 +193,25 @@ The development server runs on port 9000 by default (http://localhost:9000).
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
+
+## <a name="recent-refactor"></a>Recent Refactoring (Early 2024)
+
+A significant refactoring effort has been undertaken to improve the modularity, testability, and maintainability of PDF-A-go-go. Key changes include:
+
+*   **New Directory Structure:** The `src` directory has been reorganized to better separate concerns:
+    *   `src/core/`: Contains core logic modules like `EventBus.js`, `PageManager.js`, `RenderQueue.js`, and `ConfigManager.js`.
+    *   `src/rendering/`: Intended for modules specifically related to the PDF.js rendering process or custom rendering logic (currently minimal, mostly in `ScrollablePdfViewer.js`).
+    *   `src/ui/`: Contains UI helper functions and the main UI setup logic (`ui.js`).
+    *   `src/utils/`: For utility functions (e.g., `debounce.js`).
+    *   `src/types/`: For TypeScript type definitions if the project moves towards TypeScript, or complex JSDoc typedefs.
+*   **Core Module Extraction:**
+    *   **`EventBus.js`**: A simple publish/subscribe event bus for decoupled communication between components.
+    *   **`ConfigManager.js`**: Manages all viewer configuration options, merging user-provided settings with defaults.
+    *   **`RenderQueue.js`**: A queue for managing and prioritizing page rendering tasks, ensuring sequential processing.
+    *   **`PageManager.js`**: Handles the lifecycle of PDF pages, determines visible pages, and coordinates with the `RenderQueue` for scheduling low-resolution and high-resolution rendering passes.
+*   **Main Viewer (`ScrollablePdfViewer.js`):** This class still orchestrates the overall viewer but now delegates more responsibilities to the new core modules.
+*   **Improved Testability:** The extracted modules have been equipped with unit tests (using Vitest), laying the groundwork for more robust testing.
+
+This refactoring aims to make the codebase easier to understand, extend, and debug.
+
+## <a name="getting-started"></a>Getting Started
