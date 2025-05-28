@@ -1,11 +1,45 @@
 /**
- * UI helper functions for PDF-A-go-go.
+ * @file UI Components and Controls for PDF-A-go-go.
+ * 
+ * This module provides comprehensive UI functionality for the PDF viewer including:
+ * - Loading progress indicators with visual feedback
+ * - Navigation controls (previous/next, page selector, download)
+ * - Search functionality with text highlighting and match navigation
+ * - Accessibility features (screen reader support, keyboard navigation)
+ * - Error handling and user feedback
+ * - Mobile-responsive design and touch interaction
+ * 
+ * All UI components are designed with accessibility in mind, featuring proper
+ * ARIA labels, keyboard navigation support, and screen reader compatibility.
+ * 
+ * @author PDF-A-go-go Contributors
+ * @version 1.0.0
+ * @see {@link https://github.com/khawkins98/PDF-A-go-go|GitHub Repository}
  */
 
 /**
  * Creates and inserts a loading progress bar inside the given container.
- * @param {HTMLElement} container - The container to insert the loading bar into.
- * @returns {HTMLProgressElement} The created progress bar element.
+ * 
+ * The loading bar provides visual feedback during PDF loading with both
+ * a progress bar and percentage text. It's designed to be accessible
+ * and provides clear indication of loading status.
+ * 
+ * @param {HTMLElement} container - The container element to insert the loading bar into
+ * @returns {HTMLProgressElement} The created progress bar element for updating progress
+ * 
+ * @example
+ * const container = document.getElementById('pdf-container');
+ * const progressBar = createLoadingBar(container);
+ * 
+ * // Later, update the progress
+ * updateLoadingBar(progressBar, 0.5); // 50% complete
+ * 
+ * @example
+ * // The loading bar creates this structure:
+ * // <div class="pdfagogo-loading">
+ * //   <div class="pdfagogo-loading-text">Loading <span class="pdfagogo-loading-percent">0%</span></div>
+ * //   <progress class="pdfagogo-progress-bar" value="0" max="1"></progress>
+ * // </div>
  */
 export function createLoadingBar(container) {
   let loadingDiv = document.createElement("div");
@@ -23,33 +57,118 @@ export function createLoadingBar(container) {
 }
 
 /**
- * Updates the loading progress bar value and percent text.
- * @param {HTMLProgressElement} progressBar - The progress bar element.
- * @param {number|null} value - Progress value (0-1) or null for indeterminate.
+ * Updates the loading progress bar value and percentage text display.
+ * 
+ * This function handles both determinate progress (with specific percentage)
+ * and indeterminate progress (when exact progress is unknown). It updates
+ * both the visual progress bar and the text percentage display.
+ * 
+ * @param {HTMLProgressElement} progressBar - The progress bar element to update
+ * @param {number|null} value - Progress value between 0-1, or null for indeterminate progress
+ * 
+ * @example
+ * // Update to 75% complete
+ * updateLoadingBar(progressBar, 0.75);
+ * 
+ * @example
+ * // Set to indeterminate state (spinning/unknown progress)
+ * updateLoadingBar(progressBar, null);
+ * 
+ * @example
+ * // Typical usage in a loading sequence
+ * const progressBar = createLoadingBar(container);
+ * 
+ * // Start with indeterminate
+ * updateLoadingBar(progressBar, null);
+ * 
+ * // Update with actual progress as it becomes available
+ * fetch('/api/pdf-data')
+ *   .then(response => {
+ *     const reader = response.body.getReader();
+ *     const contentLength = response.headers.get('Content-Length');
+ *     let receivedLength = 0;
+ *     
+ *     return new ReadableStream({
+ *       start(controller) {
+ *         function pump() {
+ *           return reader.read().then(({ done, value }) => {
+ *             if (done) {
+ *               controller.close();
+ *               return;
+ *             }
+ *             receivedLength += value.length;
+ *             updateLoadingBar(progressBar, receivedLength / contentLength);
+ *             controller.enqueue(value);
+ *             return pump();
+ *           });
+ *         }
+ *         return pump();
+ *       }
+ *     });
+ *   });
  */
 export function updateLoadingBar(progressBar, value) {
   if (!progressBar) return;
+  
   const percentSpan = document.querySelector('.pdfagogo-loading-percent');
+  
   if (typeof value === "number") {
+    // Determinate progress - show specific percentage
     progressBar.value = value;
     if (percentSpan) percentSpan.textContent = `${Math.round(value * 100)}%`;
   } else {
+    // Indeterminate progress - remove value attribute for spinning animation
     progressBar.removeAttribute("value");
     if (percentSpan) percentSpan.textContent = '';
   }
 }
 
 /**
- * Removes the loading bar from the DOM.
+ * Removes the loading bar from the DOM completely.
+ * 
+ * This function safely removes the loading indicator once PDF loading
+ * is complete or has failed. It handles cases where the loading bar
+ * might not exist or has already been removed.
+ * 
+ * @example
+ * // After successful PDF load
+ * loadPdf(url)
+ *   .then(pdf => {
+ *     removeLoadingBar();
+ *     initializeViewer(pdf);
+ *   })
+ *   .catch(error => {
+ *     removeLoadingBar();
+ *     showError('Failed to load PDF: ' + error.message);
+ *   });
  */
 export function removeLoadingBar() {
   const loadingDiv = document.querySelector(".pdfagogo-loading");
-  if (loadingDiv && loadingDiv.parentNode) loadingDiv.parentNode.removeChild(loadingDiv);
+  if (loadingDiv && loadingDiv.parentNode) {
+    loadingDiv.parentNode.removeChild(loadingDiv);
+  }
 }
 
 /**
- * Shows an error message
- * @param {string} message - The error message to display.
+ * Displays an error message to the user in place of the loading indicator.
+ * 
+ * This function replaces the loading bar content with an error message,
+ * providing clear feedback when PDF loading fails. The error is displayed
+ * in a user-friendly format with appropriate styling.
+ * 
+ * @param {string} message - The error message to display to the user
+ * 
+ * @example
+ * // Handle network error
+ * showError('PDF not found. Please check the URL and try again.');
+ * 
+ * @example
+ * // Handle parsing error
+ * showError('Invalid PDF file. The file may be corrupted.');
+ * 
+ * @example
+ * // Handle timeout error
+ * showError('Loading timeout. Please check your connection and try again.');
  */
 export function showError(message) {
   const loadingDiv = document.querySelector(".pdfagogo-loading");
@@ -59,13 +178,86 @@ export function showError(message) {
 }
 
 /**
- * Sets up all main UI controls (search, navigation, page selector, accessibility, etc.)
- * and wires up their event listeners.
- * @param {HTMLElement} container - The main viewer container.
- * @param {Object} featureOptions - Feature toggles and options.
- * @param {Object} viewer - The viewer instance (after init).
- * @param {Object} book - The book object (with numPages, getPage).
- * @param {Object} pdf - The loaded PDF.js document.
+ * Sets up all main UI controls and wires up their event listeners.
+ * 
+ * This is the primary UI initialization function that creates and configures:
+ * - Search controls with text input and match navigation
+ * - Navigation controls (previous/next buttons, page selector)
+ * - Download and share functionality
+ * - Accessibility features (screen reader announcements, keyboard navigation)
+ * - Page tracking and URL fragment support
+ * - Mobile-responsive touch interactions
+ * 
+ * The function handles feature toggles through the featureOptions parameter,
+ * allowing selective enabling/disabling of UI components. All controls are
+ * designed with accessibility in mind and include proper ARIA labels.
+ * 
+ * @param {HTMLElement} container - The main viewer container element
+ * @param {Object} featureOptions - Feature toggles and configuration options
+ * @param {boolean} [featureOptions.showSearch=true] - Enable search functionality
+ * @param {boolean} [featureOptions.showPrevNext=true] - Show previous/next navigation buttons
+ * @param {boolean} [featureOptions.showPageSelector=true] - Show page number input field
+ * @param {boolean} [featureOptions.showCurrentPage=true] - Show current page indicator
+ * @param {boolean} [featureOptions.showDownload=true] - Show download button
+ * @param {boolean} [featureOptions.showResizeGrip=true] - Show resize handle
+ * @param {ScrollablePdfViewer} viewer - The initialized PDF viewer instance
+ * @param {Object} book - The PDF book object with page access methods
+ * @param {Function} book.numPages - Returns total number of pages
+ * @param {Function} book.getPage - Retrieves a specific page
+ * @param {Object} pdf - The loaded PDF.js document instance
+ * 
+ * @example
+ * // Basic setup with all features enabled
+ * setupControls(
+ *   document.getElementById('pdf-container'),
+ *   {
+ *     showSearch: true,
+ *     showPrevNext: true,
+ *     showPageSelector: true,
+ *     showCurrentPage: true,
+ *     showDownload: true
+ *   },
+ *   viewerInstance,
+ *   bookObject,
+ *   pdfDocument
+ * );
+ * 
+ * @example
+ * // Minimal setup with only navigation
+ * setupControls(
+ *   container,
+ *   {
+ *     showSearch: false,
+ *     showPrevNext: true,
+ *     showPageSelector: false,
+ *     showCurrentPage: true,
+ *     showDownload: false
+ *   },
+ *   viewer,
+ *   book,
+ *   pdf
+ * );
+ * 
+ * @example
+ * // The function creates this UI structure:
+ * // <div class="pdfagogo-search-controls">
+ * //   <input class="pdfagogo-search-box" type="text" placeholder="Search text..." />
+ * //   <button class="pdfagogo-search-btn">Search</button>
+ * //   <span class="pdfagogo-search-result"></span>
+ * //   <button class="pdfagogo-prev-match-btn">Prev Match</button>
+ * //   <button class="pdfagogo-next-match-btn">Next Match</button>
+ * // </div>
+ * // <div class="pdfagogo-controls">
+ * //   <button class="pdfagogo-prev">Previous</button>
+ * //   <button class="pdfagogo-next">Next</button>
+ * //   <button class="pdfagogo-share">Share</button>
+ * //   <button class="pdfagogo-download">Download PDF</button>
+ * //   <input class="pdfagogo-goto-page" type="number" />
+ * //   <button class="pdfagogo-goto-btn">Go</button>
+ * //   <span class="pdfagogo-page-indicator"></span>
+ * // </div>
+ * // <div class="pdfagogo-page-announcement" aria-live="polite"></div>
+ * // <div class="pdfagogo-a11y-instructions"></div>
  */
 export function setupControls(container, featureOptions, viewer, book, pdf) {
   // Remove any existing controls

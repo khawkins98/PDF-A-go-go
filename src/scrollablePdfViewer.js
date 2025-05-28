@@ -1,29 +1,118 @@
+/**
+ * @file Scrollable PDF Viewer: Core rendering and interaction engine for PDF-A-go-go.
+ * 
+ * This module provides the main ScrollablePdfViewer class that handles:
+ * - PDF page rendering with render queue management
+ * - Memory management and performance optimization
+ * - User interaction (scrolling, navigation, touch/mouse events)
+ * - Accessibility features and keyboard navigation
+ * - Performance monitoring and debug capabilities
+ * - Mobile and desktop optimization
+ * 
+ * The viewer uses a sophisticated render queue system to manage page rendering
+ * efficiently, with automatic memory cleanup and performance tracking.
+ * 
+ * @author PDF-A-go-go Contributors
+ * @version 1.0.0
+ * @see {@link https://github.com/khawkins98/PDF-A-go-go|GitHub Repository}
+ */
+
 import EventEmitter from "events";
 
+/**
+ * Render queue system for managing PDF page rendering tasks.
+ * 
+ * This class implements a priority-based task queue that processes rendering
+ * operations using requestAnimationFrame for optimal performance. It ensures
+ * that high-priority tasks (visible pages) are rendered before lower-priority
+ * tasks (off-screen pages).
+ * 
+ * @class RenderQueue
+ * @example
+ * const queue = new RenderQueue();
+ * 
+ * // Add a high-priority task
+ * queue.add(() => renderVisiblePage(1), true);
+ * 
+ * // Add a normal priority task
+ * queue.add(() => renderOffscreenPage(5));
+ * 
+ * // Clear all pending tasks
+ * queue.clear();
+ */
 class RenderQueue {
+  /**
+   * Create a new render queue instance.
+   * 
+   * @constructor
+   */
   constructor() {
+    /** @type {Array<Function>} Array of pending render tasks */
     this.queue = [];
+    
+    /** @type {boolean} Whether the queue is currently processing tasks */
     this.isProcessing = false;
+    
+    /** @type {Function|null} The currently executing task */
     this.currentTask = null;
   }
 
+  /**
+   * Add a rendering task to the queue.
+   * 
+   * Tasks can be added with normal or high priority. High-priority tasks
+   * are added to the front of the queue and will be processed before
+   * normal priority tasks.
+   * 
+   * @param {Function} task - The rendering task function to execute
+   * @param {boolean} [priority=false] - Whether this is a high-priority task
+   * 
+   * @example
+   * // Add a normal priority task
+   * queue.add(() => renderPage(5));
+   * 
+   * // Add a high-priority task (will be processed first)
+   * queue.add(() => renderVisiblePage(2), true);
+   */
   add(task, priority = false) {
     if (priority) {
+      // High-priority tasks go to the front of the queue
       this.queue.unshift(task);
     } else {
+      // Normal priority tasks go to the back
       this.queue.push(task);
     }
 
+    // Start processing if not already running
     if (!this.isProcessing) {
       this.process();
     }
   }
 
+  /**
+   * Clear all pending tasks from the queue.
+   * 
+   * This method removes all queued tasks but does not interrupt
+   * the currently executing task.
+   * 
+   * @example
+   * // Clear all pending renders when user navigates away
+   * queue.clear();
+   */
   clear() {
     this.queue = [];
     this.currentTask = null;
   }
 
+  /**
+   * Process the next task in the queue using requestAnimationFrame.
+   * 
+   * This method uses requestAnimationFrame to ensure rendering tasks
+   * are executed at the optimal time for smooth performance. It handles
+   * errors gracefully and continues processing even if individual tasks fail.
+   * 
+   * @private
+   */
   process() {
     if (this.queue.length === 0) {
       this.isProcessing = false;
@@ -48,26 +137,123 @@ class RenderQueue {
   }
 }
 
+/**
+ * Main scrollable PDF viewer class with comprehensive rendering and interaction capabilities.
+ * 
+ * This class extends EventEmitter to provide a rich event-driven interface for PDF viewing.
+ * It handles all aspects of PDF rendering, user interaction, performance optimization,
+ * and accessibility features.
+ * 
+ * Key features:
+ * - Horizontal scrolling PDF viewer with smooth navigation
+ * - Render queue system for optimal performance
+ * - Memory management with automatic cleanup
+ * - Mobile and desktop optimization
+ * - Accessibility support (ARIA labels, keyboard navigation)
+ * - Performance monitoring and debug capabilities
+ * - Touch and mouse interaction support
+ * 
+ * @class ScrollablePdfViewer
+ * @extends EventEmitter
+ * 
+ * @fires ScrollablePdfViewer#initialRenderComplete - When initial page rendering is complete
+ * @fires ScrollablePdfViewer#pageChange - When the current page changes
+ * @fires ScrollablePdfViewer#seen - When a page becomes visible
+ * 
+ * @example
+ * const viewer = new ScrollablePdfViewer({
+ *   app: document.getElementById('pdf-container'),
+ *   book: {
+ *     numPages: () => 10,
+ *     getPage: (index, callback) => {
+ *       // render page implementation
+ *     }
+ *   },
+ *   options: {
+ *     debug: true,
+ *     momentum: 2.0,
+ *     scale: 1.5
+ *   }
+ * });
+ */
 export class ScrollablePdfViewer extends EventEmitter {
+  /**
+   * Create a new ScrollablePdfViewer instance.
+   * 
+   * Initializes the PDF viewer with the provided configuration, sets up the DOM structure,
+   * configures device-specific optimizations, and begins the initial page rendering process.
+   * 
+   * @param {Object} config - Configuration object for the viewer
+   * @param {HTMLElement} config.app - The container element for the viewer
+   * @param {Object} config.book - PDF book object with page access methods
+   * @param {Function} config.book.numPages - Returns the total number of pages
+   * @param {Function} config.book.getPage - Retrieves a specific page for rendering
+   * @param {Object} [config.options={}] - Viewer options and settings
+   * @param {number} [config.options.scale] - Rendering scale factor
+   * @param {number} [config.options.momentum=1.5] - Scroll momentum factor
+   * @param {boolean} [config.options.debug=false] - Enable debug mode with performance metrics
+   * @param {string} [config.options.backgroundColor] - Background color for pages
+   * @param {number} [config.options.margin] - Page margin settings
+   * 
+   * @constructor
+   * @example
+   * const viewer = new ScrollablePdfViewer({
+   *   app: document.getElementById('pdf-container'),
+   *   book: {
+   *     numPages: () => 10,
+   *     getPage: (index, callback) => {
+   *       // render page implementation
+   *     }
+   *   },
+   *   options: {
+   *     debug: true,
+   *     momentum: 2.0,
+   *     scale: 1.5
+   *   }
+   * });
+   */
   constructor({ app, book, options }) {
     super();
+    
+    /** @type {HTMLElement} The main container element */
     this.app = app;
+    
+    /** @type {Object} PDF book object providing page access */
     this.book = book;
+    
+    /** @type {Object} Configuration options for the viewer */
     this.options = options || {};
+    
+    /** @type {number} Total number of pages in the PDF */
     this.pageCount = book.numPages();
+    
+    /** @type {number} Currently visible/active page (0-based index) */
     this.currentPage = 0;
+    
+    /** @type {Object<number, HTMLCanvasElement>} Cache of rendered page canvases */
     this.pageCanvases = {};
+    
+    /** @type {RenderQueue} Queue for managing rendering tasks */
     this.renderQueue = new RenderQueue();
 
-    // Device detection
+    // Device detection and optimization settings
+    /** @type {boolean} Whether the device is detected as mobile */
     this.isMobile = window.innerWidth <= 768;
+    
+    /** @type {number} Maximum number of pages to keep in memory cache */
     this.maxCachedPages = this.isMobile ? 3 : 5;
+    
+    /** @type {number} Range of pages to render around the current view */
     this.visibleRange = this.isMobile ? 1 : 2; // Pages to render around current view
 
+    // Create main scroll container
+    /** @type {HTMLElement} Main scrolling container element */
     this.scrollContainer = document.createElement("div");
     this.scrollContainer.className = "pdfagogo-scroll-container";
     this.app.appendChild(this.scrollContainer);
 
+    // Create pages container with flexbox layout
+    /** @type {HTMLElement} Container for all PDF pages */
     this.pagesContainer = document.createElement("div");
     this.pagesContainer.className = "pdfagogo-pages-container";
     this.pagesContainer.style.display = "flex";
@@ -77,7 +263,22 @@ export class ScrollablePdfViewer extends EventEmitter {
     this.pagesContainer.style.height = "100%";
     this.scrollContainer.appendChild(this.pagesContainer);
 
+    // Debug and performance monitoring setup
+    /** @type {boolean} Whether debug mode is enabled */
     this.debug = typeof this.options.debug === 'boolean' ? this.options.debug : false;
+    
+    /**
+     * Performance metrics collection object.
+     * @type {Object}
+     * @property {number} initialRenderStart - Timestamp when initial render started
+     * @property {number} initialRenderEnd - Timestamp when initial render completed
+     * @property {Object<number, number>} pageRenderTimes - Render times for each page
+     * @property {Object<number, number>} highResUpgradeTimes - High-res upgrade times
+     * @property {number} totalPagesRendered - Total number of pages rendered
+     * @property {number} totalHighResUpgrades - Total number of high-res upgrades
+     * @property {Object} memoryUsage - Memory usage tracking data
+     * @property {number} lastUpdate - Timestamp of last metrics update
+     */
     this.metrics = {
       initialRenderStart: 0,
       initialRenderEnd: 0,
@@ -93,25 +294,41 @@ export class ScrollablePdfViewer extends EventEmitter {
       this._setupDebugDisplay();
     }
 
+    /** @type {Set<number>} Set of currently visible page indices */
     this._visiblePages = new Set();
 
+    // Initialize event handlers and begin rendering
     this._setupEventHandlers();
     this._initializePages();
   }
 
+  /**
+   * Set up all event handlers for user interaction and system events.
+   * 
+   * This method configures handlers for:
+   * - Window resize events
+   * - Scroll events for page tracking
+   * - Mouse and touch interaction
+   * - Wheel scrolling with momentum
+   * - Memory management events
+   * 
+   * @private
+   */
   _setupEventHandlers() {
     this._setupResizeHandler();
     this._setupScrollHandler();
     this._setupGrabAndScroll();
     this._setupWheelScrollHandler();
 
-    // Memory management
+    // Memory management event handlers
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
+        // Clean up memory when page becomes hidden
         this._cleanupOffscreenPages(true);
       }
     });
 
+    // Handle memory pressure events (if supported by browser)
     if ('onmemorypressure' in window) {
       window.addEventListener('memorypressure', () => {
         this._cleanupOffscreenPages(true);
@@ -119,13 +336,26 @@ export class ScrollablePdfViewer extends EventEmitter {
     }
   }
 
+  /**
+   * Initialize all PDF pages with placeholder canvases and begin rendering.
+   * 
+   * This method performs a two-phase initialization:
+   * 1. Creates placeholder canvases for all pages off-screen
+   * 2. Moves them to the visible container and renders visible pages
+   * 
+   * This approach ensures smooth initial loading without layout shifts.
+   * 
+   * @private
+   * @async
+   * @fires ScrollablePdfViewer#initialRenderComplete
+   */
   async _initializePages() {
     if (this.debug) {
       this.metrics.initialRenderStart = performance.now();
       console.log('[PDF-A-go-go Debug] Starting initial render');
     }
 
-    // Create an off-screen container for initial setup
+    // Create an off-screen container for initial setup to prevent layout shifts
     const offscreenContainer = document.createElement('div');
     offscreenContainer.style.position = 'absolute';
     offscreenContainer.style.visibility = 'hidden';
