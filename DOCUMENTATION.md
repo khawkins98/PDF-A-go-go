@@ -569,12 +569,12 @@ Shareable page links with URL fragments:
 
 ```javascript
 // Generate shareable link
-const shareUrl = `${window.location.origin}${window.location.pathname}#pdf-page=${page}`;
+const shareUrl = `${window.location.origin}${window.location.pathname}#pdf-page-${page}`;
 
 // Parse page from URL
 function getPageFromHash() {
   const hash = window.location.hash;
-  const match = hash.match(/#pdf-page=(\\d+)/);
+  const match = hash.match(/#pdf-page-(\\d+)/);
   return match ? parseInt(match[1], 10) : null;
 }
 ```

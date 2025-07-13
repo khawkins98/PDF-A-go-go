@@ -1,6 +1,6 @@
 /**
  * @file UI Components and Controls for PDF-A-go-go.
- * 
+ *
  * This module provides comprehensive UI functionality for the PDF viewer including:
  * - Loading progress indicators with visual feedback
  * - Navigation controls (previous/next, page selector, download)
@@ -8,10 +8,10 @@
  * - Accessibility features (screen reader support, keyboard navigation)
  * - Error handling and user feedback
  * - Mobile-responsive design and touch interaction
- * 
+ *
  * All UI components are designed with accessibility in mind, featuring proper
  * ARIA labels, keyboard navigation support, and screen reader compatibility.
- * 
+ *
  * @author PDF-A-go-go Contributors
  * @version 1.0.0
  * @see {@link https://github.com/khawkins98/PDF-A-go-go|GitHub Repository}
@@ -19,21 +19,21 @@
 
 /**
  * Creates and inserts a loading progress bar inside the given container.
- * 
+ *
  * The loading bar provides visual feedback during PDF loading with both
  * a progress bar and percentage text. It's designed to be accessible
  * and provides clear indication of loading status.
- * 
+ *
  * @param {HTMLElement} container - The container element to insert the loading bar into
  * @returns {HTMLProgressElement} The created progress bar element for updating progress
- * 
+ *
  * @example
  * const container = document.getElementById('pdf-container');
  * const progressBar = createLoadingBar(container);
- * 
+ *
  * // Later, update the progress
  * updateLoadingBar(progressBar, 0.5); // 50% complete
- * 
+ *
  * @example
  * // The loading bar creates this structure:
  * // <div class="pdfagogo-loading">
@@ -58,36 +58,36 @@ export function createLoadingBar(container) {
 
 /**
  * Updates the loading progress bar value and percentage text display.
- * 
+ *
  * This function handles both determinate progress (with specific percentage)
  * and indeterminate progress (when exact progress is unknown). It updates
  * both the visual progress bar and the text percentage display.
- * 
+ *
  * @param {HTMLProgressElement} progressBar - The progress bar element to update
  * @param {number|null} value - Progress value between 0-1, or null for indeterminate progress
- * 
+ *
  * @example
  * // Update to 75% complete
  * updateLoadingBar(progressBar, 0.75);
- * 
+ *
  * @example
  * // Set to indeterminate state (spinning/unknown progress)
  * updateLoadingBar(progressBar, null);
- * 
+ *
  * @example
  * // Typical usage in a loading sequence
  * const progressBar = createLoadingBar(container);
- * 
+ *
  * // Start with indeterminate
  * updateLoadingBar(progressBar, null);
- * 
+ *
  * // Update with actual progress as it becomes available
  * fetch('/api/pdf-data')
  *   .then(response => {
  *     const reader = response.body.getReader();
  *     const contentLength = response.headers.get('Content-Length');
  *     let receivedLength = 0;
- *     
+ *
  *     return new ReadableStream({
  *       start(controller) {
  *         function pump() {
@@ -109,9 +109,9 @@ export function createLoadingBar(container) {
  */
 export function updateLoadingBar(progressBar, value) {
   if (!progressBar) return;
-  
+
   const percentSpan = document.querySelector('.pdfagogo-loading-percent');
-  
+
   if (typeof value === "number") {
     // Determinate progress - show specific percentage
     progressBar.value = value;
@@ -125,11 +125,11 @@ export function updateLoadingBar(progressBar, value) {
 
 /**
  * Removes the loading bar from the DOM completely.
- * 
+ *
  * This function safely removes the loading indicator once PDF loading
  * is complete or has failed. It handles cases where the loading bar
  * might not exist or has already been removed.
- * 
+ *
  * @example
  * // After successful PDF load
  * loadPdf(url)
@@ -151,21 +151,21 @@ export function removeLoadingBar() {
 
 /**
  * Displays an error message to the user in place of the loading indicator.
- * 
+ *
  * This function replaces the loading bar content with an error message,
  * providing clear feedback when PDF loading fails. The error is displayed
  * in a user-friendly format with appropriate styling.
- * 
+ *
  * @param {string} message - The error message to display to the user
- * 
+ *
  * @example
  * // Handle network error
  * showError('PDF not found. Please check the URL and try again.');
- * 
+ *
  * @example
  * // Handle parsing error
  * showError('Invalid PDF file. The file may be corrupted.');
- * 
+ *
  * @example
  * // Handle timeout error
  * showError('Loading timeout. Please check your connection and try again.');
@@ -179,7 +179,7 @@ export function showError(message) {
 
 /**
  * Sets up all main UI controls and wires up their event listeners.
- * 
+ *
  * This is the primary UI initialization function that creates and configures:
  * - Search controls with text input and match navigation
  * - Navigation controls (previous/next buttons, page selector)
@@ -187,11 +187,11 @@ export function showError(message) {
  * - Accessibility features (screen reader announcements, keyboard navigation)
  * - Page tracking and URL fragment support
  * - Mobile-responsive touch interactions
- * 
+ *
  * The function handles feature toggles through the featureOptions parameter,
  * allowing selective enabling/disabling of UI components. All controls are
  * designed with accessibility in mind and include proper ARIA labels.
- * 
+ *
  * @param {HTMLElement} container - The main viewer container element
  * @param {Object} featureOptions - Feature toggles and configuration options
  * @param {boolean} [featureOptions.showSearch=true] - Enable search functionality
@@ -205,7 +205,7 @@ export function showError(message) {
  * @param {Function} book.numPages - Returns total number of pages
  * @param {Function} book.getPage - Retrieves a specific page
  * @param {Object} pdf - The loaded PDF.js document instance
- * 
+ *
  * @example
  * // Basic setup with all features enabled
  * setupControls(
@@ -221,7 +221,7 @@ export function showError(message) {
  *   bookObject,
  *   pdfDocument
  * );
- * 
+ *
  * @example
  * // Minimal setup with only navigation
  * setupControls(
@@ -237,7 +237,7 @@ export function showError(message) {
  *   book,
  *   pdf
  * );
- * 
+ *
  * @example
  * // The function creates this UI structure:
  * // <div class="pdfagogo-search-controls">
@@ -364,7 +364,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
   if (shareBtn)
     shareBtn.onclick = () => {
       const page = currentPage + 1;
-      const shareUrl = `${window.location.origin}${window.location.pathname}#pdf-page=${page}`;
+      const shareUrl = `${window.location.origin}${window.location.pathname}#pdf-page-${page}`;
       navigator.clipboard.writeText(shareUrl);
       alert("Share link copied to clipboard:\n" + shareUrl);
     };
@@ -609,7 +609,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
 
   // --- Hash-based page navigation ---
   function getPageFromHash() {
-    const match = window.location.hash.match(/pdf-page=(\d+)/);
+    const match = window.location.hash.match(/pdf-page-(\d+)/);
     if (match) {
       const pageNum = parseInt(match[1], 10);
       if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= pdf.numPages) {
@@ -658,7 +658,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       alert("Invalid page number");
       return;
     }
-    window.location.hash = `pdf-page=${pageNum}`;
+    window.location.hash = `pdf-page-${pageNum}`;
     originalSetPageByNumber(pageNum);
   };
 

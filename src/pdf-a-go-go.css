@@ -3,7 +3,7 @@
   height: 80vh;
   margin: 40px auto 10px auto;
   border: 1px solid #ccc;
-  padding: 2rem 0;
+  padding: 1rem 0;
   background: #353535;
   text-align: center;
   position: relative;
@@ -129,7 +129,7 @@
   }
 }
 .pdfagogo-page-wrapper {
-  margin: 0 auto;
+  margin: 1.5rem auto;
   background: #222;
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.18);
@@ -212,10 +212,6 @@
 } */
 /* Improve visibility on mobile */
 @media (max-width: 768px) {
-  .pdfagogo-page-wrapper {
-    margin: 0 0.75rem;
-    box-shadow: 0 1px 8px rgba(0,0,0,0.15);
-  }
   .pdfagogo-text-layer {
     opacity: 0.15;
   }

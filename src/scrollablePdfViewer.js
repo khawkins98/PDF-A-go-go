@@ -376,6 +376,7 @@ export class ScrollablePdfViewer extends EventEmitter {
     for (let i = 0; i < this.pageCount; i++) {
       const wrapper = document.createElement('div');
       wrapper.className = 'pdfagogo-page-wrapper';
+      wrapper.id = `pdf-page-${i + 1}`;
 
       const canvas = document.createElement("canvas");
       canvas.className = "pdfagogo-page-canvas";
