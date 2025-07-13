@@ -18,6 +18,7 @@
 **PDF-A-go-go** is a lightweight, accessible, embeddable PDF viewer built on top of PDF.js. It provides a side-scroll viewing experience with comprehensive accessibility support, performance optimizations, and advanced features like search, HTML download handling, and performance monitoring.
 
 ### Key Features
+
 - 📖 **Side-scroll PDF viewing** with smooth navigation
 - 🦾 **Full accessibility support** (ARIA labels, keyboard navigation, screen reader support)
 - ⚡ **Performance optimized** with render queuing and memory management
@@ -29,6 +30,7 @@
 - 🔗 **Shareable page links** with URL fragment support
 
 ### Technology Stack
+
 - **Core**: Vanilla JavaScript (ES6+)
 - **PDF Engine**: PDF.js (Mozilla)
 - **UI Framework**: @tpp/htm-x for DOM manipulation
@@ -74,12 +76,14 @@ PDF-A-go-go Application Architecture
 **Purpose**: Application initialization and orchestration
 
 **Key Responsibilities**:
+
 - Parse configuration from data attributes
 - Initialize PDF loading with progress tracking
 - Set up the viewer and UI controls
 - Handle WebGL configuration
 
 **Key Functions**:
+
 ```javascript
 /**
  * Initialize the PDF-A-go-go viewer
@@ -92,6 +96,7 @@ function init(book, id, opts, cb)
 ```
 
 **Configuration Parsing**:
+
 ```javascript
 // Reads data attributes from container element
 function getOptionsFromDataAttrs(container)
@@ -103,12 +108,14 @@ function parseBool(val, fallback) // Robust boolean parsing
 **Purpose**: Core PDF rendering and interaction engine
 
 **Key Features**:
+
 - **Render Queue System**: Manages rendering tasks with priority
 - **Memory Management**: Automatic cleanup of off-screen pages
 - **Performance Monitoring**: Detailed metrics collection
 - **Mobile Optimization**: Adaptive rendering for mobile devices
 
 **Class Structure**:
+
 ```javascript
 export class ScrollablePdfViewer extends EventEmitter {
   constructor({ app, book, options })
@@ -131,6 +138,7 @@ export class ScrollablePdfViewer extends EventEmitter {
 ```
 
 **Render Queue System**:
+
 ```javascript
 class RenderQueue {
   add(task, priority = false)    // Add rendering task
@@ -144,12 +152,14 @@ class RenderQueue {
 **Purpose**: User interface components and interaction handling
 
 **Key Components**:
+
 - **Loading Progress**: Visual feedback during PDF loading
 - **Navigation Controls**: Previous/Next buttons, page selector
 - **Search Interface**: Text search with match navigation
 - **Accessibility**: Screen reader announcements, keyboard support
 
 **Main Functions**:
+
 ```javascript
 // Loading UI
 export function createLoadingBar(container)
@@ -161,6 +171,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf)
 ```
 
 **Search Functionality**:
+
 ```javascript
 async function searchPdf(query)     // Full-text search across pages
 function showMatch(idx)             // Navigate to search match
@@ -172,6 +183,7 @@ function updateNavArrows()          // Update navigation state
 **Purpose**: PDF loading with progress tracking and HTML handling
 
 **Key Features**:
+
 - **Content Type Detection**: Automatically detects HTML vs PDF content
 - **Progress Tracking**: Real-time loading progress updates
 - **HTML Download Integration**: Seamless handling of HTML-wrapped PDFs
@@ -192,11 +204,13 @@ export async function loadPdfWithProgress(url, onProgress, options = {})
 **Purpose**: Handle PDFs served through HTML redirect pages
 
 **Use Cases**:
+
 - Institutional repositories
 - Document management systems
 - Academic websites with download gates
 
 **Key Features**:
+
 - **Meta Refresh Detection**: Parses meta refresh tags
 - **Iframe Proxy**: Safe handling of redirects
 - **Timeout Management**: Configurable download timeouts
@@ -221,33 +235,35 @@ export class HTMLDownloadHandler extends EventTarget {
 The PDF viewer is configured through data attributes on the container element:
 
 ```html
-<div class="pdfagogo-container" id="pdfagogo-container"
-     data-pdf-url="./document.pdf"
-     data-show-search="true"
-     data-show-prev-next="true"
-     data-show-page-selector="true"
-     data-show-current-page="true"
-     data-show-download="true"
-     data-show-resize-grip="true"
-     data-default-page="1"
-     data-debug="false">
-</div>
+<div
+  class="pdfagogo-container"
+  id="pdfagogo-container"
+  data-pdf-url="./document.pdf"
+  data-show-search="true"
+  data-show-prev-next="true"
+  data-show-page-selector="true"
+  data-show-current-page="true"
+  data-show-download="true"
+  data-show-resize-grip="true"
+  data-default-page="1"
+  data-debug="false"
+></div>
 ```
 
 ### Viewer Instance Methods
 
 ```javascript
 // Navigation
-viewer.flip_forward()           // Go to next page
-viewer.flip_back()             // Go to previous page
-viewer.go_to_page(pageNum)     // Go to specific page (0-based)
-viewer.scrollBy(pages)         // Scroll by number of pages
+viewer.flip_forward(); // Go to next page
+viewer.flip_back(); // Go to previous page
+viewer.go_to_page(pageNum); // Go to specific page (0-based)
+viewer.scrollBy(pages); // Scroll by number of pages
 
 // Rendering
-viewer.rerenderPage(ndx)       // Force re-render of specific page
+viewer.rerenderPage(ndx); // Force re-render of specific page
 
 // Performance
-viewer.getPerformanceMetrics() // Get detailed performance data
+viewer.getPerformanceMetrics(); // Get detailed performance data
 ```
 
 ### Events
@@ -255,11 +271,11 @@ viewer.getPerformanceMetrics() // Get detailed performance data
 The viewer emits events that can be listened to:
 
 ```javascript
-viewer.on('initialRenderComplete', () => {
-  console.log('All pages initially rendered');
+viewer.on("initialRenderComplete", () => {
+  console.log("All pages initially rendered");
 });
 
-viewer.on('pageChange', (pageNumber) => {
+viewer.on("pageChange", (pageNumber) => {
   console.log(`Current page: ${pageNumber}`);
 });
 ```
@@ -267,36 +283,40 @@ viewer.on('pageChange', (pageNumber) => {
 ## Configuration Options
 
 ### Display Options
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `data-pdf-url` | string | `"./example.pdf"` | PDF URL to load |
-| `data-show-prev-next` | boolean | `true` | Show navigation buttons |
-| `data-show-page-selector` | boolean | `true` | Show page input field |
-| `data-show-current-page` | boolean | `true` | Show current page indicator |
-| `data-show-search` | boolean | `true` | Show search controls |
-| `data-show-download` | boolean | `true` | Show download button |
-| `data-show-resize-grip` | boolean | `true` | Show resize handle |
+
+| Option                    | Type    | Default           | Description                 |
+| ------------------------- | ------- | ----------------- | --------------------------- |
+| `data-pdf-url`            | string  | `"./example.pdf"` | PDF URL to load             |
+| `data-show-prev-next`     | boolean | `true`            | Show navigation buttons     |
+| `data-show-page-selector` | boolean | `true`            | Show page input field       |
+| `data-show-current-page`  | boolean | `true`            | Show current page indicator |
+| `data-show-search`        | boolean | `true`            | Show search controls        |
+| `data-show-download`      | boolean | `true`            | Show download button        |
+| `data-show-resize-grip`   | boolean | `true`            | Show resize handle          |
 
 ### Appearance Options
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `data-background-color` | string | - | Background color |
-| `data-box-border` | number | - | Border size in pixels |
-| `data-margin` | number | - | General margin |
-| `data-margin-top` | number | - | Top margin |
-| `data-margin-left` | number | - | Left margin |
+
+| Option                  | Type   | Default | Description           |
+| ----------------------- | ------ | ------- | --------------------- |
+| `data-background-color` | string | -       | Background color      |
+| `data-box-border`       | number | -       | Border size in pixels |
+| `data-margin`           | number | -       | General margin        |
+| `data-margin-top`       | number | -       | Top margin            |
+| `data-margin-left`      | number | -       | Left margin           |
 
 ### Behavior Options
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `data-default-page` | number | `1` | Default page to open |
-| `data-momentum` | number | `0.5` | Scroll momentum factor |
-| `data-disable-webgl` | boolean | `true` | Disable WebGL rendering |
-| `data-debug` | boolean | `false` | Enable debug mode |
+
+| Option               | Type    | Default | Description             |
+| -------------------- | ------- | ------- | ----------------------- |
+| `data-default-page`  | number  | `1`     | Default page to open    |
+| `data-momentum`      | number  | `0.5`   | Scroll momentum factor  |
+| `data-disable-webgl` | boolean | `true`  | Disable WebGL rendering |
+| `data-debug`         | boolean | `false` | Enable debug mode       |
 
 ### HTML Download Options
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
+
+| Option                  | Type   | Default | Description           |
+| ----------------------- | ------ | ------- | --------------------- |
 | `data-download-timeout` | number | `30000` | Download timeout (ms) |
 
 ## Performance & Optimization
@@ -327,11 +347,13 @@ class RenderQueue {
 ### Memory Management
 
 **Automatic Cleanup**:
+
 - Off-screen pages are automatically cleaned up
 - Memory pressure events trigger aggressive cleanup
 - Mobile devices use reduced cache sizes
 
 **Configuration**:
+
 ```javascript
 // Device-specific optimization
 this.isMobile = window.innerWidth <= 768;
@@ -361,18 +383,19 @@ const metrics = viewer.getPerformanceMetrics();
 
 ### Keyboard Navigation
 
-| Key | Action |
-|-----|--------|
-| `Tab` | Focus the viewer |
-| `Left Arrow` | Previous page |
-| `Right Arrow` | Next page |
-| `+` | Zoom in |
-| `-` | Zoom out |
-| `Enter` | Activate focused element |
+| Key           | Action                   |
+| ------------- | ------------------------ |
+| `Tab`         | Focus the viewer         |
+| `Left Arrow`  | Previous page            |
+| `Right Arrow` | Next page                |
+| `+`           | Zoom in                  |
+| `-`           | Zoom out                 |
+| `Enter`       | Activate focused element |
 
 ### Screen Reader Support
 
 **ARIA Labels**:
+
 ```javascript
 canvas.setAttribute("tabindex", "0");
 canvas.setAttribute("data-page", i + 1);
@@ -380,6 +403,7 @@ canvas.setAttribute("aria-label", `Page ${i + 1} of ${this.pageCount}`);
 ```
 
 **Live Regions**:
+
 ```javascript
 // Page announcements
 pageAnnouncement.setAttribute("aria-live", "polite");
@@ -419,7 +443,9 @@ The application includes comprehensive performance tests using Playwright:
 
 ```typescript
 // Desktop performance test
-test('should render PDF pages within performance thresholds (desktop)', async ({ page }) => {
+test("should render PDF pages within performance thresholds (desktop)", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1280, height: 800 });
 
   const metrics = await page.evaluate(() => {
@@ -430,9 +456,12 @@ test('should render PDF pages within performance thresholds (desktop)', async ({
 });
 
 // Mobile performance test with CPU throttling
-test('should render PDF pages within performance thresholds (mobile)', async ({ page, context }) => {
+test("should render PDF pages within performance thresholds (mobile)", async ({
+  page,
+  context,
+}) => {
   const client = await context.newCDPSession(page);
-  await client.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  await client.send("Emulation.setCPUThrottlingRate", { rate: 4 });
 
   await page.setViewportSize({ width: 375, height: 667 });
 
@@ -528,11 +557,11 @@ For institutional repositories and document management systems that serve PDFs t
 ```javascript
 // Automatic detection and handling
 const response = await fetch(url);
-const contentType = response.headers.get('content-type');
+const contentType = response.headers.get("content-type");
 
-if (contentType && contentType.includes('text/html')) {
+if (contentType && contentType.includes("text/html")) {
   const handler = new HTMLDownloadHandler({
-    downloadTimeout: options.downloadTimeout
+    downloadTimeout: options.downloadTimeout,
   });
   const pdfBlob = await handler.handleHTMLDownload(url);
   // Continue with PDF.js loading...
@@ -551,11 +580,11 @@ Robust parsing of meta refresh tags:
  *         "3; url=\\"/path/to/file.pdf?foo=bar\\""
  */
 function parseMetaRefresh(content) {
-  const parts = content.split(';');
+  const parts = content.split(";");
   if (parts.length < 2) return null;
 
   const delay = parseInt(parts[0].trim(), 10) || 0;
-  const urlPart = parts.slice(1).join(';').trim();
+  const urlPart = parts.slice(1).join(";").trim();
   const urlMatch = urlPart.match(/url\\s*=\\s*['\\"]?([^'\\"]+)['\\"]?/i);
 
   if (!urlMatch) return null;
@@ -585,12 +614,15 @@ Comprehensive debugging with visual indicators:
 
 ```javascript
 if (this.debug) {
-  console.log(`%c🎨 Rendering page ${ndx + 1}`, 'color: #4CAF50; font-weight: bold;');
+  console.log(
+    `%c🎨 Rendering page ${ndx + 1}`,
+    "color: #4CAF50; font-weight: bold;"
+  );
 
   // Visual debug overlay
-  const debugOverlay = document.createElement('div');
-  debugOverlay.style.background = '#4CAF50';
-  debugOverlay.style.color = 'white';
+  const debugOverlay = document.createElement("div");
+  debugOverlay.style.background = "#4CAF50";
+  debugOverlay.style.color = "white";
   debugOverlay.textContent = `Rendering...`;
   // Add to page...
 }
