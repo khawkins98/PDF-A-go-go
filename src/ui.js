@@ -195,7 +195,7 @@ export function showError(message) {
  * @param {HTMLElement} container - The main viewer container element
  * @param {Object} featureOptions - Feature toggles and configuration options
  * @param {boolean} [featureOptions.showSearch=true] - Enable search functionality
- * @param {boolean} [featureOptions.showPrevNext=true] - Show previous/next navigation buttons
+
  * @param {boolean} [featureOptions.showPageSelector=true] - Show page number input field
  * @param {boolean} [featureOptions.showCurrentPage=true] - Show current page indicator
  * @param {boolean} [featureOptions.showDownload=true] - Show download button
@@ -212,7 +212,7 @@ export function showError(message) {
  *   document.getElementById('pdf-container'),
  *   {
  *     showSearch: true,
- *     showPrevNext: true,
+
  *     showPageSelector: true,
  *     showCurrentPage: true,
  *     showDownload: true
@@ -228,7 +228,7 @@ export function showError(message) {
  *   container,
  *   {
  *     showSearch: false,
- *     showPrevNext: true,
+
  *     showPageSelector: false,
  *     showCurrentPage: true,
  *     showDownload: false
@@ -260,19 +260,21 @@ export function showError(message) {
  * // <div class="pdfagogo-a11y-instructions"></div>
  */
 export function setupControls(container, featureOptions, viewer, book, pdf) {
-  // Remove any existing controls
+  // Remove any existing controls to prevent duplicates
   [
     "pdfagogo-search-controls",
     "pdfagogo-controls",
     "pdfagogo-page-announcement",
     "pdfagogo-a11y-instructions",
+    "pdfagogo-hint-left",
+    "pdfagogo-hint-right"
   ].forEach((cls) => {
     const el = document.querySelector("." + cls);
     if (el && el.parentNode) el.parentNode.removeChild(el);
   });
 
   // Search controls
-  let searchControls, searchBox, searchBtn, searchResult, nextMatchBtn, prevMatchBtn;
+  let searchControls, searchBox, searchBtn, searchResult;
   if (featureOptions.showSearch) {
     searchControls = document.createElement("div");
     searchControls.className = "pdfagogo-search-controls";
@@ -285,27 +287,12 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     searchBox = searchControls.querySelector(".pdfagogo-search-box");
     searchBtn = searchControls.querySelector(".pdfagogo-search-btn");
     searchResult = searchControls.querySelector(".pdfagogo-search-result");
-    // Add next/prev match buttons
-    nextMatchBtn = document.createElement("button");
-    nextMatchBtn.textContent = "Next Match";
-    nextMatchBtn.className = "pdfagogo-next-match-btn";
-    prevMatchBtn = document.createElement("button");
-    prevMatchBtn.textContent = "Prev Match";
-    prevMatchBtn.className = "pdfagogo-prev-match-btn";
-    searchControls.appendChild(prevMatchBtn);
-    searchControls.appendChild(nextMatchBtn);
   }
 
   // Main controls
   const controls = document.createElement("div");
   controls.className = "pdfagogo-controls";
   let controlsHTML = "";
-  if (featureOptions.showPrevNext) {
-    controlsHTML +=
-      '<button class="pdfagogo-prev" aria-label="Previous page">Previous</button>';
-    controlsHTML +=
-      '<button class="pdfagogo-next" aria-label="Next page">Next</button>';
-  }
   controlsHTML +=
     '<button class="pdfagogo-share" aria-label="Share current page">Share</button>';
   if (featureOptions.showDownload) {
@@ -370,15 +357,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
 
   // --- Event wiring and logic ---
 
-  // Navigation buttons
-  const prevBtn = document.querySelector(".pdfagogo-prev");
-  const nextBtn = document.querySelector(".pdfagogo-next");
-  if (nextBtn) nextBtn.onclick = () => viewer.flip_forward();
-  if (prevBtn) prevBtn.onclick = () => viewer.flip_back();
-  if (!featureOptions.showPrevNext) {
-    if (prevBtn) prevBtn.style.display = "none";
-    if (nextBtn) nextBtn.style.display = "none";
-  }
+
 
   // Share button
   const shareBtn = document.querySelector(".pdfagogo-share");

@@ -32,7 +32,6 @@ let viewer = null;
  * @param {Function} book.getPage - Retrieves a specific page with rendering capabilities
  * @param {string} id - DOM element ID for the viewer container
  * @param {Object} [opts={}] - Viewer configuration options
- * @param {boolean} [opts.showPrevNext=true] - Show previous/next navigation buttons
  * @param {boolean} [opts.showPageSelector=true] - Show page number input field
  * @param {boolean} [opts.showCurrentPage=true] - Show current page indicator
  * @param {boolean} [opts.showSearch=true] - Show search functionality
@@ -65,7 +64,7 @@ let viewer = null;
  * @example
  * // Advanced configuration
  * init(pdfBook, 'viewer-container', {
- *   showPrevNext: true,
+
  *   showPageSelector: true,
  *   showSearch: true,
  *   defaultPage: 5,
@@ -144,7 +143,7 @@ function init(book, id, opts, cb) {
    * @property {boolean} showDownload - Show download button
    */
   const defaultOptions = {
-    showPrevNext: true,
+
     showPageSelector: true,
     showCurrentPage: true,
     showSearch: true,
@@ -211,7 +210,6 @@ function init(book, id, opts, cb) {
     if (map.marginLeft) opts.marginLeft = parseFloat(map.marginLeft);
     
     // UI feature toggles
-    if (map.showPrevNext !== undefined) opts.showPrevNext = parseBool(map.showPrevNext, undefined);
     if (map.showPageSelector !== undefined) opts.showPageSelector = parseBool(map.showPageSelector, undefined);
     if (map.showCurrentPage !== undefined) opts.showCurrentPage = parseBool(map.showCurrentPage, undefined);
     if (map.showSearch !== undefined) opts.showSearch = parseBool(map.showSearch, undefined);
