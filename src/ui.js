@@ -557,24 +557,6 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     }
   });
 
-  // Hide/show navigation arrows on first/last page
-  function updateNavArrows() {
-    if (!prevBtn || !nextBtn) return;
-    let isFirst, isLast;
-    isFirst = currentPage === 0;
-    isLast = currentPage >= pdf.numPages;
-    prevBtn.style.visibility = isFirst ? 'hidden' : '';
-    nextBtn.style.visibility = isLast ? 'hidden' : '';
-    setTimeout(() => {
-      const leftHint = document.querySelector('.pdfagogo-hint-left');
-      const rightHint = document.querySelector('.pdfagogo-hint-right');
-      if (leftHint) leftHint.style.display = isFirst ? 'none' : '';
-      if (rightHint) rightHint.style.display = isLast ? 'none' : '';
-    }, 100);
-  }
-  viewer.on("seen", updateNavArrows);
-  updateNavArrows();
-
   // Dynamically add overlay hint zones for click navigation
   setTimeout(() => {
     let leftZone = document.querySelector('.pdfagogo-hint-left');
