@@ -357,8 +357,6 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
 
   // --- Event wiring and logic ---
 
-
-
   // Share button
   const shareBtn = document.querySelector(".pdfagogo-share");
   if (shareBtn)
@@ -474,6 +472,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       }
     }
   }
+
   function showMatch(idx) {
     if (matchPages.length === 0) {
       window.__pdfagogo__highlights = {};
@@ -518,18 +517,6 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
         showMatch(0);
       } else {
         if (searchResult) searchResult.textContent = "Not found";
-      }
-    };
-  if (nextMatchBtn)
-    nextMatchBtn.onclick = function () {
-      if (matchPages.length > 0) {
-        showMatch(currentMatchIdx + 1);
-      }
-    };
-  if (prevMatchBtn)
-    prevMatchBtn.onclick = function () {
-      if (matchPages.length > 0) {
-        showMatch(currentMatchIdx - 1);
       }
     };
   if (searchBox)
