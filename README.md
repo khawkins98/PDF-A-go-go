@@ -188,7 +188,7 @@ Performance thresholds are set to:
 - Desktop: Initial render < 5s, Average CPU < 80%
 - Mobile: Initial render < 10s, Average CPU < 90%
 
-The development server runs on port 9000 by default (http://localhost:9000).
+The development server runs on port 9001 by default (http://localhost:9001).
 
 ## License
 

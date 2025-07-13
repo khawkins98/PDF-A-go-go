@@ -27,8 +27,8 @@
     "build": "webpack --mode production",
     "test:serve": "webpack serve --mode development",
     "pretest": "npm run build",
-    "test": "start-server-and-test test:serve http://localhost:9000 'playwright test'",
-    "test:debug": "start-server-and-test test:serve http://localhost:9000 'playwright test --debug'"
+    "test": "start-server-and-test test:serve http://localhost:9001 'playwright test'",
+    "test:debug": "start-server-and-test test:serve http://localhost:9001 'playwright test --debug'"
   },
   "devDependencies": {
     "@playwright/test": "^1.42.1",

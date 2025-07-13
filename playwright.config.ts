@@ -7,7 +7,7 @@ const config: PlaywrightTestConfig = {
     timeout: 15000
   },
   use: {
-    baseURL: 'http://localhost:9000',
+    baseURL: 'http://localhost:9001',
     trace: 'on-first-retry',
   },
   projects: [

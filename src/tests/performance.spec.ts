@@ -130,7 +130,7 @@ test.describe('PDF-A-go-go Performance Tests', () => {
 
     try {
       // Load the page
-      await page.goto('http://localhost:9000/double-spread.html');
+      await page.goto('http://localhost:9001/double-spread.html');
 
       // Wait for initial render to complete
       await page.waitForSelector('.pdfagogo-debug-info', { timeout: 10000 });
@@ -204,7 +204,7 @@ test.describe('PDF-A-go-go Performance Tests', () => {
 
     try {
       // Load the page
-      await page.goto('http://localhost:9000/double-spread.html');
+      await page.goto('http://localhost:9001/double-spread.html');
 
       // Wait for initial render to complete with longer timeout for mobile
       await page.waitForSelector('.pdfagogo-debug-info', { timeout: 15000 });
