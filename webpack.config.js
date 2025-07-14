@@ -57,7 +57,7 @@ const dev = Object.assign({}, base, {
       directory: path.join(__dirname, 'dist'),
     },
     compress: true,
-    port: 9001,
+    port: 9000,
     open: true,
     hot: true,
     watchFiles: ['src/**/*'],

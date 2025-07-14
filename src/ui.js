@@ -265,9 +265,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     "pdfagogo-search-controls",
     "pdfagogo-controls",
     "pdfagogo-page-announcement",
-    "pdfagogo-a11y-instructions",
-    "pdfagogo-hint-left",
-    "pdfagogo-hint-right"
+    "pdfagogo-a11y-instructions"
   ].forEach((cls) => {
     const el = document.querySelector("." + cls);
     if (el && el.parentNode) el.parentNode.removeChild(el);
@@ -340,8 +338,8 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     a11yInstructions.innerHTML = `
       <strong>Accessibility:</strong><br>
       - Use <kbd>Tab</kbd> to focus the reader.<br>
-      - Use <kbd>Left Arrow</kbd> or click/tap the left side to go to the previous page.<br>
-      - Use <kbd>Right Arrow</kbd> or click/tap the right side to go to the next page.<br>
+      - Use <kbd>Up or Left Arrow</kbd> to go to the previous page.<br>
+      - Use <kbd>Down or Right Arrow</kbd> to go to the next page.<br>
       - Use <kbd>+</kbd> or <kbd>-</kbd> to zoom in/out.<br>
       - Use the buttons below for navigation, sharing, and searching.<br>
       - The current page is announced for screen readers.
@@ -535,6 +533,12 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     } else if (event.key === "ArrowRight") {
       viewer.flip_forward();
       event.preventDefault();
+    } else if (event.key === "ArrowUp") {
+      viewer.flip_back();
+      event.preventDefault();
+    } else if (event.key === "ArrowDown") {
+      viewer.flip_forward();
+      event.preventDefault();
     } else if (event.key === "+" || event.key === "=") {
       // No zoom in scroll mode
       event.preventDefault();
@@ -543,38 +547,6 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       event.preventDefault();
     }
   });
-
-  // Dynamically add overlay hint zones for click navigation
-  setTimeout(() => {
-    let leftZone = document.querySelector('.pdfagogo-hint-left');
-    let rightZone = document.querySelector('.pdfagogo-hint-right');
-    if (!leftZone) {
-      leftZone = document.createElement("div");
-      leftZone.className = "pdfagogo-hint-zone pdfagogo-hint-left";
-      const leftArrow = document.createElement("span");
-      leftArrow.className = "pdfagogo-hint-arrow";
-      leftArrow.setAttribute("aria-hidden", "true");
-      leftArrow.innerHTML = "&#8592;";
-      leftZone.appendChild(leftArrow);
-      container.appendChild(leftZone);
-    }
-    if (!rightZone) {
-      rightZone = document.createElement("div");
-      rightZone.className = "pdfagogo-hint-zone pdfagogo-hint-right";
-      const rightArrow = document.createElement("span");
-      rightArrow.className = "pdfagogo-hint-arrow";
-      rightArrow.setAttribute("aria-hidden", "true");
-      rightArrow.innerHTML = "&#8594;";
-      rightZone.appendChild(rightArrow);
-      container.appendChild(rightZone);
-    }
-    leftZone.addEventListener("mouseenter", () => leftZone.classList.add("active"));
-    leftZone.addEventListener("mouseleave", () => leftZone.classList.remove("active"));
-    rightZone.addEventListener("mouseenter", () => rightZone.classList.add("active"));
-    rightZone.addEventListener("mouseleave", () => rightZone.classList.remove("active"));
-    leftZone.addEventListener("click", () => viewer.flip_back());
-    rightZone.addEventListener("click", () => viewer.flip_forward());
-  }, 100);
 
   // --- Hash-based page navigation ---
   function getPageFromHash() {
