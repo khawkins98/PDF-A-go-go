@@ -103,7 +103,7 @@
 }
 .pdfagogo-scroll-container {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
   overflow-x: scroll;
   overflow-y: scroll;

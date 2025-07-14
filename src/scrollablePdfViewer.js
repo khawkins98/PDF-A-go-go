@@ -257,7 +257,7 @@ export class ScrollablePdfViewer extends EventEmitter {
     this.pagesContainer = document.createElement("div");
     this.pagesContainer.className = "pdfagogo-pages-container";
     this.pagesContainer.style.display = "column";
-    this.pagesContainer.style.flexDirection = "row";
+    this.pagesContainer.style.flexDirection = "column";
     this.pagesContainer.style.alignItems = "center";
     this.pagesContainer.style.minWidth = "100%";
     this.pagesContainer.style.height = "100%";
@@ -365,7 +365,7 @@ export class ScrollablePdfViewer extends EventEmitter {
     offscreenContainer.style.zIndex = '-1';
     offscreenContainer.className = 'pdfagogo-pages-container';
     offscreenContainer.style.display = 'column';
-    offscreenContainer.style.flexDirection = 'row';
+    offscreenContainer.style.flexDirection = 'column';
     offscreenContainer.style.alignItems = 'center';
     offscreenContainer.style.minWidth = '100%';
     offscreenContainer.style.height = '100%';
@@ -489,9 +489,9 @@ export class ScrollablePdfViewer extends EventEmitter {
     let maxVisiblePage = null;
     let maxVisibleRatio = 0;
 
-    // Extend the visible area to include pages that are nearly visible
-    const extendedLeft = containerRect.left - containerRect.width * 0.5;
-    const extendedRight = containerRect.right + containerRect.width * 0.5;
+    // Extend the visible area vertically to include pages that are nearly visible
+    const extendedTop = containerRect.top - containerRect.height * 0.5;
+    const extendedBottom = containerRect.bottom + containerRect.height * 0.5;
 
     const wrappers = container.querySelectorAll('.pdfagogo-page-wrapper');
     wrappers.forEach(wrapper => {
@@ -499,11 +499,11 @@ export class ScrollablePdfViewer extends EventEmitter {
       if (!pageNum) return;
 
       const rect = wrapper.getBoundingClientRect();
-      if (rect.right > extendedLeft && rect.left < extendedRight) {
+      if (rect.bottom > extendedTop && rect.top < extendedBottom) {
 
-        const visibleWidth = Math.min(rect.right, containerRect.right) -
-                           Math.max(rect.left, containerRect.left);
-        const percentVisible = visibleWidth / rect.width;
+        const visibleHeight = Math.min(rect.bottom, containerRect.bottom) -
+                              Math.max(rect.top, containerRect.top);
+        const percentVisible = visibleHeight / rect.height;
         visiblePages.add(pageNum);
 
         if (percentVisible > maxVisibleRatio) {
@@ -715,17 +715,17 @@ export class ScrollablePdfViewer extends EventEmitter {
   _setupGrabAndScroll() {
     const container = this.scrollContainer;
     let isDown = false;
-    let startX;
-    let scrollLeft;
+    let startY;
+    let scrollTop;
     let positions = [];
     let animationFrame;
     const momentum = typeof this.options.momentum === 'number' ? this.options.momentum : 0.3;
 
     container.style.cursor = 'grab';
 
-    const recordPosition = (x) => {
+    const recordPosition = (y) => {
       const now = Date.now();
-      positions.push({ x, time: now });
+      positions.push({ y, time: now });
       // Keep only the last 5 positions
       if (positions.length > 5) positions.shift();
     };
@@ -739,18 +739,18 @@ export class ScrollablePdfViewer extends EventEmitter {
       if (positions.length < 2) return 0;
       const first = positions[0];
       const last = positions[positions.length - 1];
-      const dx = last.x - first.x;
+      const dy = last.y - first.y;
       const dt = last.time - first.time;
-      return dt > 0 ? dx / dt : 0;
+      return dt > 0 ? dy / dt : 0;
     };
 
     const onStart = (e) => {
       isDown = true;
       container.style.cursor = 'grabbing';
       container.classList.add('grabbing');
-      startX = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
-      scrollLeft = container.scrollLeft;
-      positions = [{ x: startX, time: Date.now() }];
+      startY = e.type.startsWith('touch') ? e.touches[0].pageY : e.pageY;
+      scrollTop = container.scrollTop;
+      positions = [{ y: startY, time: Date.now() }];
       // Cancel any ongoing animation
       if (animationFrame) {
         cancelAnimationFrame(animationFrame);
@@ -761,10 +761,10 @@ export class ScrollablePdfViewer extends EventEmitter {
     const onMove = (e) => {
       if (!isDown) return;
       e.preventDefault();
-      const x = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
-      recordPosition(x);
-      const walk = x - startX;
-      container.scrollLeft = scrollLeft - walk;
+      const y = e.type.startsWith('touch') ? e.touches[0].pageY : e.pageY;
+      recordPosition(y);
+      const walk = y - startY;
+      container.scrollTop = scrollTop - walk;
     };
 
     const onEnd = () => {
@@ -777,13 +777,13 @@ export class ScrollablePdfViewer extends EventEmitter {
       if (Math.abs(velocity) > 0.2) {
         const startVelocity = velocity * momentum * 16; // 16ms per frame
         const startTime = Date.now();
-        const startScroll = container.scrollLeft;
+        const startScroll = container.scrollTop;
         const animate = () => {
           const elapsed = Date.now() - startTime;
           const deceleration = 0.002; // pixels per ms^2
           const remaining = startVelocity * Math.exp(-deceleration * elapsed);
           if (Math.abs(remaining) > 0.01 && elapsed < 500) {
-            container.scrollLeft = startScroll - (startVelocity / deceleration) * (1 - Math.exp(-deceleration * elapsed));
+            container.scrollTop = startScroll - (startVelocity / deceleration) * (1 - Math.exp(-deceleration * elapsed));
             animationFrame = requestAnimationFrame(animate);
           }
         };
@@ -820,50 +820,36 @@ export class ScrollablePdfViewer extends EventEmitter {
         wheelAnimationFrame = null;
       }
 
-      // Handle both vertical and horizontal scrolling
-      let deltaX = e.deltaX;
-      let deltaY = e.deltaY;
+      // Handle vertical scrolling
+      const deltaY = e.deltaY;
 
-      // If shift is held, treat vertical scroll as horizontal
-      if (e.shiftKey) {
-        deltaX = deltaY;
-        deltaY = 0;
-      }
+      e.preventDefault();
 
-      // If it's primarily horizontal scrolling or touchpad gesture
-      // if (Math.abs(deltaX) > Math.abs(deltaY) || e.deltaMode === 0) {
+      // Calculate new velocity
+      const delta = deltaY * momentum;
+      wheelVelocity = dt > 0 ? delta / dt : 0;
 
-      // Only handle horizontal scrolling here - let vertical scroll pass through
-      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      // Apply immediate scroll
+      this.scrollContainer.scrollTop += delta;
 
-        e.preventDefault();
+      // Apply momentum if the scroll was fast enough
+      if (Math.abs(wheelVelocity) > 0.1) {
+        const startVelocity = wheelVelocity;
+        const startTime = now;
+        const startScroll = this.scrollContainer.scrollTop;
 
-        // Calculate new velocity
-        const delta = deltaX * momentum;
-        wheelVelocity = dt > 0 ? delta / dt : 0;
+        const animate = () => {
+          const elapsed = Date.now() - startTime;
+          const deceleration = 0.002; // pixels per ms^2
+          const remaining = startVelocity * Math.exp(-deceleration * elapsed);
 
-        // Apply immediate scroll
-        this.scrollContainer.scrollLeft += delta;
-
-        // Apply momentum if the scroll was fast enough
-        if (Math.abs(wheelVelocity) > 0.1) {
-          const startVelocity = wheelVelocity;
-          const startTime = now;
-          const startScroll = this.scrollContainer.scrollLeft;
-
-          const animate = () => {
-            const elapsed = Date.now() - startTime;
-            const deceleration = 0.002; // pixels per ms^2
-            const remaining = startVelocity * Math.exp(-deceleration * elapsed);
-
-            if (Math.abs(remaining) > 0.01 && elapsed < 300) {
-              this.scrollContainer.scrollLeft = startScroll +
-                (startVelocity / deceleration) * (1 - Math.exp(-deceleration * elapsed));
-              wheelAnimationFrame = requestAnimationFrame(animate);
-            }
-          };
-          wheelAnimationFrame = requestAnimationFrame(animate);
-        }
+          if (Math.abs(remaining) > 0.01 && elapsed < 300) {
+            this.scrollContainer.scrollTop = startScroll +
+              (startVelocity / deceleration) * (1 - Math.exp(-deceleration * elapsed));
+            wheelAnimationFrame = requestAnimationFrame(animate);
+          }
+        };
+        wheelAnimationFrame = requestAnimationFrame(animate);
       }
 
       lastWheelTime = now;
@@ -964,9 +950,9 @@ export class ScrollablePdfViewer extends EventEmitter {
   }
 
   scrollBy(pages) {
-    const pageWidth = this._getPageWidth() + 24;
+    const pageHeight = this._getPageHeight() + 24;
     this.scrollContainer.scrollBy({
-      left: pageWidth * pages,
+      top: pageHeight * pages,
       behavior: "smooth"
     });
   }

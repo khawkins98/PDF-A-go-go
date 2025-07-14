@@ -69,9 +69,9 @@ async function measureScrollPerformance(page: Page, cpuTracker: ReturnType<typeo
   await page.evaluate(() => {
     const container = document.querySelector('.pdfagogo-scroll-container') as HTMLElement;
     if (container) {
-      const scrollAmount = container.scrollWidth - container.clientWidth;
+      const scrollAmount = container.scrollHeight - container.clientHeight;
       container.scrollTo({
-        left: scrollAmount,
+        top: scrollAmount,
         behavior: 'smooth'
       });
     }
