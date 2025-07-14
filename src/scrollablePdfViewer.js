@@ -973,23 +973,18 @@ export class ScrollablePdfViewer extends EventEmitter {
 
   // Change the view to show a specific page
   go_to_page(pageNum) {
-    // Center the given page
     const wrapper = this.pageCanvases[pageNum]?.parentElement;
     if (!wrapper) return;
 
-    const containerWidth = this.scrollContainer.clientWidth;
-    const wrapperRect = wrapper.getBoundingClientRect();
-    const containerRect = this.scrollContainer.getBoundingClientRect();
-
-    // Calculate scroll position to center the page
-    const scrollLeft = wrapper.offsetLeft - (containerWidth - wrapperRect.width) / 2;
-
-    this.scrollContainer.scrollTo({
-      left: Math.max(0, scrollLeft),
-      behavior: "smooth"
+    // Use the browser's native scrolling to bring the page into view instead of calculating coordinates
+    // This pairs naturally with hash-based navigation (e.g. #pdf-page-2)
+    wrapper.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center"
     });
 
-    // Update current page immediately
+    // Update current page state immediately
     this.currentPage = pageNum;
     this.emit("seen", pageNum + 1); // Emit 1-based page number
 
