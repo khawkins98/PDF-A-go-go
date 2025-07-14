@@ -18,7 +18,7 @@ This project is very fresh (rolled on 6 May 2025). I may yet publish to npm or c
 
 ## Features
 
-- 📖 Side-scroll-style PDF viewing
+- 📖 Vertical scroll PDF viewing
 - 🦾 Accessible (keyboard navigation, ARIA labels, screen reader support)
 - ⚡ Fast, lightweight, and dependency-minimal
 - 🎨 Customizable UI (show/hide controls)
@@ -68,7 +68,7 @@ Set options via data attributes on the container:
 - `data-margin`, `data-margin-top`, `data-margin-left` (number): Margins (optional)
 - `data-disable-webgl` (true/false): Disable WebGL rendering in PDF.js (default: true / WebGL off).
   - **Note:** Disabling WebGL (the default) seems to be more performant in most browsers.
-- `data-momentum` (number): Controls the speed of grab-and-scroll (momentum) for fast navigation. Default is 0.5. Higher values allow faster scrolling when dragging the document horizontally.
+- `data-momentum` (number): Controls the speed of grab-and-scroll (momentum) for fast navigation. Default is 0.5. Higher values allow faster scrolling when dragging the document vertically.
 
 ## HTML Download Handler
 

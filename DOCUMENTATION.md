@@ -15,11 +15,11 @@
 
 ## Project Overview
 
-**PDF-A-go-go** is a lightweight, accessible, embeddable PDF viewer built on top of PDF.js. It provides a side-scroll viewing experience with comprehensive accessibility support, performance optimizations, and advanced features like search, HTML download handling, and performance monitoring.
+**PDF-A-go-go** is a lightweight, accessible, embeddable PDF viewer built on top of PDF.js. It provides a vertical scroll viewing experience with comprehensive accessibility support, performance optimizations, and advanced features like search, HTML download handling, and performance monitoring.
 
 ### Key Features
 
-- 📖 **Side-scroll PDF viewing** with smooth navigation
+- 📖 **Vertical scroll PDF viewing** with smooth navigation
 - 🦾 **Full accessibility support** (ARIA labels, keyboard navigation, screen reader support)
 - ⚡ **Performance optimized** with render queuing and memory management
 - 🎨 **Highly customizable** UI with show/hide controls
