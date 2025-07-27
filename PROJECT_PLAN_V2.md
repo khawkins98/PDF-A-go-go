@@ -129,7 +129,7 @@ The snippet shows the lean vertical-scroll foundation—no custom grab-and-throw
 - [x] **Remove grab and scroll acceleration calculations**
 - [x] ~~**Add mouse-over scroll area on right/left for desktop**~~ **Decided against**
 - [ ] **Disable PDF auto-resize when using `data-show-resize-grip` (maintain scale)**
-- [ ] **Set default page width to 90% of container for better legibility**
+- [x] **Set default page width to 90% of container for better legibility** ✨ *Enhanced with adaptive high-resolution rendering*
 
 ---
 

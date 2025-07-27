@@ -144,8 +144,7 @@
   will-change: transform;
   z-index: 1;
   scroll-snap-align: start;
-  max-width: 90%;
-  width: 90%;
+  /* Width and height are now set dynamically by JavaScript based on container size */
 }
 .pdfagogo-page-canvas {
   position: absolute;
@@ -153,10 +152,20 @@
   left: 0;
   margin: 0;
   border-radius: 8px;
+  /* High-quality rendering for PDF content */
   image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
+  image-rendering: high-quality;
+  image-rendering: smooth;
+  /* Enhanced font and text rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  /* GPU acceleration for smooth rendering */
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
+  /* Optimize for text */
+  font-variant-ligatures: common-ligatures;
+  font-feature-settings: "liga" 1, "kern" 1;
   -webkit-tap-highlight-color: transparent;
   z-index: 1;
   pointer-events: none;
@@ -237,9 +246,8 @@
   }
   
   .pdfagogo-page-wrapper {
-    width: 95%;
-    max-width: 95%;
     margin: 1rem auto;
+    /* Width is now set dynamically by JavaScript */
   }
   
   .pdfagogo-container {
@@ -254,8 +262,7 @@
   }
   
   .pdfagogo-page-wrapper {
-    width: 85%;
-    max-width: 85%;
+    /* Width is now set dynamically by JavaScript */
   }
 }
 .pdfagogo-resize-grip {

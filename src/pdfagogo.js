@@ -302,7 +302,7 @@ function init(book, id, opts, cb) {
          * @param {number} highlights[].width - Width of highlight
          * @param {number} highlights[].height - Height of highlight
          */
-        getPage: (num, cb, highlights) => {
+        getPage: (num, cb, highlights, targetScale) => {
           const pageNum = num + 1; // Convert to 1-based indexing
           
           if (pageNum < 1 || pageNum > pdf.numPages) {
@@ -313,8 +313,14 @@ function init(book, id, opts, cb) {
           pdf
             .getPage(pageNum)
             .then(async function (page) {
-              // Use device pixel ratio for crisp rendering
-              const scale = window.devicePixelRatio || 1.8;
+              // Use the target scale provided by the viewer, or fall back to device pixel ratio
+              const scale = targetScale || window.devicePixelRatio || 1.8;
+              
+              // Debug: Log the scale being used for PDF rendering
+              if (targetScale && window.console) {
+                console.log(`%c📄 PDF page ${pageNum} rendered at scale: ${scale.toFixed(2)}x (requested: ${targetScale.toFixed(2)}x)`, 'color: #FF5722;');
+              }
+              
               const viewport = page.getViewport({ scale });
               
               // Create canvas for rendering

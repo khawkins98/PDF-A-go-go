@@ -415,7 +415,40 @@ export class ScrollablePdfViewer extends EventEmitter {
     if (!canvas) return;
 
     const startTime = this.debug ? performance.now() : 0;
-    const scale = this.options.scale || window.devicePixelRatio || 1.8;
+
+    // Calculate optimal scale for high-quality rendering
+    const devicePixelRatio = window.devicePixelRatio || 1;
+    const targetWidth = this._getPageWidth();
+
+    // Much more aggressive scaling for desktop displays
+    let baseScale;
+    if (this.isMobile) {
+      // Mobile: conservative scaling to preserve performance
+      baseScale = Math.max(2.0, devicePixelRatio * 1.5);
+    } else {
+      // Desktop: aggressive scaling for crisp text and graphics
+      baseScale = Math.max(3.0, devicePixelRatio * 2.0);
+    }
+
+    // Scale up significantly for larger page widths
+    // Target 3-4+ pixels per CSS pixel for excellent desktop quality
+    const sizeMultiplier = Math.max(1.5, Math.min(3.5, targetWidth / 300));
+
+    let scale = this.options.scale || (baseScale * sizeMultiplier);
+
+    // Safety check: cap maximum canvas dimensions to prevent memory issues
+    // while still allowing very high quality
+    const maxCanvasWidth = 4096; // Maximum reasonable canvas width
+    if (targetWidth * scale > maxCanvasWidth) {
+      const oldScale = scale;
+      scale = maxCanvasWidth / targetWidth;
+      if (this.debug) {
+        console.log(
+          `%c⚠️ Scale capped from ${oldScale.toFixed(2)}x to ${scale.toFixed(2)}x to prevent excessive canvas size`,
+          'color: #FF9800;'
+        );
+      }
+    }
 
     // Add visual debug indicator for rendering start
     if (this.debug) {
@@ -444,24 +477,42 @@ export class ScrollablePdfViewer extends EventEmitter {
         return;
       }
 
-      const targetHeight = this._getPageHeight();
+      // Use width-based sizing for better legibility
+      const targetWidth = this._getPageWidth();
       const aspect = pg.width / pg.height;
-      const width = targetHeight * aspect;
+      const height = targetWidth / aspect;
 
       // Set canvas dimensions and styles in one go
       const wrapper = canvas.parentElement;
-      wrapper.style.width = width + "px";
-      wrapper.style.height = targetHeight + "px";
-      canvas.style.width = width + "px";
-      canvas.style.height = targetHeight + "px";
-      canvas.width = width * scale;
-      canvas.height = targetHeight * scale;
+      wrapper.style.width = targetWidth + "px";
+      wrapper.style.height = height + "px";
+      canvas.style.width = targetWidth + "px";
+      canvas.style.height = height + "px";
+      canvas.width = targetWidth * scale;
+      canvas.height = height * scale;
 
-      // Render directly to the canvas
+      // Render directly to the canvas with optimal quality settings
       const ctx = canvas.getContext("2d", {
         alpha: false,
-        willReadFrequently: true
+        willReadFrequently: true,
+        desynchronized: false // Ensure consistent rendering
       });
+
+      // Configure context for high-quality rendering
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+
+      // Additional high-quality rendering settings
+      ctx.textRenderingOptimization = 'optimizeQuality';
+      ctx.font = 'inherit'; // Ensure proper font inheritance
+
+      // Enable font smoothing for better text clarity
+      if (ctx.fontKerning !== undefined) {
+        ctx.fontKerning = 'normal';
+      }
+      if (ctx.textRendering !== undefined) {
+        ctx.textRendering = 'optimizeLegibility';
+      }
 
       if (pg.img) {
         ctx.drawImage(pg.img, 0, 0, canvas.width, canvas.height);
@@ -474,10 +525,12 @@ export class ScrollablePdfViewer extends EventEmitter {
         this.metrics.totalHighResUpgrades++;
         this._updateDebugInfo();
         console.log(`%c✨ Rendered page ${ndx + 1} in ${duration.toFixed(1)}ms`, 'color: #4CAF50; font-weight: bold;');
+        console.log(`%c   Source: ${pg.width}×${pg.height} (PDF scale: ${scale.toFixed(2)}x)`, 'color: #9C27B0;');
+        console.log(`%c   Canvas: ${canvas.width}×${canvas.height} (display scale: ${scale.toFixed(2)}x, DPR: ${devicePixelRatio})`, 'color: #2196F3;');
       }
 
       if (callback) callback();
-    }, highlights);
+    }, highlights, scale);
   }
 
   _updateVisiblePages() {
@@ -622,9 +675,6 @@ export class ScrollablePdfViewer extends EventEmitter {
 
     // Update dimensions for all pages
     const resizePromises = [];
-    // for (let i = 0; i < this.pageCount; i++) {
-    //   resizePromises.push(this._setPageDimensions(i));
-    // }
 
     await Promise.all(resizePromises);
 
@@ -634,21 +684,6 @@ export class ScrollablePdfViewer extends EventEmitter {
     // Update visible pages and re-render them
     await this._updateVisiblePages();
     const visiblePages = Array.from(this._visiblePages);
-
-    // Render visible pages in low res
-    // const renderPromises = [];
-    // for (const pageNum of visiblePages) {
-    //   renderPromises.push(
-    //     new Promise(resolve => {
-    //       this.renderQueue.add(
-    //         () => this._renderPage(pageNum - 1, resolve),
-    //         true // Priority render for visible pages
-    //       );
-    //     })
-    //   );
-    // }
-
-    // await Promise.all(renderPromises);
 
     // Queue high-res renders for visible pages
     visiblePages.forEach(pageNum => {
@@ -668,18 +703,6 @@ export class ScrollablePdfViewer extends EventEmitter {
       if (scrollTimeout) {
         clearTimeout(scrollTimeout);
       }
-
-      // Update visible pages immediately if enough time has passed
-      // if (now - lastScrollTime > 32) { // ~30fps
-      //   this._updateVisiblePages();
-      //   lastScrollTime = now;
-      // }
-
-      // // Set a new timeout for final update
-      // scrollTimeout = setTimeout(() => {
-      //   this._updateVisiblePages();
-      //   scrollTimeout = null;
-      // }, 100);
     });
   }
 
@@ -701,13 +724,29 @@ export class ScrollablePdfViewer extends EventEmitter {
   }
 
   /**
+   * Calculate the target width for PDF pages based on container width.
+   * Uses 90% of container width for better legibility, with responsive breakpoints.
+   * @returns {number} Target page width in pixels
+   */
+  _getPageWidth() {
+    const containerWidth = this.scrollContainer.clientWidth || 800;
+
+    // Use different percentages based on screen size for optimal legibility
+    if (this.isMobile) {
+      return containerWidth * 0.95; // 95% on mobile for better use of limited space
+    } else {
+      return containerWidth * 0.90; // 90% on desktop as planned
+    }
+  }
+
+  /**
    * Sets up basic scroll container styling.
    * Native scrolling behavior is now preferred over custom drag mechanics.
    */
   _setupBasicScrolling() {
     const container = this.scrollContainer;
     container.style.cursor = 'default';
-    
+
     // Remove any grab-related classes that might exist
     container.classList.remove('grabbing');
   }
@@ -808,7 +847,20 @@ export class ScrollablePdfViewer extends EventEmitter {
   }
 
   scrollBy(pages) {
-    const pageHeight = this._getPageHeight() + 24;
+    // Get the actual height of a rendered page wrapper, or estimate based on our width calculation
+    const firstPageWrapper = this.pageCanvases[0]?.parentElement;
+    let pageHeight;
+
+    if (firstPageWrapper && firstPageWrapper.style.height) {
+      // Use actual rendered page height if available
+      pageHeight = parseInt(firstPageWrapper.style.height) + 48; // 48px for margins (1.5rem * 2 + extra)
+    } else {
+      // Fallback: estimate based on typical PDF aspect ratio
+      const targetWidth = this._getPageWidth();
+      const estimatedHeight = targetWidth / 0.77; // Typical letter size aspect ratio
+      pageHeight = estimatedHeight + 48;
+    }
+
     this.scrollContainer.scrollBy({
       top: pageHeight * pages,
       behavior: "smooth"
