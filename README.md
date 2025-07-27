@@ -19,6 +19,7 @@ This project is very fresh (rolled on 6 May 2025). I may yet publish to npm or c
 ## Features
 
 - 📖 Vertical scroll PDF viewing
+- 🔍 Zoom support (pinch-to-zoom on touch devices, Ctrl+Plus/Minus on desktop)
 - 🦾 Accessible (keyboard navigation, ARIA labels, screen reader support)
 - ⚡ Fast, lightweight, and dependency-minimal
 - 🎨 Customizable UI (show/hide controls)
@@ -68,6 +69,26 @@ Set options via data attributes on the container:
 - `data-margin`, `data-margin-top`, `data-margin-left` (number): Margins (optional)
 - `data-disable-webgl` (true/false): Disable WebGL rendering in PDF.js (default: true / WebGL off).
   - **Note:** Disabling WebGL (the default) seems to be more performant in most browsers.
+
+## Zoom Functionality
+
+PDF-A-go-go supports multiple zoom methods for better document readability:
+
+### Touch Devices
+- **Pinch-to-zoom**: Use two fingers to pinch in/out to zoom in/out
+- Zoom range: 25% to 500%
+
+### Desktop/Keyboard
+- **Ctrl + Plus** (or **Ctrl + =**): Zoom in
+- **Ctrl + Minus**: Zoom out  
+- **Ctrl + 0**: Reset zoom to 100%
+- **Mouse wheel + Ctrl**: Scroll wheel while holding Ctrl to zoom
+
+### Zoom Behavior
+- Zoom uses CSS scaling for smooth performance (no PDF re-rendering required)
+- Zoom is centered at the top of the viewing area
+- When zoomed in, horizontal scrolling becomes available
+- Zoom level ranges from 25% to 500% in 10% increments
 
 ## HTML Download Handler
 

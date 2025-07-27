@@ -297,6 +297,19 @@ export class ScrollablePdfViewer extends EventEmitter {
     /** @type {Set<number>} Set of currently visible page indices */
     this._visiblePages = new Set();
 
+    // Zoom functionality
+    /** @type {number} Current zoom level (1.0 = 100%) */
+    this.zoomLevel = 1.0;
+    
+    /** @type {number} Minimum zoom level */
+    this.minZoom = 0.25;
+    
+    /** @type {number} Maximum zoom level */
+    this.maxZoom = 5.0;
+    
+    /** @type {number} Zoom increment for keyboard shortcuts */
+    this.zoomStep = 0.1;
+
     // Initialize event handlers and begin rendering
     this._setupEventHandlers();
     this._initializePages();
@@ -318,6 +331,7 @@ export class ScrollablePdfViewer extends EventEmitter {
     this._setupResizeHandler();
     this._setupScrollHandler();
     this._setupBasicScrolling();
+    this._setupZoomHandlers();
 
     // Memory management event handlers
     document.addEventListener('visibilitychange', () => {
@@ -749,6 +763,158 @@ export class ScrollablePdfViewer extends EventEmitter {
 
     // Remove any grab-related classes that might exist
     container.classList.remove('grabbing');
+  }
+
+  /**
+   * Set up zoom event handlers for pinch gestures and keyboard shortcuts.
+   * @private
+   */
+  _setupZoomHandlers() {
+    // Keyboard zoom handlers (Ctrl + Plus/Minus)
+    document.addEventListener('keydown', (e) => {
+      // Only handle if the container or its children are focused
+      if (!this.app.contains(document.activeElement) && document.activeElement !== document.body) {
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey)) {
+        switch (e.key) {
+          case '+':
+          case '=':
+            e.preventDefault();
+            this.zoomIn();
+            break;
+          case '-':
+            e.preventDefault();
+            this.zoomOut();
+            break;
+          case '0':
+            e.preventDefault();
+            this.resetZoom();
+            break;
+        }
+      }
+    });
+
+    // Touch handlers for pinch zoom
+    let lastTouchDistance = 0;
+    let isPinching = false;
+
+    this.scrollContainer.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        isPinching = true;
+        lastTouchDistance = this._getTouchDistance(e.touches[0], e.touches[1]);
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    this.scrollContainer.addEventListener('touchmove', (e) => {
+      if (isPinching && e.touches.length === 2) {
+        e.preventDefault();
+        const currentDistance = this._getTouchDistance(e.touches[0], e.touches[1]);
+        const distanceChange = currentDistance - lastTouchDistance;
+        
+        // Apply zoom based on distance change
+        const zoomChange = distanceChange * 0.01; // Sensitivity factor
+        this.setZoom(this.zoomLevel + zoomChange);
+        
+        lastTouchDistance = currentDistance;
+      }
+    }, { passive: false });
+
+    this.scrollContainer.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) {
+        isPinching = false;
+      }
+    });
+
+    // Mouse wheel zoom with Ctrl held
+    this.scrollContainer.addEventListener('wheel', (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const delta = e.deltaY;
+        const zoomChange = delta > 0 ? -this.zoomStep : this.zoomStep;
+        this.setZoom(this.zoomLevel + zoomChange);
+      }
+    }, { passive: false });
+  }
+
+  /**
+   * Calculate distance between two touch points.
+   * @param {Touch} touch1 - First touch point
+   * @param {Touch} touch2 - Second touch point
+   * @returns {number} Distance between touch points
+   * @private
+   */
+  _getTouchDistance(touch1, touch2) {
+    const dx = touch1.clientX - touch2.clientX;
+    const dy = touch1.clientY - touch2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  /**
+   * Set the zoom level to a specific value.
+   * @param {number} zoom - Target zoom level (1.0 = 100%)
+   * @param {boolean} [animate=true] - Whether to animate the zoom change
+   */
+  setZoom(zoom, animate = true) {
+    // Clamp zoom level to valid range
+    zoom = Math.max(this.minZoom, Math.min(this.maxZoom, zoom));
+    
+    if (zoom === this.zoomLevel) return;
+    
+    this.zoomLevel = zoom;
+    
+    // Apply transform to pages container
+    const transform = `scale(${zoom})`;
+    this.pagesContainer.style.transform = transform;
+    this.pagesContainer.style.transformOrigin = 'center top';
+    
+    if (animate) {
+      this.pagesContainer.style.transition = 'transform 0.2s ease-out';
+      setTimeout(() => {
+        this.pagesContainer.style.transition = '';
+      }, 200);
+    }
+
+    // Emit zoom change event
+    this.emit('zoom', {
+      level: this.zoomLevel,
+      percentage: Math.round(this.zoomLevel * 100)
+    });
+
+    if (this.debug) {
+      console.log(`[PDF-A-go-go Debug] Zoom level: ${(this.zoomLevel * 100).toFixed(0)}%`);
+    }
+  }
+
+  /**
+   * Zoom in by one step.
+   */
+  zoomIn() {
+    this.setZoom(this.zoomLevel + this.zoomStep);
+  }
+
+  /**
+   * Zoom out by one step.
+   */
+  zoomOut() {
+    this.setZoom(this.zoomLevel - this.zoomStep);
+  }
+
+  /**
+   * Reset zoom to 100%.
+   */
+  resetZoom() {
+    this.setZoom(1.0);
+  }
+
+  /**
+   * Get the current zoom level.
+   * @returns {number} Current zoom level (1.0 = 100%)
+   */
+  getZoom() {
+    return this.zoomLevel;
   }
 
 

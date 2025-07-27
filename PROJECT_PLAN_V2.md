@@ -30,6 +30,7 @@ The snippet shows the lean vertical-scroll foundation—no custom grab-and-throw
 - **Less code, fewer bugs**: drop bespoke physics & page-tracking logic.
 - **Simpler interaction model**: keyboards, mice, touch all map naturally.
 - **Accessibility boost**: assistive tech already understands vertical docs.
+- **Zoom support**: pinch-to-zoom and keyboard shortcuts (Ctrl+Plus/Minus) for better readability.
 
 ---
 
@@ -85,6 +86,7 @@ The snippet shows the lean vertical-scroll foundation—no custom grab-and-throw
 - [x] ~~Add subtle hover zones on left/right edges that nudge scroll vertically (desktop only).~~ **Decided against** - Keeping the interface clean and relying on native scrolling behavior.
 - [x] Preserve existing keyboard shortcuts (↑ ↓ PgUp PgDn, spacebar). (Be sure the PDF areas is focused before trying.)
 - [x] Confirm accessible roles (`role="document"`, ARIA landmarks).
+- [x] **Add zoom functionality** - Pinch zoom (touch) and Ctrl+Plus/Minus (keyboard) support with CSS scaling.
 
 ### 3️⃣ Testing
 
@@ -130,6 +132,7 @@ The snippet shows the lean vertical-scroll foundation—no custom grab-and-throw
 - [x] ~~**Add mouse-over scroll area on right/left for desktop**~~ **Decided against**
 - [ ] **Disable PDF auto-resize when using `data-show-resize-grip` (maintain scale)**
 - [x] **Set default page width to 90% of container for better legibility** ✨ *Enhanced with adaptive high-resolution rendering*
+- [x] **Add zoom functionality** - Pinch zoom and Ctrl+Plus/Minus zoom support ✨ *CSS scaling without PDF redraw*
 
 ---
 
