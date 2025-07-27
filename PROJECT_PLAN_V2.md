@@ -72,37 +72,37 @@ The snippet shows the lean vertical-scroll foundation—no custom grab-and-throw
 
 ### 1️⃣ Layout & UI Refactor
 
-- Convert page container from horizontal flex to vertical column.
-- Update `pdf-a-go-go.css` styles; deprecate left/right gutters.
-- Ensure mobile viewport fit & landscape support.
-- Verify scroll-snap alignment across browsers.
-- Make each PDF page render at ~90% of the container’s width for improved legibility (responsive to viewport changes).
-- Disable PDF auto-resize when the embed area is resized via `data-show-resize-grip`; maintain page scale while allowing taller viewport.
+- [ ] Convert page container from horizontal flex to vertical column.
+- [ ] Update `pdf-a-go-go.css` styles; deprecate left/right gutters.
+- [ ] Ensure mobile viewport fit & landscape support.
+- [ ] Verify scroll-snap alignment across browsers.
+- [ ] Make each PDF page render at ~90% of the container’s width for improved legibility (responsive to viewport changes).
+- [ ] Disable PDF auto-resize when the embed area is resized via `data-show-resize-grip`; maintain page scale while allowing taller viewport.
 
 ### 2️⃣ Input Handling & Interaction
 
-- **Remove** grab-and-scroll acceleration calculations (`scrollablePdfViewer.js`).
-- Add subtle hover zones on left/right edges that nudge scroll vertically (desktop only).
-- Preserve existing keyboard shortcuts (↑ ↓ PgUp PgDn, spacebar).
-- Confirm accessible roles (`role="document"`, ARIA landmarks).
+- [ ] **Remove** grab-and-scroll acceleration calculations (`scrollablePdfViewer.js`).
+- [ ] Add subtle hover zones on left/right edges that nudge scroll vertically (desktop only).
+- [ ] Preserve existing keyboard shortcuts (↑ ↓ PgUp PgDn, spacebar).
+- [ ] Confirm accessible roles (`role="document"`, ARIA landmarks).
 
 ### 3️⃣ Testing
 
-- Rewrite Playwright specs: update selectors from `.page-horizontal` → `.page`.
-- Expand coverage: ensure first/last page visibility, snap points, keyboard nav.
-- Stress-test 100-page PDFs for jank & memory leaks.
+- [ ] Rewrite Playwright specs: update selectors from `.page-horizontal` → `.page`.
+- [ ] Expand coverage: ensure first/last page visibility, snap points, keyboard nav.
+- [ ] Stress-test 100-page PDFs for jank & memory leaks.
 
 ### 4️⃣ Performance & Regression Checks
 
-- Benchmark scroll FPS before/after (use `tests/performance.spec.ts`).
-- Throttle network to confirm lazy-load placeholders still work.
-- Audit Lighthouse accessibility & performance scores.
+- [ ] Benchmark scroll FPS before/after (use `tests/performance.spec.ts`).
+- [ ] Throttle network to confirm lazy-load placeholders still work.
+- [ ] Audit Lighthouse accessibility & performance scores.
 
 ### 5️⃣ Docs, Versioning, & Release
 
-- Update `README.md` gifs & examples.
-- Draft `CHANGELOG.md` for v2.0 (breaking changes highlighted).
-- Tag release, publish on npm (if applicable).
+- [ ] Update `README.md` gifs & examples.
+- [ ] Draft `CHANGELOG.md` for v2.0 (breaking changes highlighted).
+- [ ] Tag release, publish on npm (if applicable).
 
 ---
 
