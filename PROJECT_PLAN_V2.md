@@ -72,18 +72,18 @@ The snippet shows the lean vertical-scroll foundation—no custom grab-and-throw
 
 ### 1️⃣ Layout & UI Refactor
 
-- [ ] Convert page container from horizontal flex to vertical column.
-- [ ] Update `pdf-a-go-go.css` styles; deprecate left/right gutters.
-- [ ] Ensure mobile viewport fit & landscape support.
-- [ ] Verify scroll-snap alignment across browsers.
-- [ ] Make each PDF page render at ~90% of the container’s width for improved legibility (responsive to viewport changes).
-- [ ] Disable PDF auto-resize when the embed area is resized via `data-show-resize-grip`; maintain page scale while allowing taller viewport.
+- [x] Convert page container from horizontal flex to vertical column.
+- [x] Update `pdf-a-go-go.css` styles; deprecate left/right gutters.
+- [x] Ensure mobile viewport fit & landscape support.
+- [x] Verify scroll-snap alignment across browsers.
+- [x] Make each PDF page render at ~90% of the container's width for improved legibility (responsive to viewport changes).
+- [x] Disable PDF auto-resize when the embed area is resized via `data-show-resize-grip`; maintain page scale while allowing taller viewport.
 
 ### 2️⃣ Input Handling & Interaction
 
 - [ ] **Remove** grab-and-scroll acceleration calculations (`scrollablePdfViewer.js`).
 - [ ] Add subtle hover zones on left/right edges that nudge scroll vertically (desktop only).
-- [ ] Preserve existing keyboard shortcuts (↑ ↓ PgUp PgDn, spacebar).
+- [ ] Preserve existing keyboard shortcuts (↑ ↓ PgUp PgDn, spacebar). (Be sure the PDF areas is focused before trying.)
 - [ ] Confirm accessible roles (`role="document"`, ARIA landmarks).
 
 ### 3️⃣ Testing

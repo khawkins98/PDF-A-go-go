@@ -105,9 +105,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  overflow-x: scroll;
-  overflow-y: scroll;
+  overflow-x: hidden;
+  overflow-y: auto;
   scroll-behavior: smooth;
+  scroll-snap-type: y mandatory;
   width: 100%;
   height: 100%;
   box-sizing: border-box;
@@ -142,6 +143,9 @@
   contain: layout style paint size;
   will-change: transform;
   z-index: 1;
+  scroll-snap-align: start;
+  max-width: 90%;
+  width: 90%;
 }
 .pdfagogo-page-canvas {
   position: absolute;
@@ -230,6 +234,28 @@
 @media (max-width: 768px) {
   .pdfagogo-scroll-container::-webkit-scrollbar {
     height: 4px;
+  }
+  
+  .pdfagogo-page-wrapper {
+    width: 95%;
+    max-width: 95%;
+    margin: 1rem auto;
+  }
+  
+  .pdfagogo-container {
+    height: 70vh;
+  }
+}
+
+/* Landscape mobile support */
+@media (max-width: 768px) and (orientation: landscape) {
+  .pdfagogo-container {
+    height: 80vh;
+  }
+  
+  .pdfagogo-page-wrapper {
+    width: 85%;
+    max-width: 85%;
   }
 }
 .pdfagogo-resize-grip {

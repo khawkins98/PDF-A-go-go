@@ -256,7 +256,7 @@ export class ScrollablePdfViewer extends EventEmitter {
     /** @type {HTMLElement} Container for all PDF pages */
     this.pagesContainer = document.createElement("div");
     this.pagesContainer.className = "pdfagogo-pages-container";
-    this.pagesContainer.style.display = "column";
+    this.pagesContainer.style.display = "flex";
     this.pagesContainer.style.flexDirection = "column";
     this.pagesContainer.style.alignItems = "center";
     this.pagesContainer.style.minWidth = "100%";
@@ -364,7 +364,7 @@ export class ScrollablePdfViewer extends EventEmitter {
     offscreenContainer.style.top = '0';
     offscreenContainer.style.zIndex = '-1';
     offscreenContainer.className = 'pdfagogo-pages-container';
-    offscreenContainer.style.display = 'column';
+    offscreenContainer.style.display = 'flex';
     offscreenContainer.style.flexDirection = 'column';
     offscreenContainer.style.alignItems = 'center';
     offscreenContainer.style.minWidth = '100%';

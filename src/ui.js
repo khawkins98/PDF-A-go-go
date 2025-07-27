@@ -649,26 +649,15 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
 
     /**
      * Handler for when the user releases the resize grip (mouse/touch up).
-     * Cleans up event listeners, redraws the PDF pages, and restores the scroll position to the current page.
+     * Cleans up event listeners. Note: PDF pages maintain their scale - only container height changes.
      */
     async function onMouseUp(e) {
       isResizing = false;
       document.body.style.cursor = '';
-      // document.removeEventListener('mousemove', onMouseMove);
-      // document.removeEventListener('mouseup', onMouseUp);
-      // document.removeEventListener('touchmove', onMouseMove);
-      // document.removeEventListener('touchend', onMouseUp);
-      // Only redraw after resizing ends
-      // Store the current page index so we can restore the scroll position after redraw
-      let currentPage = (typeof viewer.showNdx === 'number') ? viewer.showNdx : (viewer.currentPage || 0);
-
-      // Trigger window resize event to redraw pages at new dimensions
-      window.dispatchEvent(new Event('resize'));
-
-      // Restore the scroll position to the same page after resizing
-      if (typeof viewer?.go_to_page === 'function') {
-        viewer.go_to_page(currentPage);
-      }
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      // Note: We no longer trigger window resize events to maintain consistent PDF page scale
+      // The container height change provides more vertical space without affecting page rendering
       e.preventDefault();
     }
 
