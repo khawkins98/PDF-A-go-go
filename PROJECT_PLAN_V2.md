@@ -54,20 +54,20 @@ The snippet shows the lean vertical-scroll foundation—no custom grab-and-throw
 | Vertical layout | ✅ **Done** | Pages flow top-to-bottom; snap points feel solid |
 | Rendering pipeline | ✅ **Healthy** | Perf logs show ~400 ms high-res renders; lazy loading intact |
 | Keyboard navigation | ✅ **Good** | Arrow / Pg keys flip pages; ARIA page announcements fire |
-| Momentum drag (mouse) | ⚠️ **Still Active** | `_setupGrabAndScroll` inertia math needs removal |
-| Wheel acceleration | ⚠️ **Still Active** | `_setupWheelScrollHandler` custom easing present |
-| Hover scroll zones | ⏳ **Missing** | No side-edge listeners or CSS |
+| Momentum drag (mouse) | ✅ **Removed** | Deleted `_setupGrabAndScroll` - using native scrolling |
+| Wheel acceleration | ✅ **Removed** | Deleted `_setupWheelScrollHandler` - using native scrolling |
+| Hover scroll zones | ❌ **Skipped** | Decided against - keeping interface clean |
 | CSS cleanup | 🧐 **Mixed** | `overflow-x: scroll` still set; `display: "column"` typo in JS |
 | Tests | 🔴 **Broken** | Old selectors (`.page-horizontal`) failing in Playwright |
 
 ### 🎯 Next Concrete Steps (in priority order)
 
-1. **Delete acceleration handlers** – Remove `_setupGrabAndScroll` and velocity logic in `_setupWheelScrollHandler`.
-2. **Add desktop hover zones** – Two slim fixed divs that on hover call `scrollBy({ top: ±viewportHeight, behavior: 'smooth' })`; gate behind `(hover: hover)`.
+1. ✅ **Delete acceleration handlers** – Remove `_setupGrabAndScroll` and velocity logic in `_setupWheelScrollHandler`.
+2. ✅ ~~**Add desktop hover zones**~~ – **Decided against** - Keeping the interface clean and minimal.
 3. **Fix CSS nits** – Set `overflow-x: hidden` and change inline `display` to `flex` on `pagesContainer`.
 4. **Remove auto-resize on resize grip** – Keep canvas scale fixed when container height grows; ensure grip still works for vertical space.
 5. **Increase default page width** – Set page wrapper to `max-width: 90%` of viewer container; handle DPI scaling gracefully.
-5. **Rewrite tests** – Update selectors, assert vertical scroll, add hover-zone coverage, include resize-grip behaviour.
+5. **Rewrite tests** – Update selectors, assert vertical scroll, include resize-grip behaviour.
 6. **Polish & docs** – Re-run perf spec, update README visuals, finalize changelog.
 
 ### 1️⃣ Layout & UI Refactor
@@ -81,10 +81,10 @@ The snippet shows the lean vertical-scroll foundation—no custom grab-and-throw
 
 ### 2️⃣ Input Handling & Interaction
 
-- [ ] **Remove** grab-and-scroll acceleration calculations (`scrollablePdfViewer.js`).
-- [ ] Add subtle hover zones on left/right edges that nudge scroll vertically (desktop only).
-- [ ] Preserve existing keyboard shortcuts (↑ ↓ PgUp PgDn, spacebar). (Be sure the PDF areas is focused before trying.)
-- [ ] Confirm accessible roles (`role="document"`, ARIA landmarks).
+- [x] **Remove** grab-and-scroll acceleration calculations (`scrollablePdfViewer.js`).
+- [x] ~~Add subtle hover zones on left/right edges that nudge scroll vertically (desktop only).~~ **Decided against** - Keeping the interface clean and relying on native scrolling behavior.
+- [x] Preserve existing keyboard shortcuts (↑ ↓ PgUp PgDn, spacebar). (Be sure the PDF areas is focused before trying.)
+- [x] Confirm accessible roles (`role="document"`, ARIA landmarks).
 
 ### 3️⃣ Testing
 
@@ -112,7 +112,7 @@ The snippet shows the lean vertical-scroll foundation—no custom grab-and-throw
 | ------------------------------------------- | ------------------ | ----------------------------------------------------- |
 | Snap behaviour inconsistent across browsers | Janky scroll       | Polyfill or feature-detect, add unit test             |
 | Large PDFs stall scroll                     | Perceived perf hit | Keep lazy-load, consider virtualization               |
-| Custom hover scroll feels gimmicky          | UX confusion       | Gate behind `prefers-hover` media query & user toggle |
+| ~~Custom hover scroll feels gimmicky~~      | ~~UX confusion~~   | **Resolved** - Removed hover zones entirely |
 
 ---
 
@@ -126,8 +126,8 @@ The snippet shows the lean vertical-scroll foundation—no custom grab-and-throw
 ### Remaining To-Dos (live checklist)
 
 - [ ] **Update tests**
-- [ ] **Remove grab and scroll acceleration calculations**
-- [ ] **Add mouse-over scroll area on right/left for desktop**
+- [x] **Remove grab and scroll acceleration calculations**
+- [x] ~~**Add mouse-over scroll area on right/left for desktop**~~ **Decided against**
 - [ ] **Disable PDF auto-resize when using `data-show-resize-grip` (maintain scale)**
 - [ ] **Set default page width to 90% of container for better legibility**
 
