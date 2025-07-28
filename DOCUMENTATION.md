@@ -47,7 +47,7 @@
 PDF-A-go-go Application Architecture
 
 ┌─────────────────────────────────────────────────────────────┐
-│                    Entry Point (pdfagogo.js)                │
+│                    Entry Point (assets/js/pdfagogo.js)                │
 │  • Application initialization                               │
 │  • Configuration parsing                                    │
 │  • PDF loading orchestration                               │
@@ -74,7 +74,7 @@ PDF-A-go-go Application Architecture
 
 ## Core Modules
 
-### 1. Main Entry Point (`pdfagogo.js`)
+### 1. Main Entry Point (`assets/js/pdfagogo.js`)
 
 **Purpose**: Application initialization and orchestration
 
@@ -659,7 +659,7 @@ The build process uses Webpack 5 with the following key features:
 // Entry points
 entry: {
   'pdf-a-go-go': {
-    import: './src/pdfagogo.js',
+    import: './src/assets/js/pdfagogo.js',
     library: {
       name: 'flipbook',
       type: 'umd',
@@ -686,15 +686,20 @@ module: {
 
 ```
 src/
-├── pdfagogo.js              # Main entry point
-├── scrollablePdfViewer.js   # Core viewer class
-├── ui.js                    # UI components
-├── pdfLoader.js             # PDF loading logic
-├── htmlDownloadHandler.js   # HTML download handling
-├── pdf-a-go-go.css         # Styles
-├── index.html              # Demo page
-├── double-spread.html      # Large PDF demo
-└── tests/                  # Test files
+├── index.html              # Main demo page
+├── assets/
+│   ├── css/
+│   │   └── pdf-a-go-go.css         # Styles
+│   └── js/
+│       ├── pdfagogo.js              # Main entry point
+│       ├── scrollablePdfViewer.js   # Core viewer class
+│       ├── ui.js                    # UI components
+│       ├── pdfLoader.js             # PDF loading logic
+│       └── htmlDownloadHandler.js  # HTML download handling
+├── examples/
+│   ├── *.html                      # Example demo pages
+│   └── *.pdf                       # Example PDF files
+└── tests/                          # Test files
 ```
 
 ## Advanced Features
