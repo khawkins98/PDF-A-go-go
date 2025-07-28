@@ -625,7 +625,7 @@ export class ScrollablePdfViewer extends EventEmitter {
 
     wrappers.forEach((wrapper, index) => {
       const pageNum = parseInt(wrapper.querySelector('canvas')?.getAttribute('data-page'), 10);
-      if (!pageNum) return;
+      if (isNaN(pageNum) || pageNum < 1) return;
 
       const rect = wrapper.getBoundingClientRect();
       const isVisible = rect.bottom > extendedTop && rect.top < extendedBottom;
@@ -648,12 +648,9 @@ export class ScrollablePdfViewer extends EventEmitter {
     });
 
     // Update current page if we found a most visible page
-
-
-    if (maxVisiblePage !== null && maxVisibleRatio > 0.5) {
+    if (maxVisiblePage !== null && maxVisibleRatio > 0.25) {
       const newPage = maxVisiblePage - 1;
       if (this.currentPage !== newPage) {
-
         this.currentPage = newPage;
         this.emit("seen", maxVisiblePage);
       }

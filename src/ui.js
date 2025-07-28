@@ -427,7 +427,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       pageAnnouncement.textContent = `Page ${currentPage} of ${totalPages}`;
   }
   viewer.on("seen", updatePage);
-  updatePage(0);
+  updatePage(1); // Start at page 1 since that's what's initially visible
   if (!featureOptions.showCurrentPage) {
     if (pageIndicator) pageIndicator.style.display = "none";
   }
@@ -572,7 +572,10 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
   }
   // Wait for initial render before going to hash page
   viewer.on('initialRenderComplete', () => {
-    console.log('initialRenderComplete');
+    // Update visible pages to sync the page counter with what's actually shown
+    if (typeof viewer._updateVisiblePages === 'function') {
+      viewer._updateVisiblePages();
+    }
     goToHashPage();
   });
 
