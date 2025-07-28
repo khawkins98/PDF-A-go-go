@@ -33,7 +33,7 @@ This project is very fresh (rolled on 6 May 2025). I may yet publish to npm or c
 - ⌨️ **Comprehensive keyboard navigation**
 - 🔍 **Full-text search** with highlighting and match navigation
 - 🔝 **Resizable viewer** with drag handle
-- 📑 **Complete navigation controls** (page selector, prev/next)
+- 📑 **Complete navigation controls** (page selector, share link)
 - ⬇️ **PDF download** functionality
 - 🌐 **Smart HTML download handling** for institutional repositories
 - 🛠️ **Built on** [pdf.js](https://github.com/mozilla/pdf.js) with performance enhancements
@@ -48,7 +48,6 @@ Include the JS and CSS in your HTML, and add a container:
 <div class="pdfagogo-container" id="pdfagogo-container"
      data-pdf-url="./example.pdf"
      data-show-search="true"
-     data-show-prev-next="true"
      data-show-page-selector="true"
      data-show-current-page="true"
      data-show-download="true"
@@ -59,7 +58,6 @@ Include the JS and CSS in your HTML, and add a container:
 Set options via data attributes on the container:
 
 - `data-pdf-url` (string): PDF URL to load (default: sample PDF)
-- `data-show-prev-next` (true/false): Show previous/next page buttons (default: true)
 - `data-show-page-selector` (true/false): Show page selector input (default: true)
 - `data-show-current-page` (true/false): Show current page indicator (default: true)
 - `data-show-search` (true/false): Show search controls (default: true)

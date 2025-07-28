@@ -157,7 +157,7 @@ class RenderQueue {
 **Key Components**:
 
 - **Loading Progress**: Visual feedback during PDF loading
-- **Navigation Controls**: Previous/Next buttons, page selector
+- **Navigation Controls**: Page selector and share link
 - **Search Interface**: Text search with match navigation
 - **Accessibility**: Screen reader announcements, keyboard support
 
@@ -243,7 +243,6 @@ The PDF viewer is configured through data attributes on the container element:
   id="pdfagogo-container"
   data-pdf-url="./document.pdf"
   data-show-search="true"
-  data-show-prev-next="true"
   data-show-page-selector="true"
   data-show-current-page="true"
   data-show-download="true"
@@ -306,7 +305,7 @@ PDF-A-go-go provides comprehensive zoom capabilities across all input methods:
 
 **Desktop/Keyboard**:
 - **Ctrl + Plus** (or **Ctrl + =**): Zoom in by 10%
-- **Ctrl + Minus**: Zoom out by 10%  
+- **Ctrl + Minus**: Zoom out by 10%
 - **Ctrl + 0**: Reset zoom to 100%
 - **Mouse wheel + Ctrl**: Hold Ctrl while scrolling to zoom
 
@@ -357,7 +356,7 @@ container.setAttribute('tabindex', '0');
 // Listen for zoom changes
 viewer.on('zoomChange', (newZoomLevel) => {
   console.log(`Zoom: ${(newZoomLevel * 100).toFixed(0)}%`);
-  
+
   // Update UI or perform actions based on zoom level
   if (newZoomLevel > 2.0) {
     console.log('High zoom level - consider showing detail controls');
@@ -376,7 +375,6 @@ const currentZoom = viewer.getZoom(); // Get current level
 | Option                    | Type    | Default           | Description                 |
 | ------------------------- | ------- | ----------------- | --------------------------- |
 | `data-pdf-url`            | string  | `"./example.pdf"` | PDF URL to load             |
-| `data-show-prev-next`     | boolean | `true`            | Show navigation buttons     |
 | `data-show-page-selector` | boolean | `true`            | Show page input field       |
 | `data-show-current-page`  | boolean | `true`            | Show current page indicator |
 | `data-show-search`        | boolean | `true`            | Show search controls        |
@@ -398,7 +396,7 @@ const currentZoom = viewer.getZoom(); // Get current level
 | Option               | Type    | Default | Description             |
 | -------------------- | ------- | ------- | ----------------------- |
 | `data-default-page`  | number  | `1`     | Default page to open    |
-| `data-momentum`      | number  | `0.5`   | Scroll momentum factor  |
+| `data-momentum`      | number  | `1.5`   | Scroll momentum factor  |
 | `data-disable-webgl` | boolean | `true`  | Disable WebGL rendering |
 | `data-debug`         | boolean | `false` | Enable debug mode       |
 
@@ -455,7 +453,7 @@ class RenderQueue {
       console.error('Invalid task added to render queue');
       return;
     }
-    
+
     // Priority tasks go to front of queue
     if (priority) {
       this.queue.unshift(task);
@@ -471,7 +469,7 @@ class RenderQueue {
       this.process();
       return;
     }
-    
+
     // Execute with local reference to prevent race conditions
     const taskToExecute = this.currentTask;
     Promise.resolve(taskToExecute())
@@ -485,7 +483,7 @@ class RenderQueue {
 
 **Adaptive Buffer Sizes**:
 - Small documents (≤100 pages): 4 page buffer
-- Medium documents (101-500 pages): 4-20 page buffer  
+- Medium documents (101-500 pages): 4-20 page buffer
 - Large documents (500+ pages): 20 page buffer
 - Mobile devices: 50% of desktop buffer sizes
 
@@ -502,7 +500,7 @@ async _calculatePlaceholderDimensions() {
   const targetWidth = this._getPageWidth();
   const aspectRatio = firstPage.width / firstPage.height;
   const expectedHeight = targetWidth / aspectRatio;
-  
+
   // Apply to all 827 placeholder pages for accurate total height
   this.pageCanvases.forEach(canvas => {
     if (canvas.getAttribute('data-resolution') === 'placeholder') {
