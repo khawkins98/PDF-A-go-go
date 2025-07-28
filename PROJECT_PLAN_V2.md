@@ -90,6 +90,7 @@ The snippet shows the lean vertical-scroll foundation—no custom grab-and-throw
 
 ### 3️⃣ Testing
 
+- [x] Rewrite Playwright specs: comprehensive zoom functionality tests added.
 - [x] Expand coverage: zoom controls, boundaries, events, horizontal scrolling when zoomed.
 - [x] Performance tests: ensure existing scroll performance maintained with zoom functionality.
 - [ ] Stress-test 100-page PDFs for jank & memory leaks.
@@ -130,7 +131,7 @@ The snippet shows the lean vertical-scroll foundation—no custom grab-and-throw
 - [x] **Update tests** ✨ *Added comprehensive zoom functionality tests*
 - [x] **Remove grab and scroll acceleration calculations**
 - [x] ~~**Add mouse-over scroll area on right/left for desktop**~~ **Decided against**
-- [ ] **Disable PDF auto-resize when using `data-show-resize-grip` (maintain scale)**
+- [x] **Disable PDF auto-resize when using `data-show-resize-grip` (maintain scale)** ✨ *Already implemented - resize grip changes container height without triggering PDF page re-rendering*
 - [x] **Set default page width to 90% of container for better legibility** ✨ *Enhanced with adaptive high-resolution rendering*
 - [x] **Add zoom functionality** - Pinch zoom and Ctrl+Plus/Minus zoom support ✨ *CSS scaling without PDF redraw*
 
