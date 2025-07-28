@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF-A-go-go - Large PDF Stress Test (827 pages)</title>
+    <link rel="stylesheet" href="pdf-a-go-go.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .test-header {
+            max-width: 1200px;
+            margin: 0 auto 20px auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .test-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .test-metric {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+
+        .test-metric strong {
+            display: block;
+            color: #007bff;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .test-instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+
+        .test-instructions h3 {
+            margin: 0 0 10px 0;
+            color: #856404;
+        }
+
+        .test-instructions ul {
+            margin: 10px 0 0 20px;
+            color: #856404;
+        }
+
+        .zoom-controls {
+            background: #e7f3ff;
+            border: 1px solid #b6d7ff;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+
+        .zoom-controls h3 {
+            margin: 0 0 10px 0;
+            color: #0056b3;
+        }
+
+        /* Make the container larger for stress testing */
+        .pdfagogo-container {
+            height: 90vh;
+            max-width: 1400px;
+        }
+
+        /* Debug panel styling */
+        .pdfagogo-debug-info {
+            font-size: 11px !important;
+            background: rgba(0, 0, 0, 0.9) !important;
+            border-bottom-left-radius: 8px !important;
+            border: 1px solid #333 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-header">
+        <h1>🚀 PDF-A-go-go Large PDF Stress Test</h1>
+        <p>This page tests the performance and memory handling of PDF-A-go-go with a very large PDF document (example_large.pdf, 827 pages, 5.4MB). Debug mode is enabled to monitor real-time performance metrics.</p>
+
+        <div class="test-info">
+            <div class="test-metric">
+                <strong>Document Size</strong>
+                827 pages, 5.4MB
+            </div>
+            <div class="test-metric">
+                <strong>Debug Mode</strong>
+                Enabled (see top-right corner)
+            </div>
+            <div class="test-metric">
+                <strong>Zoom Support</strong>
+                Full range (25% - 500%)
+            </div>
+            <div class="test-metric">
+                <strong>Memory Management</strong>
+                Automatic cleanup enabled
+            </div>
+        </div>
+
+        <div class="test-instructions">
+            <h3>📋 Testing Instructions</h3>
+            <ul>
+                <li><strong>Scroll Performance:</strong> Scroll through the document and observe debug metrics in top-right</li>
+                <li><strong>Memory Usage:</strong> Watch "Memory Freed" metric to see garbage collection in action</li>
+                <li><strong>Rendering Speed:</strong> Note "Avg High-Res" times (should be under 500ms per page)</li>
+                <li><strong>Page Navigation:</strong> Use arrow keys, Page Up/Down to test navigation</li>
+                <li><strong>Large Document Handling:</strong> Jump to different sections and observe performance</li>
+            </ul>
+        </div>
+
+        <div class="zoom-controls">
+            <h3>🔍 Zoom Testing</h3>
+            <p><strong>Focus the PDF first (click on it), then:</strong></p>
+            <ul>
+                <li><kbd>Ctrl + Plus</kbd> / <kbd>Ctrl + =</kbd> to zoom in</li>
+                <li><kbd>Ctrl + Minus</kbd> to zoom out</li>
+                <li><kbd>Ctrl + 0</kbd> to reset zoom</li>
+                <li><kbd>Ctrl + Mouse Wheel</kbd> for smooth zooming</li>
+                <li><strong>Touch devices:</strong> Pinch to zoom</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- PDF Viewer Container with Large PDF and Debug Mode -->
+    <div class="pdfagogo-container" id="pdfagogo-container"
+         data-pdf-url="./example_large.pdf"
+         data-show-search="true"
+         data-show-page-selector="true"
+         data-show-current-page="true"
+         data-show-download="true"
+         data-show-resize-grip="true"
+         data-debug="true"
+         data-default-page="1"
+         style="width:100%;max-width:1400px;box-sizing:border-box;margin:0 auto;">
+    </div>
+
+    <script src="pdf-a-go-go.js"></script>
+
+    <script>
+        // Additional stress test monitoring
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('pdfagogo-container');
+
+            // Log when PDF viewer is ready
+            if (container) {
+                const checkViewer = () => {
+                    if (container.pdfViewer) {
+                        console.log('🚀 Large PDF Stress Test Started');
+                        console.log('📄 Document:', '827 pages, 5.4MB');
+                        console.log('🔧 Debug mode enabled');
+                        console.log('💾 Memory management: Automatic cleanup');
+
+                        // Monitor zoom events
+                        container.pdfViewer.on('zoom', (event) => {
+                            console.log(`🔍 Zoom: ${event.percentage}% (${event.level.toFixed(2)}x)`);
+                        });
+
+                        // Monitor page visibility events
+                        container.pdfViewer.on('seen', (pageNum) => {
+                            console.log(`👁️ Page ${pageNum} visible`);
+                        });
+
+                        // Performance monitoring
+                        setTimeout(() => {
+                            const metrics = container.pdfViewer.getPerformanceMetrics();
+                            if (metrics) {
+                                console.log('📊 Performance Metrics:', metrics);
+                            }
+                        }, 5000);
+
+                    } else {
+                        setTimeout(checkViewer, 100);
+                    }
+                };
+                checkViewer();
+            }
+
+            // Memory monitoring (Chrome/Chromium only)
+            if ('memory' in performance) {
+                setInterval(() => {
+                    const memory = performance.memory;
+                    if (memory) {
+                        console.log(`🧠 Memory: ${(memory.usedJSHeapSize / 1024 / 1024).toFixed(1)}MB used, ${(memory.totalJSHeapSize / 1024 / 1024).toFixed(1)}MB total`);
+                    }
+                }, 10000); // Log every 10 seconds
+            }
+        });
+    </script>
+</body>
+</html>

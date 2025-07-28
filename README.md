@@ -15,6 +15,7 @@ This project is very fresh (rolled on 6 May 2025). I may yet publish to npm or c
 - [Basic demo](https://khawkins98.github.io/PDF-A-go-go/)
 - [Large double spread demo](https://khawkins98.github.io/PDF-A-go-go/double-spread.html#pdf-page-10) (12MB PDF)
 - [Load iFrame with meta redirect](https://khawkins98.github.io/PDF-A-go-go/html-download-example.html)
+- [Large PDF stress test (827 pages)](https://khawkins98.github.io/PDF-A-go-go/stress-test-large-pdf.html)
 
 ## Features
 
@@ -80,7 +81,7 @@ PDF-A-go-go supports multiple zoom methods for better document readability:
 
 ### Desktop/Keyboard
 - **Ctrl + Plus** (or **Ctrl + =**): Zoom in
-- **Ctrl + Minus**: Zoom out  
+- **Ctrl + Minus**: Zoom out
 - **Ctrl + 0**: Reset zoom to 100%
 - **Mouse wheel + Ctrl**: Scroll wheel while holding Ctrl to zoom
 

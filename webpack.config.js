@@ -38,7 +38,9 @@ const base = {
         { from: 'src/double-spread.html', to: 'double-spread.html' },
         { from: 'src/html-download-example.html', to: 'html-download-example.html' },
         { from: 'src/html-download-example-iframe.html', to: 'html-download-example-iframe.html' },
+        { from: 'src/stress-test-large-pdf.html', to: 'stress-test-large-pdf.html' },
         { from: 'src/example.pdf', to: 'example.pdf' },
+        { from: 'src/example_large.pdf', to: 'example_large.pdf' },
         { from: 'src/example_spread.pdf', to: 'example_spread.pdf' },
         { from: 'src/tests', to: 'tests' }
       ]

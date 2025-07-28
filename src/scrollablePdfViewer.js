@@ -75,6 +75,12 @@ class RenderQueue {
    * queue.add(() => renderVisiblePage(2), true);
    */
   add(task, priority = false) {
+    // Validate that the task is a function
+    if (typeof task !== 'function') {
+      console.error('[RenderQueue] Invalid task added to render queue. Expected function, got:', typeof task, task);
+      return;
+    }
+
     if (priority) {
       // High-priority tasks go to the front of the queue
       this.queue.unshift(task);
@@ -122,17 +128,41 @@ class RenderQueue {
     this.isProcessing = true;
     this.currentTask = this.queue.shift();
 
+    // Validate that we have a valid function to execute
+    if (typeof this.currentTask !== 'function') {
+      console.warn('[RenderQueue] Invalid task in render queue:', typeof this.currentTask);
+      this.currentTask = null;
+      this.process(); // Skip to next task
+      return;
+    }
+
     requestAnimationFrame(() => {
-      Promise.resolve(this.currentTask())
-        .then(() => {
-          this.currentTask = null;
-          this.process(); // Process next task
-        })
-        .catch(err => {
-          console.error('Render task failed:', err);
-          this.currentTask = null;
-          this.process(); // Continue with next task even if current fails
-        });
+      // Double-check that currentTask is still a function (race condition protection)
+      if (typeof this.currentTask !== 'function') {
+        this.currentTask = null;
+        this.process();
+        return;
+      }
+      
+      // Store the task in a local variable to prevent race conditions
+      const taskToExecute = this.currentTask;
+      
+      try {
+        Promise.resolve(taskToExecute())
+          .then(() => {
+            this.currentTask = null;
+            this.process(); // Process next task
+          })
+          .catch(err => {
+            console.error('[RenderQueue] Render task failed:', err);
+            this.currentTask = null;
+            this.process(); // Continue with next task even if current fails
+          });
+      } catch (error) {
+        console.error('[RenderQueue] Error calling currentTask:', error);
+        this.currentTask = null;
+        this.process();
+      }
     });
   }
 }
@@ -336,15 +366,20 @@ export class ScrollablePdfViewer extends EventEmitter {
     // Memory management event handlers
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
-        // Clean up memory when page becomes hidden
-        this._cleanupOffscreenPages(true);
+        // For large documents, use normal cleanup to preserve buffer
+        // For small documents, use forced cleanup as before
+        const forceCleanup = this.pageCount <= 100;
+        this._cleanupOffscreenPages(forceCleanup);
       }
     });
 
     // Handle memory pressure events (if supported by browser)
     if ('onmemorypressure' in window) {
       window.addEventListener('memorypressure', () => {
-        this._cleanupOffscreenPages(true);
+        // For large documents, use normal cleanup to preserve navigation
+        // For small documents, use forced cleanup to free memory
+        const forceCleanup = this.pageCount <= 100;
+        this._cleanupOffscreenPages(forceCleanup);
       });
     }
   }
@@ -386,24 +421,71 @@ export class ScrollablePdfViewer extends EventEmitter {
 
     // First pass: Create placeholder canvases for all pages
     const pageSetupPromises = [];
-    for (let i = 0; i < this.pageCount; i++) {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'pdfagogo-page-wrapper';
-      wrapper.id = `pdf-page-${i + 1}`;
+    
+    if (this.debug) {
+      console.log(`[PDF-A-go-go Debug] Creating ${this.pageCount} page placeholders...`);
+    }
+    
+    // For very large documents (>100 pages), use efficient batch creation
+    if (this.pageCount > 100) {
+      const batchSize = 50;
+      for (let batch = 0; batch < Math.ceil(this.pageCount / batchSize); batch++) {
+        const startIdx = batch * batchSize;
+        const endIdx = Math.min(startIdx + batchSize, this.pageCount);
+        
+        if (this.debug) {
+          console.log(`[PDF-A-go-go Debug] Creating batch ${batch + 1}: pages ${startIdx + 1}-${endIdx}`);
+        }
+        
+        for (let i = startIdx; i < endIdx; i++) {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'pdfagogo-page-wrapper';
+          wrapper.id = `pdf-page-${i + 1}`;
 
-      const canvas = document.createElement("canvas");
-      canvas.className = "pdfagogo-page-canvas";
-      canvas.setAttribute("tabindex", "0");
-      canvas.setAttribute("data-page", i + 1);
-      canvas.setAttribute("data-resolution", "placeholder");
+          const canvas = document.createElement("canvas");
+          canvas.className = "pdfagogo-page-canvas";
+          canvas.setAttribute("tabindex", "0");
+          canvas.setAttribute("data-page", i + 1);
+          canvas.setAttribute("data-resolution", "placeholder");
 
-      wrapper.appendChild(canvas);
-      this.pageCanvases[i] = canvas;
-      offscreenContainer.appendChild(wrapper);
+          wrapper.appendChild(canvas);
+          this.pageCanvases[i] = canvas;
+          offscreenContainer.appendChild(wrapper);
+        }
+        
+        // Yield control back to browser between batches
+        if (batch < Math.ceil(this.pageCount / batchSize) - 1) {
+          await new Promise(resolve => setTimeout(resolve, 0));
+        }
+      }
+    } else {
+      // Standard creation for smaller documents
+      for (let i = 0; i < this.pageCount; i++) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'pdfagogo-page-wrapper';
+        wrapper.id = `pdf-page-${i + 1}`;
+
+        const canvas = document.createElement("canvas");
+        canvas.className = "pdfagogo-page-canvas";
+        canvas.setAttribute("tabindex", "0");
+        canvas.setAttribute("data-page", i + 1);
+        canvas.setAttribute("data-resolution", "placeholder");
+
+        wrapper.appendChild(canvas);
+        this.pageCanvases[i] = canvas;
+        offscreenContainer.appendChild(wrapper);
+      }
+    }
+    
+    if (this.debug) {
+      console.log(`[PDF-A-go-go Debug] Created ${Object.keys(this.pageCanvases).length} page canvases`);
     }
 
     // Wait for all page dimensions to be calculated
     await Promise.all(pageSetupPromises);
+
+    // Get typical page dimensions from the first page for accurate placeholder sizing
+    await this._calculatePlaceholderDimensions();
 
     // Move all prepared pages to the visible container at once
     while (offscreenContainer.firstChild) {
@@ -559,14 +641,19 @@ export class ScrollablePdfViewer extends EventEmitter {
     const extendedTop = containerRect.top - containerRect.height * 0.5;
     const extendedBottom = containerRect.bottom + containerRect.height * 0.5;
 
-    const wrappers = container.querySelectorAll('.pdfagogo-page-wrapper');
-    wrappers.forEach(wrapper => {
+    const wrappers = this.pagesContainer.querySelectorAll('.pdfagogo-page-wrapper');
+    
+
+    wrappers.forEach((wrapper, index) => {
       const pageNum = parseInt(wrapper.querySelector('canvas')?.getAttribute('data-page'), 10);
       if (!pageNum) return;
 
       const rect = wrapper.getBoundingClientRect();
-      if (rect.bottom > extendedTop && rect.top < extendedBottom) {
+      const isVisible = rect.bottom > extendedTop && rect.top < extendedBottom;
+      
 
+      
+      if (isVisible) {
         const visibleHeight = Math.min(rect.bottom, containerRect.bottom) -
                               Math.max(rect.top, containerRect.top);
         const percentVisible = visibleHeight / rect.height;
@@ -576,13 +663,18 @@ export class ScrollablePdfViewer extends EventEmitter {
           maxVisibleRatio = percentVisible;
           maxVisiblePage = pageNum;
         }
+        
+
       }
     });
 
     // Update current page if we found a most visible page
+
+    
     if (maxVisiblePage !== null && maxVisibleRatio > 0.5) {
       const newPage = maxVisiblePage - 1;
       if (this.currentPage !== newPage) {
+
         this.currentPage = newPage;
         this.emit("seen", maxVisiblePage);
       }
@@ -610,7 +702,19 @@ export class ScrollablePdfViewer extends EventEmitter {
     const visiblePages = Array.from(this._visiblePages);
     const start = Math.min(...visiblePages);
     const end = Math.max(...visiblePages);
-    const buffer = this.isMobile ? 1 : 2;
+    
+    // Adaptive buffer size based on document size
+    let buffer;
+    if (this.pageCount > 500) {
+      // Large documents: keep more pages in memory for better navigation
+      buffer = this.isMobile ? 10 : 20;
+    } else if (this.pageCount > 100) {
+      // Medium documents: moderate buffer
+      buffer = this.isMobile ? 5 : 10;
+    } else {
+      // Small documents: original buffer
+      buffer = this.isMobile ? 1 : 2;
+    }
 
     const keepRange = new Set();
     for (let i = start - buffer; i <= end + buffer; i++) {
@@ -717,24 +821,67 @@ export class ScrollablePdfViewer extends EventEmitter {
       if (scrollTimeout) {
         clearTimeout(scrollTimeout);
       }
+      
+      // Update visible pages immediately for responsive feedback
+      this._updateVisiblePages();
+      
+      // Also set a timeout for cleanup and memory management
+      // Use longer cleanup intervals for large documents to reduce churn
+      const cleanupDelay = this.pageCount > 500 ? 1000 : this.pageCount > 100 ? 500 : 150;
+      
+      scrollTimeout = setTimeout(() => {
+        this._updateVisiblePages();
+        this._cleanupOffscreenPages();
+        scrollTimeout = null;
+      }, cleanupDelay);
     });
   }
 
-  _getPageWidth() {
-    // Try to get the width of the second page's rendered image (or first if not available)
-    let pageIdx = 1;
-    if (this.pageCount < 2) pageIdx = 0;
-    const canvas = this.pageCanvases[pageIdx];
-    if (canvas && canvas.clientWidth) {
-      return canvas.clientWidth;
-    }
-    // Fallback: estimate based on container height and aspect ratio
-    const containerHeight = this.scrollContainer.clientHeight || 600;
-    return containerHeight * 0.7;
-  }
+  /**
+   * Calculate and set proper dimensions for all placeholder pages.
+   * This ensures the scroll container has accurate total height from the start.
+   */
+  async _calculatePlaceholderDimensions() {
+    return new Promise((resolve) => {
+      // Get first page to calculate typical aspect ratio
+      this.book.getPage(0, (err, firstPage) => {
+        if (err) {
+          console.warn('Could not get first page for dimension calculation:', err);
+          resolve();
+          return;
+        }
 
-  _getPageHeight() {
-    return this.scrollContainer.clientHeight || 600;
+        // Calculate target width more reliably during initialization
+        const containerWidth = this.scrollContainer.clientWidth || this.scrollContainer.offsetWidth || 800;
+        const targetWidth = this.isMobile ? containerWidth * 0.95 : containerWidth * 0.90;
+        
+        const aspectRatio = firstPage.width / firstPage.height;
+        const expectedHeight = targetWidth / aspectRatio;
+
+        if (this.debug) {
+          console.log(`[PDF-A-go-go Debug] Container width: ${containerWidth}px, Target width: ${targetWidth}px, Expected height: ${expectedHeight}px (aspect: ${aspectRatio.toFixed(2)})`);
+        }
+
+        // Apply calculated dimensions to all placeholder pages
+        Object.keys(this.pageCanvases).forEach(pageIndex => {
+          const canvas = this.pageCanvases[pageIndex];
+          const wrapper = canvas.parentElement;
+          
+          if (canvas.getAttribute('data-resolution') === 'placeholder') {
+            wrapper.style.width = targetWidth + 'px';
+            wrapper.style.height = expectedHeight + 'px';
+            canvas.style.width = targetWidth + 'px';
+            canvas.style.height = expectedHeight + 'px';
+            
+            // Set small canvas size for placeholder to save memory
+            canvas.width = 32;
+            canvas.height = 32;
+          }
+        });
+
+        resolve();
+      });
+    });
   }
 
   /**
@@ -743,7 +890,16 @@ export class ScrollablePdfViewer extends EventEmitter {
    * @returns {number} Target page width in pixels
    */
   _getPageWidth() {
-    const containerWidth = this.scrollContainer.clientWidth || 800;
+    // Try to get the width of an already rendered page first
+    let pageIdx = 1;
+    if (this.pageCount < 2) pageIdx = 0;
+    const canvas = this.pageCanvases[pageIdx];
+    if (canvas && canvas.clientWidth && canvas.clientWidth > 32) {
+      return canvas.clientWidth;
+    }
+    
+    // Calculate based on container width (use same logic as placeholder calculation)
+    const containerWidth = this.scrollContainer.clientWidth || this.scrollContainer.offsetWidth || 800;
 
     // Use different percentages based on screen size for optimal legibility
     if (this.isMobile) {
