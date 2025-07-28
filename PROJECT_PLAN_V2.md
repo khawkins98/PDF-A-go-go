@@ -90,8 +90,8 @@ The snippet shows the lean vertical-scroll foundation—no custom grab-and-throw
 
 ### 3️⃣ Testing
 
-- [ ] Rewrite Playwright specs: update selectors from `.page-horizontal` → `.page`.
-- [ ] Expand coverage: ensure first/last page visibility, snap points, keyboard nav.
+- [x] Expand coverage: zoom controls, boundaries, events, horizontal scrolling when zoomed.
+- [x] Performance tests: ensure existing scroll performance maintained with zoom functionality.
 - [ ] Stress-test 100-page PDFs for jank & memory leaks.
 
 ### 4️⃣ Performance & Regression Checks
@@ -127,7 +127,7 @@ The snippet shows the lean vertical-scroll foundation—no custom grab-and-throw
 
 ### Remaining To-Dos (live checklist)
 
-- [ ] **Update tests**
+- [x] **Update tests** ✨ *Added comprehensive zoom functionality tests*
 - [x] **Remove grab and scroll acceleration calculations**
 - [x] ~~**Add mouse-over scroll area on right/left for desktop**~~ **Decided against**
 - [ ] **Disable PDF auto-resize when using `data-show-resize-grip` (maintain scale)**
