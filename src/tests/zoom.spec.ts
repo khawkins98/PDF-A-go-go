@@ -277,23 +277,47 @@ test.describe('PDF-A-go-go Zoom Functionality', () => {
     expect(hasEventListeners.hasTouchAction).toBe(true);
   });
 
-  test('Zoom Persistence During Page Navigation', async ({ page }) => {
+    test('Zoom Persistence During Page Navigation', async ({ page }) => {
     await focusPdfContainer(page);
-
+    
     // Zoom in
     await page.keyboard.press('Control+=');
     await page.keyboard.press('Control+=');
     await page.waitForTimeout(300);
-
+    
     const zoomLevel = await getCurrentZoomLevel(page);
     expect(zoomLevel).toBeCloseTo(1.2, 1);
-
+    
     // Navigate to a different page (if PDF has multiple pages)
     await page.keyboard.press('ArrowDown');
     await page.waitForTimeout(500);
-
+    
     // Check that zoom is maintained
     const persistedZoom = await getCurrentZoomLevel(page);
     expect(persistedZoom).toBeCloseTo(zoomLevel, 1);
+  });
+
+  test('Zoom Does Not Activate When Container Not Focused', async ({ page }) => {
+    // Don't focus the PDF container - focus something else instead
+    await page.focus('body');
+    
+    const initialZoom = await getCurrentZoomLevel(page);
+    expect(initialZoom).toBe(1.0);
+    
+    // Try to zoom without focusing the container
+    await page.keyboard.press('Control+=');
+    await page.waitForTimeout(300);
+    
+    // Zoom should NOT have changed
+    const unchangedZoom = await getCurrentZoomLevel(page);
+    expect(unchangedZoom).toBe(1.0);
+    
+    // Now focus the container and zoom should work
+    await focusPdfContainer(page);
+    await page.keyboard.press('Control+=');
+    await page.waitForTimeout(300);
+    
+    const focusedZoom = await getCurrentZoomLevel(page);
+    expect(focusedZoom).toBeCloseTo(1.1, 1);
   });
 });

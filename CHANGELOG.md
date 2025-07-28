@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Smooth CSS scaling**: Zoom uses performant CSS transforms (no PDF re-rendering required)
 - **Auto horizontal scroll**: Horizontal scrolling automatically enables when zoomed beyond viewport
 - **Zoom events**: Programmatic access to zoom state changes via event emission
+- **Focus-aware zoom controls**: Keyboard zoom shortcuts only activate when PDF container is focused (prevents global page interference)
 
 #### 📱 Enhanced Mobile Experience
 - **Native touch scrolling**: Leverages browser momentum scrolling for smooth performance
@@ -116,6 +117,7 @@ For users upgrading from v1.x:
 - **Resize behavior**: Fixed inconsistent behavior when using resize grip
 - **Mobile scroll stuttering**: Resolved performance issues with custom momentum on mobile devices
 - **Page alignment**: Fixed page positioning inconsistencies during navigation
+- **Global keyboard interference**: Fixed zoom shortcuts intercepting global page events (now requires PDF container focus)
 
 ### 📦 Dependencies
 

@@ -84,6 +84,8 @@ PDF-A-go-go supports multiple zoom methods for better document readability:
 - **Ctrl + 0**: Reset zoom to 100%
 - **Mouse wheel + Ctrl**: Scroll wheel while holding Ctrl to zoom
 
+**Note**: For keyboard zoom shortcuts to work, the PDF viewer must be focused. Click on the PDF viewer area first, then use the keyboard shortcuts.
+
 ### Zoom Behavior
 - Zoom uses CSS scaling for smooth performance (no PDF re-rendering required)
 - Zoom is centered at the top of the viewing area

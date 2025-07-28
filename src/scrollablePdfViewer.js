@@ -770,13 +770,13 @@ export class ScrollablePdfViewer extends EventEmitter {
    * @private
    */
   _setupZoomHandlers() {
-    // Keyboard zoom handlers (Ctrl + Plus/Minus)
-    document.addEventListener('keydown', (e) => {
-      // Only handle if the container or its children are focused
-      if (!this.app.contains(document.activeElement) && document.activeElement !== document.body) {
-        return;
-      }
-
+    // Make the container focusable for proper zoom control
+    if (!this.app.hasAttribute('tabindex')) {
+      this.app.setAttribute('tabindex', '0');
+    }
+    
+    // Keyboard zoom handlers (Ctrl + Plus/Minus) - only when PDF container is focused
+    this.app.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey)) {
         switch (e.key) {
           case '+':
