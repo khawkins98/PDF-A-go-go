@@ -143,10 +143,10 @@ class RenderQueue {
         this.process();
         return;
       }
-      
+
       // Store the task in a local variable to prevent race conditions
       const taskToExecute = this.currentTask;
-      
+
       try {
         Promise.resolve(taskToExecute())
           .then(() => {
@@ -330,13 +330,13 @@ export class ScrollablePdfViewer extends EventEmitter {
     // Zoom functionality
     /** @type {number} Current zoom level (1.0 = 100%) */
     this.zoomLevel = 1.0;
-    
+
     /** @type {number} Minimum zoom level */
     this.minZoom = 0.25;
-    
+
     /** @type {number} Maximum zoom level */
     this.maxZoom = 5.0;
-    
+
     /** @type {number} Zoom increment for keyboard shortcuts */
     this.zoomStep = 0.1;
 
@@ -366,20 +366,16 @@ export class ScrollablePdfViewer extends EventEmitter {
     // Memory management event handlers
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
-        // For large documents, use normal cleanup to preserve buffer
-        // For small documents, use forced cleanup as before
-        const forceCleanup = this.pageCount <= 100;
-        this._cleanupOffscreenPages(forceCleanup);
+        // Use normal cleanup that respects buffer for all document sizes
+        this._cleanupOffscreenPages(false);
       }
     });
 
     // Handle memory pressure events (if supported by browser)
     if ('onmemorypressure' in window) {
       window.addEventListener('memorypressure', () => {
-        // For large documents, use normal cleanup to preserve navigation
-        // For small documents, use forced cleanup to free memory
-        const forceCleanup = this.pageCount <= 100;
-        this._cleanupOffscreenPages(forceCleanup);
+        // On memory pressure, force cleanup for all document sizes
+        this._cleanupOffscreenPages(true);
       });
     }
   }
@@ -421,46 +417,24 @@ export class ScrollablePdfViewer extends EventEmitter {
 
     // First pass: Create placeholder canvases for all pages
     const pageSetupPromises = [];
-    
+
     if (this.debug) {
       console.log(`[PDF-A-go-go Debug] Creating ${this.pageCount} page placeholders...`);
     }
-    
-    // For very large documents (>100 pages), use efficient batch creation
-    if (this.pageCount > 100) {
-      const batchSize = 50;
-      for (let batch = 0; batch < Math.ceil(this.pageCount / batchSize); batch++) {
-        const startIdx = batch * batchSize;
-        const endIdx = Math.min(startIdx + batchSize, this.pageCount);
-        
-        if (this.debug) {
-          console.log(`[PDF-A-go-go Debug] Creating batch ${batch + 1}: pages ${startIdx + 1}-${endIdx}`);
-        }
-        
-        for (let i = startIdx; i < endIdx; i++) {
-          const wrapper = document.createElement('div');
-          wrapper.className = 'pdfagogo-page-wrapper';
-          wrapper.id = `pdf-page-${i + 1}`;
 
-          const canvas = document.createElement("canvas");
-          canvas.className = "pdfagogo-page-canvas";
-          canvas.setAttribute("tabindex", "0");
-          canvas.setAttribute("data-page", i + 1);
-          canvas.setAttribute("data-resolution", "placeholder");
+    // Use adaptive batching for all documents - scales naturally with document size
+    const batchSize = Math.max(10, Math.min(50, Math.ceil(this.pageCount / 10)));
+    const totalBatches = Math.ceil(this.pageCount / batchSize);
 
-          wrapper.appendChild(canvas);
-          this.pageCanvases[i] = canvas;
-          offscreenContainer.appendChild(wrapper);
-        }
-        
-        // Yield control back to browser between batches
-        if (batch < Math.ceil(this.pageCount / batchSize) - 1) {
-          await new Promise(resolve => setTimeout(resolve, 0));
-        }
+    for (let batch = 0; batch < totalBatches; batch++) {
+      const startIdx = batch * batchSize;
+      const endIdx = Math.min(startIdx + batchSize, this.pageCount);
+
+      if (this.debug) {
+        console.log(`[PDF-A-go-go Debug] Creating batch ${batch + 1}/${totalBatches}: pages ${startIdx + 1}-${endIdx} (batch size: ${batchSize})`);
       }
-    } else {
-      // Standard creation for smaller documents
-      for (let i = 0; i < this.pageCount; i++) {
+
+      for (let i = startIdx; i < endIdx; i++) {
         const wrapper = document.createElement('div');
         wrapper.className = 'pdfagogo-page-wrapper';
         wrapper.id = `pdf-page-${i + 1}`;
@@ -475,8 +449,13 @@ export class ScrollablePdfViewer extends EventEmitter {
         this.pageCanvases[i] = canvas;
         offscreenContainer.appendChild(wrapper);
       }
+
+      // Yield control back to browser between batches (except last batch)
+      if (batch < totalBatches - 1) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
     }
-    
+
     if (this.debug) {
       console.log(`[PDF-A-go-go Debug] Created ${Object.keys(this.pageCanvases).length} page canvases`);
     }
@@ -642,7 +621,7 @@ export class ScrollablePdfViewer extends EventEmitter {
     const extendedBottom = containerRect.bottom + containerRect.height * 0.5;
 
     const wrappers = this.pagesContainer.querySelectorAll('.pdfagogo-page-wrapper');
-    
+
 
     wrappers.forEach((wrapper, index) => {
       const pageNum = parseInt(wrapper.querySelector('canvas')?.getAttribute('data-page'), 10);
@@ -650,9 +629,9 @@ export class ScrollablePdfViewer extends EventEmitter {
 
       const rect = wrapper.getBoundingClientRect();
       const isVisible = rect.bottom > extendedTop && rect.top < extendedBottom;
-      
 
-      
+
+
       if (isVisible) {
         const visibleHeight = Math.min(rect.bottom, containerRect.bottom) -
                               Math.max(rect.top, containerRect.top);
@@ -663,14 +642,14 @@ export class ScrollablePdfViewer extends EventEmitter {
           maxVisibleRatio = percentVisible;
           maxVisiblePage = pageNum;
         }
-        
+
 
       }
     });
 
     // Update current page if we found a most visible page
 
-    
+
     if (maxVisiblePage !== null && maxVisibleRatio > 0.5) {
       const newPage = maxVisiblePage - 1;
       if (this.currentPage !== newPage) {
@@ -702,19 +681,11 @@ export class ScrollablePdfViewer extends EventEmitter {
     const visiblePages = Array.from(this._visiblePages);
     const start = Math.min(...visiblePages);
     const end = Math.max(...visiblePages);
-    
-    // Adaptive buffer size based on document size
-    let buffer;
-    if (this.pageCount > 500) {
-      // Large documents: keep more pages in memory for better navigation
-      buffer = this.isMobile ? 10 : 20;
-    } else if (this.pageCount > 100) {
-      // Medium documents: moderate buffer
-      buffer = this.isMobile ? 5 : 10;
-    } else {
-      // Small documents: original buffer
-      buffer = this.isMobile ? 1 : 2;
-    }
+
+    // Adaptive buffer size - scales naturally with document size and device
+    const baseBuffer = this.isMobile ? 2 : 4;
+    const scalingFactor = Math.ceil(this.pageCount / 100);
+    const buffer = Math.max(baseBuffer, Math.min(baseBuffer * scalingFactor, this.isMobile ? 10 : 20));
 
     const keepRange = new Set();
     for (let i = start - buffer; i <= end + buffer; i++) {
@@ -821,14 +792,14 @@ export class ScrollablePdfViewer extends EventEmitter {
       if (scrollTimeout) {
         clearTimeout(scrollTimeout);
       }
-      
+
       // Update visible pages immediately for responsive feedback
       this._updateVisiblePages();
-      
+
       // Also set a timeout for cleanup and memory management
-      // Use longer cleanup intervals for large documents to reduce churn
-      const cleanupDelay = this.pageCount > 500 ? 1000 : this.pageCount > 100 ? 500 : 150;
-      
+      // Scale cleanup delay naturally with document size to reduce churn
+      const cleanupDelay = Math.min(1000, 150 + Math.ceil(this.pageCount / 10));
+
       scrollTimeout = setTimeout(() => {
         this._updateVisiblePages();
         this._cleanupOffscreenPages();
@@ -854,7 +825,7 @@ export class ScrollablePdfViewer extends EventEmitter {
         // Calculate target width more reliably during initialization
         const containerWidth = this.scrollContainer.clientWidth || this.scrollContainer.offsetWidth || 800;
         const targetWidth = this.isMobile ? containerWidth * 0.95 : containerWidth * 0.90;
-        
+
         const aspectRatio = firstPage.width / firstPage.height;
         const expectedHeight = targetWidth / aspectRatio;
 
@@ -866,13 +837,13 @@ export class ScrollablePdfViewer extends EventEmitter {
         Object.keys(this.pageCanvases).forEach(pageIndex => {
           const canvas = this.pageCanvases[pageIndex];
           const wrapper = canvas.parentElement;
-          
+
           if (canvas.getAttribute('data-resolution') === 'placeholder') {
             wrapper.style.width = targetWidth + 'px';
             wrapper.style.height = expectedHeight + 'px';
             canvas.style.width = targetWidth + 'px';
             canvas.style.height = expectedHeight + 'px';
-            
+
             // Set small canvas size for placeholder to save memory
             canvas.width = 32;
             canvas.height = 32;
@@ -897,7 +868,7 @@ export class ScrollablePdfViewer extends EventEmitter {
     if (canvas && canvas.clientWidth && canvas.clientWidth > 32) {
       return canvas.clientWidth;
     }
-    
+
     // Calculate based on container width (use same logic as placeholder calculation)
     const containerWidth = this.scrollContainer.clientWidth || this.scrollContainer.offsetWidth || 800;
 
@@ -930,7 +901,7 @@ export class ScrollablePdfViewer extends EventEmitter {
     if (!this.app.hasAttribute('tabindex')) {
       this.app.setAttribute('tabindex', '0');
     }
-    
+
     // Keyboard zoom handlers (Ctrl + Plus/Minus) - only when PDF container is focused
     this.app.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey)) {
@@ -969,11 +940,11 @@ export class ScrollablePdfViewer extends EventEmitter {
         e.preventDefault();
         const currentDistance = this._getTouchDistance(e.touches[0], e.touches[1]);
         const distanceChange = currentDistance - lastTouchDistance;
-        
+
         // Apply zoom based on distance change
         const zoomChange = distanceChange * 0.01; // Sensitivity factor
         this.setZoom(this.zoomLevel + zoomChange);
-        
+
         lastTouchDistance = currentDistance;
       }
     }, { passive: false });
@@ -1016,16 +987,16 @@ export class ScrollablePdfViewer extends EventEmitter {
   setZoom(zoom, animate = true) {
     // Clamp zoom level to valid range
     zoom = Math.max(this.minZoom, Math.min(this.maxZoom, zoom));
-    
+
     if (zoom === this.zoomLevel) return;
-    
+
     this.zoomLevel = zoom;
-    
+
     // Apply transform to pages container
     const transform = `scale(${zoom})`;
     this.pagesContainer.style.transform = transform;
     this.pagesContainer.style.transformOrigin = 'center top';
-    
+
     if (animate) {
       this.pagesContainer.style.transition = 'transform 0.2s ease-out';
       setTimeout(() => {
