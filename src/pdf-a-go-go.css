@@ -109,7 +109,7 @@
   overflow-x: auto; /* Allow horizontal scrolling when zoomed */
   overflow-y: auto;
   scroll-behavior: smooth;
-  scroll-snap-type: y mandatory;
+  /* scroll-snap-type: y mandatory; */
   width: 100%;
   height: 100%;
   box-sizing: border-box;
@@ -253,12 +253,12 @@
   .pdfagogo-scroll-container::-webkit-scrollbar {
     height: 4px;
   }
-  
+
   .pdfagogo-page-wrapper {
     margin: 1rem auto;
     /* Width is now set dynamically by JavaScript */
   }
-  
+
   .pdfagogo-container {
     height: 70vh;
   }
@@ -269,7 +269,7 @@
   .pdfagogo-container {
     height: 80vh;
   }
-  
+
   .pdfagogo-page-wrapper {
     /* Width is now set dynamically by JavaScript */
   }

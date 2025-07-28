@@ -19,14 +19,17 @@
 
 ### Key Features
 
-- 📖 **Vertical scroll PDF viewing** with smooth navigation
+- 📖 **Vertical scroll PDF viewing** with smooth native momentum scrolling
+- 🔍 **Advanced zoom functionality** (pinch-to-zoom, keyboard shortcuts, mouse wheel)
+- 📏 **Accurate scroll positioning** with proper placeholder dimensions for all document sizes
+- 🧠 **Unified scaling algorithms** that adapt automatically from small to massive documents (5-827+ pages)
 - 🦾 **Full accessibility support** (ARIA labels, keyboard navigation, screen reader support)
-- ⚡ **Performance optimized** with render queuing and memory management
+- ⚡ **Performance optimized** with adaptive render queuing and intelligent memory management
 - 🎨 **Highly customizable** UI with show/hide controls
-- 📱 **Mobile responsive** with touch support
-- 🔍 **Text search** with highlighting and match navigation
+- 📱 **Mobile responsive** with touch-optimized interactions
+- 🔍 **Full-text search** with highlighting and match navigation
 - 🌐 **Smart HTML download handling** for institutional repositories
-- 📊 **Performance monitoring** with detailed metrics
+- 📊 **Comprehensive performance monitoring** with detailed metrics and debug mode
 - 🔗 **Shareable page links** with URL fragment support
 
 ### Technology Stack
@@ -259,6 +262,13 @@ viewer.flip_back(); // Go to previous page
 viewer.go_to_page(pageNum); // Go to specific page (0-based)
 viewer.scrollBy(pages); // Scroll by number of pages
 
+// Zoom functionality
+viewer.setZoom(level); // Set zoom level (0.25-5.0)
+viewer.zoomIn(); // Zoom in by 10%
+viewer.zoomOut(); // Zoom out by 10%
+viewer.resetZoom(); // Reset to 100% zoom
+viewer.getZoom(); // Get current zoom level
+
 // Rendering
 viewer.rerenderPage(ndx); // Force re-render of specific page
 
@@ -278,6 +288,85 @@ viewer.on("initialRenderComplete", () => {
 viewer.on("pageChange", (pageNumber) => {
   console.log(`Current page: ${pageNumber}`);
 });
+
+viewer.on("zoomChange", (zoomLevel) => {
+  console.log(`Zoom level changed to: ${zoomLevel * 100}%`);
+});
+```
+
+## Zoom Functionality
+
+PDF-A-go-go provides comprehensive zoom capabilities across all input methods:
+
+### Zoom Methods
+
+**Touch Devices**:
+- **Pinch-to-zoom**: Use two fingers to pinch in/out for intuitive zooming
+- Smooth, responsive scaling with momentum
+
+**Desktop/Keyboard**:
+- **Ctrl + Plus** (or **Ctrl + =**): Zoom in by 10%
+- **Ctrl + Minus**: Zoom out by 10%  
+- **Ctrl + 0**: Reset zoom to 100%
+- **Mouse wheel + Ctrl**: Hold Ctrl while scrolling to zoom
+
+### Zoom Configuration
+
+```javascript
+// Zoom levels and behavior
+const zoomConfig = {
+  minZoom: 0.25,      // 25% minimum zoom
+  maxZoom: 5.0,       // 500% maximum zoom
+  zoomStep: 0.1,      // 10% increments
+  defaultZoom: 1.0    // 100% default
+};
+```
+
+### CSS Implementation
+
+Zoom uses CSS transforms for optimal performance:
+
+```css
+.pdfagogo-pages-container {
+  transform-origin: center top;
+  transition: transform 0.2s ease-out;
+  /* transform: scale(1.5) applied dynamically */
+}
+
+.pdfagogo-scroll-container {
+  overflow-x: auto; /* Enables horizontal scroll when zoomed */
+  touch-action: pan-x pan-y pinch-zoom; /* Native touch support */
+}
+```
+
+### Focus Requirements
+
+**Important**: For keyboard zoom shortcuts to work, the PDF viewer must be focused:
+
+```javascript
+// Programmatically focus the viewer
+document.querySelector('.pdfagogo-container').focus();
+
+// Container must have tabindex for focus
+container.setAttribute('tabindex', '0');
+```
+
+### Zoom Event Handling
+
+```javascript
+// Listen for zoom changes
+viewer.on('zoomChange', (newZoomLevel) => {
+  console.log(`Zoom: ${(newZoomLevel * 100).toFixed(0)}%`);
+  
+  // Update UI or perform actions based on zoom level
+  if (newZoomLevel > 2.0) {
+    console.log('High zoom level - consider showing detail controls');
+  }
+});
+
+// Programmatic zoom control
+viewer.setZoom(1.5); // Set to 150%
+const currentZoom = viewer.getZoom(); // Get current level
 ```
 
 ## Configuration Options
@@ -321,9 +410,36 @@ viewer.on("pageChange", (pageNumber) => {
 
 ## Performance & Optimization
 
+### Unified Scaling Architecture
+
+PDF-A-go-go uses a unified approach that automatically adapts to document size, eliminating special-case code:
+
+**Adaptive Batching**:
+```javascript
+// Single formula for all document sizes
+const batchSize = Math.max(10, Math.min(50, Math.ceil(pageCount / 10)));
+// Results: 5 pages = 10 batch, 827 pages = 50 batch
+```
+
+**Natural Buffer Scaling**:
+```javascript
+// Memory buffer scales with document size
+const baseBuffer = isMobile ? 2 : 4;
+const scalingFactor = Math.ceil(pageCount / 100);
+const buffer = Math.max(baseBuffer, Math.min(baseBuffer * scalingFactor, isMobile ? 10 : 20));
+// Results: 5 pages = 4 buffer, 827 pages = 20 buffer
+```
+
+**Progressive Cleanup Timing**:
+```javascript
+// Cleanup intervals adapt to document complexity
+const cleanupDelay = Math.min(1000, 150 + Math.ceil(pageCount / 10));
+// Results: 5 pages = 151ms, 827 pages = 233ms
+```
+
 ### Render Queue System
 
-The application uses a sophisticated render queue to manage page rendering:
+Enhanced render queue with race condition protection:
 
 ```javascript
 class RenderQueue {
@@ -334,6 +450,12 @@ class RenderQueue {
   }
 
   add(task, priority = false) {
+    // Validate task is a function
+    if (typeof task !== 'function') {
+      console.error('Invalid task added to render queue');
+      return;
+    }
+    
     // Priority tasks go to front of queue
     if (priority) {
       this.queue.unshift(task);
@@ -341,24 +463,53 @@ class RenderQueue {
       this.queue.push(task);
     }
   }
+
+  process() {
+    // Race condition protection
+    if (typeof this.currentTask !== 'function') {
+      this.currentTask = null;
+      this.process();
+      return;
+    }
+    
+    // Execute with local reference to prevent race conditions
+    const taskToExecute = this.currentTask;
+    Promise.resolve(taskToExecute())
+      .then(() => this.process())
+      .catch(() => this.process());
+  }
 }
 ```
 
-### Memory Management
+### Intelligent Memory Management
 
-**Automatic Cleanup**:
+**Adaptive Buffer Sizes**:
+- Small documents (≤100 pages): 4 page buffer
+- Medium documents (101-500 pages): 4-20 page buffer  
+- Large documents (500+ pages): 20 page buffer
+- Mobile devices: 50% of desktop buffer sizes
 
-- Off-screen pages are automatically cleaned up
-- Memory pressure events trigger aggressive cleanup
-- Mobile devices use reduced cache sizes
+**Smart Cleanup Strategy**:
+- `visibilitychange`: Normal cleanup (preserves buffer)
+- `memorypressure`: Aggressive cleanup (forces cleanup)
+- Scroll-based: Delayed cleanup with adaptive timing
 
-**Configuration**:
-
+**Placeholder Dimension Calculation**:
 ```javascript
-// Device-specific optimization
-this.isMobile = window.innerWidth <= 768;
-this.maxCachedPages = this.isMobile ? 3 : 5;
-this.visibleRange = this.isMobile ? 1 : 2;
+// Ensures accurate scroll bar positioning for all document sizes
+async _calculatePlaceholderDimensions() {
+  const firstPage = await this.book.getPage(0);
+  const targetWidth = this._getPageWidth();
+  const aspectRatio = firstPage.width / firstPage.height;
+  const expectedHeight = targetWidth / aspectRatio;
+  
+  // Apply to all 827 placeholder pages for accurate total height
+  this.pageCanvases.forEach(canvas => {
+    if (canvas.getAttribute('data-resolution') === 'placeholder') {
+      canvas.parentElement.style.height = expectedHeight + 'px';
+    }
+  });
+}
 ```
 
 ### Performance Metrics
