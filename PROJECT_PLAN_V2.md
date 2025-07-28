@@ -103,8 +103,8 @@ The snippet shows the lean vertical-scroll foundation—no custom grab-and-throw
 
 ### 5️⃣ Docs, Versioning, & Release
 
-- [ ] Update `README.md` gifs & examples.
-- [ ] Draft `CHANGELOG.md` for v2.0 (breaking changes highlighted).
+- [x] Update `README.md` gifs & examples.
+- [x] Draft `CHANGELOG.md` for v2.0 (breaking changes highlighted).
 - [ ] Tag release, publish on npm (if applicable).
 
 ---
