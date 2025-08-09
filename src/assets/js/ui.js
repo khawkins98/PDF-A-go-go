@@ -272,7 +272,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
   });
 
   // Search controls
-  let searchControls, searchBox, searchBtn, searchResult;
+  let searchControls, searchBox, searchBtn, searchResult, prevMatchBtn, nextMatchBtn;
   if (featureOptions.showSearch) {
     searchControls = document.createElement("div");
     searchControls.className = "pdfagogo-search-controls";
@@ -280,11 +280,15 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       <input class="pdfagogo-search-box" type="text" placeholder="Search text..." aria-label="Search text" />
       <button class="pdfagogo-search-btn">Search</button>
       <span class="pdfagogo-search-result"></span>
+      <button class="pdfagogo-prev-match-btn" aria-label="Previous match" disabled>Prev</button>
+      <button class="pdfagogo-next-match-btn" aria-label="Next match" disabled>Next</button>
     `;
     container.parentNode.insertBefore(searchControls, container);
     searchBox = searchControls.querySelector(".pdfagogo-search-box");
     searchBtn = searchControls.querySelector(".pdfagogo-search-btn");
     searchResult = searchControls.querySelector(".pdfagogo-search-result");
+    prevMatchBtn = searchControls.querySelector(".pdfagogo-prev-match-btn");
+    nextMatchBtn = searchControls.querySelector(".pdfagogo-next-match-btn");
   }
 
   // Main controls
@@ -437,6 +441,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
   let currentMatchIdx = 0;
   let matchHighlights = {}; // {pageNum: [highlightBox, ...]}
   let prevMatchPage = null; // Track previous match page index
+  let lastQuery = ""; // Track last search to allow Enter for next/prev
   async function searchPdf(query) {
     matchPages = [];
     currentMatchIdx = 0;
@@ -474,6 +479,8 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
   function showMatch(idx) {
     if (matchPages.length === 0) {
       window.__pdfagogo__highlights = {};
+      if (prevMatchBtn) prevMatchBtn.disabled = true;
+      if (nextMatchBtn) nextMatchBtn.disabled = true;
       return;
     }
     currentMatchIdx =
@@ -504,6 +511,10 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       searchResult.textContent = `Match ${currentMatchIdx + 1} of ${
         matchPages.length
       } (page ${pageNum})`;
+
+    // Enable/disable nav buttons appropriately
+    if (prevMatchBtn) prevMatchBtn.disabled = matchPages.length <= 1;
+    if (nextMatchBtn) nextMatchBtn.disabled = matchPages.length <= 1;
   }
   if (searchBtn)
     searchBtn.onclick = async function () {
@@ -511,15 +522,38 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       if (!query) return;
       if (searchResult) searchResult.textContent = "Searching...";
       await searchPdf(query);
+      lastQuery = query;
       if (matchPages.length > 0) {
         showMatch(0);
       } else {
         if (searchResult) searchResult.textContent = "Not found";
+        if (prevMatchBtn) prevMatchBtn.disabled = true;
+        if (nextMatchBtn) nextMatchBtn.disabled = true;
       }
+    };
+  if (prevMatchBtn)
+    prevMatchBtn.onclick = function () {
+      showMatch(currentMatchIdx - 1);
+    };
+  if (nextMatchBtn)
+    nextMatchBtn.onclick = function () {
+      showMatch(currentMatchIdx + 1);
     };
   if (searchBox)
     searchBox.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" && searchBtn) searchBtn.click();
+      if (e.key === "Enter") {
+        const query = searchBox.value.trim().toLowerCase();
+        if (query && query === lastQuery && matchPages.length > 0) {
+          // Cycle matches: Enter = next, Shift+Enter = previous
+          if (e.shiftKey) {
+            showMatch(currentMatchIdx - 1);
+          } else {
+            showMatch(currentMatchIdx + 1);
+          }
+        } else if (searchBtn) {
+          searchBtn.click();
+        }
+      }
     });
   if (!featureOptions.showSearch) {
     if (searchControls) searchControls.style.display = "none";
