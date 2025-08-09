@@ -8,11 +8,6 @@
   text-align: center;
   position: relative;
 }
-@media (min-width: 768px) {
-  .pdfagogo-container {
-    height: 900px;
-  }
-}
 .pdfagogo-container:focus {
   outline: 3px solid #1976d2;
   outline-offset: 2px;
