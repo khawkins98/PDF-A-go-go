@@ -8,6 +8,21 @@
   text-align: center;
   position: relative;
 }
+/* Wrapper to group controls + viewer for fullscreen */
+.pdfagogo-viewer-wrapper:fullscreen {
+  background: #111;
+}
+.pdfagogo-viewer-wrapper:fullscreen .pdfagogo-container {
+  height: 100vh;
+  margin: 0;
+  border-left: none;
+  border-right: none;
+}
+.pdfagogo-viewer-wrapper:fullscreen .pdfagogo-controls,
+.pdfagogo-viewer-wrapper:fullscreen .pdfagogo-a11y-instructions {
+  max-width: none;
+  margin: 0 auto 8px auto;
+}
 .pdfagogo-container:focus {
   outline: 3px solid #1976d2;
   outline-offset: 2px;

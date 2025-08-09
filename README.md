@@ -35,6 +35,7 @@ This project is very fresh (rolled on May 2025, refactored in Aug 2025). I may y
 - 🔝 **Resizable viewer** with drag handle
 - 📑 **Complete navigation controls** (page selector, share link)
 - ⬇️ **PDF download** functionality
+- 🖥️ **Fullscreen toggle** for viewer and controls
 - 🌐 **Smart HTML download handling** for institutional repositories
 - 🛠️ **Built on** [pdf.js](https://github.com/mozilla/pdf.js) with performance enhancements
 
@@ -51,6 +52,7 @@ Include the JS and CSS in your HTML, and add a container:
      data-show-page-selector="true"
      data-show-current-page="true"
      data-show-download="true"
+     data-show-fullscreen="true"
      data-show-resize-grip="true"
      style="width:100vw;max-width:100%;box-sizing:border-box;overflow-x:hidden;"></div>
 ```
@@ -62,6 +64,7 @@ Set options via data attributes on the container:
 - `data-show-current-page` (true/false): Show current page indicator (default: true)
 - `data-show-search` (true/false): Show search controls (default: true)
 - `data-show-download` (true/false): Show a Download PDF button (default: true)
+- `data-show-fullscreen` (true/false): Show a Fullscreen toggle (default: true)
 - `data-show-resize-grip` (true/false): Show a bar to allow the user to resize the height (default: true)
 - `data-default-page` (number): Default page to open if no #page=N in URL (1-based)
 - `data-background-color` (string): Background color (optional)

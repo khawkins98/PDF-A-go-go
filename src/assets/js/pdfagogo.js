@@ -150,6 +150,7 @@ function init(book, id, opts, cb) {
     showResizeGrip: true,
     pdfUrl: "./example.pdf",
     showDownload: true,
+    showFullscreen: true,
   };
   // --- END: Option defaults ---
 
@@ -214,6 +215,7 @@ function init(book, id, opts, cb) {
     if (map.showCurrentPage !== undefined) opts.showCurrentPage = parseBool(map.showCurrentPage, undefined);
     if (map.showSearch !== undefined) opts.showSearch = parseBool(map.showSearch, undefined);
     if (map.showResizeGrip !== undefined) opts.showResizeGrip = parseBool(map.showResizeGrip, undefined);
+    if (map.showFullscreen !== undefined) opts.showFullscreen = parseBool(map.showFullscreen, undefined);
     if (map.showDownload !== undefined) opts.showDownload = parseBool(map.showDownload, undefined);
 
     // Behavioral options

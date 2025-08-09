@@ -272,6 +272,18 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     if (el && el.parentNode) el.parentNode.removeChild(el);
   });
 
+  // Ensure a wrapper exists so we can fullscreen the viewer and its controls together
+  let wrapper = container.closest('.pdfagogo-viewer-wrapper');
+  if (!wrapper) {
+    wrapper = document.createElement('div');
+    wrapper.className = 'pdfagogo-viewer-wrapper';
+    const parent = container.parentNode;
+    if (parent) {
+      parent.insertBefore(wrapper, container);
+      wrapper.appendChild(container);
+    }
+  }
+
   // Search controls are handled by the dedicated module
   let setPageByNumber = null; // will be defined below then passed into search module
 
@@ -279,10 +291,12 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
   const controls = document.createElement("div");
   controls.className = "pdfagogo-controls";
   let controlsHTML = "";
-  controlsHTML +=
-    '<button class="pdfagogo-share" aria-label="Share current page">Share</button>';
+  controlsHTML += '<button class="pdfagogo-share" aria-label="Share current page">Share</button>';
   if (featureOptions.showDownload) {
     controlsHTML += '<button class="pdfagogo-download" aria-label="Download PDF">Download PDF</button>';
+  }
+  if (featureOptions.showFullscreen !== false) {
+    controlsHTML += '<button class="pdfagogo-fullscreen" aria-label="Enter fullscreen" title="Enter fullscreen">Fullscreen</button>';
   }
   if (featureOptions.showPageSelector) {
     controlsHTML +=
@@ -294,13 +308,15 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       '<span class="pdfagogo-page-indicator" aria-live="polite"></span>';
   }
   controls.innerHTML = controlsHTML;
-  container.parentNode.insertBefore(
-    controls,
-    container.nextSibling
-  );
+  // Insert controls inside the wrapper (above the container)
+  if (wrapper.firstChild === container) {
+    wrapper.insertBefore(controls, container);
+  } else {
+    wrapper.appendChild(controls);
+  }
 
   // Page announcement for screen readers
-  let pageAnnouncement = document.querySelector(".pdfagogo-page-announcement");
+  let pageAnnouncement = wrapper.querySelector(".pdfagogo-page-announcement");
   if (!pageAnnouncement) {
     pageAnnouncement = document.createElement("div");
     pageAnnouncement.className = "pdfagogo-page-announcement";
@@ -311,14 +327,11 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     pageAnnouncement.style.height = "1px";
     pageAnnouncement.style.overflow = "hidden";
     pageAnnouncement.setAttribute("aria-live", "polite");
-    container.parentNode.insertBefore(
-      pageAnnouncement,
-      controls.nextSibling
-    );
+    wrapper.insertBefore(pageAnnouncement, controls.nextSibling);
   }
 
   // Accessibility instructions
-  let a11yInstructions = document.querySelector(".pdfagogo-a11y-instructions");
+  let a11yInstructions = wrapper.querySelector(".pdfagogo-a11y-instructions");
   if (!a11yInstructions) {
     a11yInstructions = document.createElement("div");
     a11yInstructions.className = "pdfagogo-a11y-instructions";
@@ -332,10 +345,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       - Use the buttons below for navigation, sharing, and searching.<br>
       - The current page is announced for screen readers.
     `;
-    container.parentNode.insertBefore(
-      a11yInstructions,
-      pageAnnouncement.nextSibling
-    );
+    wrapper.insertBefore(a11yInstructions, pageAnnouncement.nextSibling);
   }
 
   // Track the current page number using the 'seen' event
@@ -344,7 +354,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
   // --- Event wiring and logic ---
 
   // Share button
-  const shareBtn = document.querySelector(".pdfagogo-share");
+  const shareBtn = controls.querySelector(".pdfagogo-share");
   if (shareBtn)
     shareBtn.onclick = () => {
       const page = currentPage + 1;
@@ -354,7 +364,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     };
 
   // Download button
-  const downloadBtn = document.querySelector(".pdfagogo-download");
+  const downloadBtn = controls.querySelector(".pdfagogo-download");
   if (downloadBtn) {
     downloadBtn.onclick = () => {
       const link = document.createElement('a');
@@ -366,9 +376,29 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     };
   }
 
+  // Fullscreen button
+  const fullscreenBtn = controls.querySelector('.pdfagogo-fullscreen');
+  if (fullscreenBtn) {
+    const updateFsButton = () => {
+      const isFs = !!document.fullscreenElement && wrapper === document.fullscreenElement;
+      fullscreenBtn.textContent = isFs ? 'Exit Fullscreen' : 'Fullscreen';
+      fullscreenBtn.setAttribute('aria-label', isFs ? 'Exit fullscreen' : 'Enter fullscreen');
+      fullscreenBtn.title = isFs ? 'Exit fullscreen' : 'Enter fullscreen';
+    };
+    fullscreenBtn.onclick = () => {
+      if (document.fullscreenElement) {
+        if (document.exitFullscreen) document.exitFullscreen();
+      } else {
+        if (wrapper.requestFullscreen) wrapper.requestFullscreen();
+      }
+    };
+    document.addEventListener('fullscreenchange', updateFsButton);
+    updateFsButton();
+  }
+
   // Page selector
-  const gotoPageInput = document.querySelector(".pdfagogo-goto-page");
-  const gotoBtn = document.querySelector(".pdfagogo-goto-btn");
+  const gotoPageInput = controls.querySelector(".pdfagogo-goto-page");
+  const gotoBtn = controls.querySelector(".pdfagogo-goto-btn");
   function baseSetPageByNumber(pageNum) {
     if (!viewer || !book) return;
     if (
@@ -405,7 +435,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
   }
 
   // Current page indicator
-  const pageIndicator = document.querySelector(
+  const pageIndicator = controls.querySelector(
     ".pdfagogo-page-indicator"
   );
   function updatePage(n) {
