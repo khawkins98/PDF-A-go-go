@@ -293,6 +293,29 @@ export class ScrollablePdfViewer extends EventEmitter {
     this.pagesContainer.style.height = "100%";
     this.scrollContainer.appendChild(this.pagesContainer);
 
+    // Create left/right edge overlays that allow page-level scrolling
+    // when the user scrolls over the extreme left/right areas. This
+    // prevents the user from feeling "trapped" inside the PDF container.
+    this.leftEdgeOverlay = document.createElement('div');
+    this.rightEdgeOverlay = document.createElement('div');
+    this.leftEdgeOverlay.className = 'pdfagogo-edge-overlay left';
+    this.rightEdgeOverlay.className = 'pdfagogo-edge-overlay right';
+    this.leftEdgeOverlay.setAttribute('aria-hidden', 'true');
+    this.rightEdgeOverlay.setAttribute('aria-hidden', 'true');
+    this.app.appendChild(this.leftEdgeOverlay);
+    this.app.appendChild(this.rightEdgeOverlay);
+
+    // Route wheel events on the overlays to the window so the whole page scrolls
+    const wheelToWindow = (e) => {
+      // Allow zoom gestures to be handled elsewhere
+      if (e.ctrlKey || e.metaKey) return;
+      e.preventDefault();
+      // Use deltaY directly for natural scrolling
+      window.scrollBy({ top: e.deltaY, left: 0, behavior: 'auto' });
+    };
+    this.leftEdgeOverlay.addEventListener('wheel', wheelToWindow, { passive: false });
+    this.rightEdgeOverlay.addEventListener('wheel', wheelToWindow, { passive: false });
+
     // Debug and performance monitoring setup
     /** @type {boolean} Whether debug mode is enabled */
     this.debug = typeof this.options.debug === 'boolean' ? this.options.debug : false;

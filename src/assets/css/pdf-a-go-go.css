@@ -127,6 +127,30 @@
   touch-action: pan-x pan-y pinch-zoom;
 }
 
+/* Edge overlays: capture wheel on outer ~5% to scroll the whole page */
+.pdfagogo-edge-overlay {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 5%;
+  z-index: 5;
+  pointer-events: auto; /* must receive wheel */
+  /* transparent but active; avoid blocking clicks with pass-through on click */
+  background: transparent;
+  transition: background 0.15s ease;
+}
+.pdfagogo-edge-overlay.left { left: 0; }
+.pdfagogo-edge-overlay.right { right: 0; }
+
+/* Subtle gradient highlight on hover to communicate interactivity */
+.pdfagogo-edge-overlay.left:hover {
+  background: linear-gradient(to right, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
+}
+.pdfagogo-edge-overlay.right:hover {
+  background: linear-gradient(to left, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
+}
+
+
 @media (min-width: 768px) {
   .pdfagogo-scroll-container {
     padding-right: 1rem;

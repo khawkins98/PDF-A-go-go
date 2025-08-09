@@ -8,7 +8,7 @@ PDF-A-go-go is a simple, embeddable PDF viewer project. It is designed to be lig
 
 ## Future plans
 
-This project is very fresh (rolled on 6 May 2025). I may yet publish to npm or change it completely.
+This project is very fresh (rolled on May 2025, refactored in Aug 2025). I may yet publish to npm or change it completely.
 
 ## Demo
 
@@ -75,10 +75,12 @@ Set options via data attributes on the container:
 PDF-A-go-go supports multiple zoom methods for better document readability:
 
 ### Touch Devices
+
 - **Pinch-to-zoom**: Use two fingers to pinch in/out to zoom in/out
 - Zoom range: 25% to 500%
 
 ### Desktop/Keyboard
+
 - **Ctrl + Plus** (or **Ctrl + =**): Zoom in
 - **Ctrl + Minus**: Zoom out
 - **Ctrl + 0**: Reset zoom to 100%
@@ -87,6 +89,7 @@ PDF-A-go-go supports multiple zoom methods for better document readability:
 **Note**: For keyboard zoom shortcuts to work, the PDF viewer must be focused. Click on the PDF viewer area first, then use the keyboard shortcuts.
 
 ### Zoom Behavior
+
 - Zoom uses CSS scaling for smooth performance (no PDF re-rendering required)
 - Zoom is centered at the top of the viewing area
 - When zoomed in, horizontal scrolling becomes available
@@ -96,7 +99,7 @@ PDF-A-go-go supports multiple zoom methods for better document readability:
 
 ---
 
-Note this is an advanced feature and may require some customisation or adaptation. It is quite experimental. See more in https://github.com/khawkins98/PDF-A-go-go/pull/7
+Note this is an advanced feature and may require some customisation or adaptation. It is quite experimental. See more in <https://github.com/khawkins98/PDF-A-go-go/pull/7>
 
 - This currently has only been tested against iframes using meta redirects
 - CORS must be set correctly (this is best used when the source and target page are the same)
@@ -127,7 +130,6 @@ Options:
 - `data-download-timeout` (number): Time in milliseconds to wait for PDF download to start (default: 30000)
 
 You can see this in action in the [HTML download example](//khawkins98.github.io/PDF-A-go-go/html-download-example.html).
-
 
 ## Performance Monitoring
 
@@ -180,6 +182,7 @@ To set up a local development environment:
 PDF-A-go-go includes comprehensive automated testing using Playwright, covering functionality, performance, and scalability:
 
 ### Test Coverage
+
 - **Zoom functionality** (15 test scenarios including pinch, keyboard, boundaries)
 - **Large document handling** (827-page PDF stress tests)
 - **Memory management** (adaptive cleanup and buffer sizing)
@@ -187,12 +190,14 @@ PDF-A-go-go includes comprehensive automated testing using Playwright, covering 
 - **Performance benchmarks** (render times, CPU usage, memory efficiency)
 
 ### Performance Optimizations
+
 - **Unified scaling algorithms** - single codebase handles all document sizes efficiently
 - **Adaptive memory management** - buffer sizes scale automatically (4-20 pages depending on document size and device)
 - **Intelligent batching** - page creation scales from 10-50 pages per batch
 - **Progressive cleanup timing** - cleanup intervals adapt to document complexity (150ms-1000ms)
 
 ### Test Results (Latest)
+
 - **Large documents**: 827 pages load in ~3.0s with 0MB net memory increase
 - **Scroll accuracy**: 99%+ precision across all document positions
 - **Zoom performance**: Complex zoom operations complete in ~2.6s
@@ -222,7 +227,7 @@ Performance thresholds are dynamically adjusted based on document size and devic
 - **Mobile**: Initial render < 10s, CPU throttling accommodated
 - **Large documents**: Special handling for 500+ page documents with extended timeouts
 
-The development server runs on port 9000 by default (http://localhost:9000).
+The development server runs on port 9000 by default (<http://localhost:9000>).
 
 ## License
 
