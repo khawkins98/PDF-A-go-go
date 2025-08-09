@@ -35,17 +35,32 @@ export function setupSearchControls(container, featureOptions, viewer, book, pdf
   searchControls.innerHTML = `
     <input class="pdfagogo-search-box" type="text" placeholder="Search text..." aria-label="Search text" />
     <button class="pdfagogo-search-btn">Search</button>
+    <button class="pdfagogo-search-clear-btn" aria-label="Clear search" title="Clear search">Clear</button>
     <span class="pdfagogo-search-result"></span>
     <button class="pdfagogo-prev-match-btn" aria-label="Previous match" disabled>Prev</button>
     <button class="pdfagogo-next-match-btn" aria-label="Next match" disabled>Next</button>
   `;
-  container.parentNode.insertBefore(searchControls, container);
+  // Prefer inserting search controls inside the main controls container if present
+  const controlsContainer = document.querySelector('.pdfagogo-controls');
+  if (controlsContainer) {
+    // Place search controls at the top of the controls container
+    controlsContainer.insertBefore(searchControls, controlsContainer.firstChild);
+  } else if (container && container.parentNode) {
+    // Fallback to previous behavior if controls container isn't available yet
+    container.parentNode.insertBefore(searchControls, container);
+  }
 
   const searchBox = searchControls.querySelector('.pdfagogo-search-box');
   const searchBtn = searchControls.querySelector('.pdfagogo-search-btn');
   const searchResult = searchControls.querySelector('.pdfagogo-search-result');
   const prevMatchBtn = searchControls.querySelector('.pdfagogo-prev-match-btn');
   const nextMatchBtn = searchControls.querySelector('.pdfagogo-next-match-btn');
+  const clearBtn = searchControls.querySelector('.pdfagogo-search-clear-btn');
+
+  // Hide navigation buttons until a search is active with results
+  if (prevMatchBtn) prevMatchBtn.style.display = 'none';
+  if (nextMatchBtn) nextMatchBtn.style.display = 'none';
+  if (clearBtn) clearBtn.style.display = 'none';
 
   // --- Search state ---
   let matchPages = [];
@@ -88,8 +103,14 @@ export function setupSearchControls(container, featureOptions, viewer, book, pdf
   function showMatch(idx) {
     if (matchPages.length === 0) {
       window.__pdfagogo__highlights = {};
-      if (prevMatchBtn) prevMatchBtn.disabled = true;
-      if (nextMatchBtn) nextMatchBtn.disabled = true;
+      if (prevMatchBtn) {
+        prevMatchBtn.disabled = true;
+        prevMatchBtn.style.display = 'none';
+      }
+      if (nextMatchBtn) {
+        nextMatchBtn.disabled = true;
+        nextMatchBtn.style.display = 'none';
+      }
       return;
     }
 
@@ -120,11 +141,20 @@ export function setupSearchControls(container, featureOptions, viewer, book, pdf
     }
 
     if (searchResult) {
-      searchResult.textContent = `Match ${currentMatchIdx + 1} of ${matchPages.length} (page ${pageNum})`;
+      searchResult.textContent = `Match set ${currentMatchIdx + 1} of ${matchPages.length} (page ${pageNum})`;
     }
 
-    if (prevMatchBtn) prevMatchBtn.disabled = matchPages.length <= 1;
-    if (nextMatchBtn) nextMatchBtn.disabled = matchPages.length <= 1;
+    if (prevMatchBtn) {
+      prevMatchBtn.disabled = matchPages.length <= 1;
+      prevMatchBtn.style.display = '';
+    }
+    if (nextMatchBtn) {
+      nextMatchBtn.disabled = matchPages.length <= 1;
+      nextMatchBtn.style.display = '';
+    }
+    if (clearBtn) {
+      clearBtn.style.display = '';
+    }
   }
 
   if (searchBtn)
@@ -138,8 +168,15 @@ export function setupSearchControls(container, featureOptions, viewer, book, pdf
         showMatch(0);
       } else {
         if (searchResult) searchResult.textContent = 'Not found';
-        if (prevMatchBtn) prevMatchBtn.disabled = true;
-        if (nextMatchBtn) nextMatchBtn.disabled = true;
+        if (prevMatchBtn) {
+          prevMatchBtn.disabled = true;
+          prevMatchBtn.style.display = 'none';
+        }
+        if (nextMatchBtn) {
+          nextMatchBtn.disabled = true;
+          nextMatchBtn.style.display = 'none';
+        }
+        if (clearBtn) clearBtn.style.display = '';
       }
     };
 
@@ -166,8 +203,58 @@ export function setupSearchControls(container, featureOptions, viewer, book, pdf
         } else if (searchBtn) {
           searchBtn.click();
         }
+      } else if (e.key === 'Escape') {
+        if (clearBtn && clearBtn.style.display !== 'none') {
+          clearBtn.click();
+        } else if (searchBox && searchBox.value) {
+          // If clear button is hidden but there is text, clear the input
+          searchBox.value = '';
+          if (searchResult) searchResult.textContent = '';
+          if (prevMatchBtn) prevMatchBtn.style.display = 'none';
+          if (nextMatchBtn) nextMatchBtn.style.display = 'none';
+          if (clearBtn) clearBtn.style.display = 'none';
+        }
       }
     });
+
+  // When typing a new query, hide the nav buttons until search runs again
+  if (searchBox) {
+    searchBox.addEventListener('input', function () {
+      if (prevMatchBtn) prevMatchBtn.style.display = 'none';
+      if (nextMatchBtn) nextMatchBtn.style.display = 'none';
+      if (clearBtn) clearBtn.style.display = searchBox.value.trim() ? '' : 'none';
+    });
+  }
+
+  // Clear/end the current search and reset UI
+  if (clearBtn) {
+    clearBtn.onclick = function () {
+      lastQuery = '';
+      matchPages = [];
+      currentMatchIdx = 0;
+      if (searchBox) searchBox.value = '';
+      if (searchResult) searchResult.textContent = '';
+      // clear highlights and rerender affected page(s)
+      const pageToClear = prevMatchPage;
+      window.__pdfagogo__highlights = {};
+      if (typeof viewer.rerenderPage === 'function') {
+        if (typeof pageToClear === 'number') {
+          viewer.rerenderPage(pageToClear);
+        }
+      } else if (typeof viewer._renderAllPages === 'function') {
+        viewer._renderAllPages();
+      }
+      if (prevMatchBtn) {
+        prevMatchBtn.disabled = true;
+        prevMatchBtn.style.display = 'none';
+      }
+      if (nextMatchBtn) {
+        nextMatchBtn.disabled = true;
+        nextMatchBtn.style.display = 'none';
+      }
+      if (clearBtn) clearBtn.style.display = 'none';
+    };
+  }
 }
 
 

@@ -16,6 +16,11 @@
   max-width: 1200px;
   margin: 0 auto 20px auto;
   text-align: center;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
 }
 .pdfagogo-controls button {
   margin: 0 10px;
@@ -40,6 +45,13 @@
   max-width: 1200px;
   margin: 0 auto 10px auto;
   text-align: center;
+}
+/* When search controls are placed inside the main controls, make them inline */
+.pdfagogo-controls .pdfagogo-search-controls {
+  display: contents;
+  max-width: none;
+  margin: 0;
+  text-align: inherit;
 }
 .pdfagogo-search-controls input {
   padding: 6px 10px;

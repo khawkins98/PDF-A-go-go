@@ -272,7 +272,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     if (el && el.parentNode) el.parentNode.removeChild(el);
   });
 
-  // Search controls are now handled by the dedicated module
+  // Search controls are handled by the dedicated module
   let setPageByNumber = null; // will be defined below then passed into search module
 
   // Main controls
