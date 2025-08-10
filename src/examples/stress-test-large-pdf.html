@@ -13,23 +13,23 @@
   </style>
 </head>
 <body>
-  <div style="max-width:1200px;margin:1rem auto;text-align:center;background:#e3e3e3;padding:1rem;border-radius:6px;">
-    <h1 style="margin:0;"><a href="./" style="text-decoration:none;color:inherit;">PDF-A-go-go</a></h1>
+  <div style="max-width:1200px;margin:1rem auto;">
+    <h1><a href="./">PDF-A-go-go</a></h1>
     <div>A lightweight embeddable PDF viewer. View the project or contribute on <a href="https://github.com/khawkins98/PDF-A-go-go" target="_blank" rel="noopener noreferrer">GitHub</a>.</div>
+    <p>This is a large PDF example (827 pages) for stress testing.</p>
   </div>
-    <p style="text-align: center;">This is a large PDF example (827 pages) for stress testing.</p>
+  <hr>
     <!-- PDF Viewer Container with Large PDF and Debug Mode -->
-    <div class="pdfagogo-container" id="pdfagogo-container"
-         data-pdf-url="./example_large.pdf"
-         data-show-search="true"
-         data-show-page-selector="true"
-         data-show-current-page="true"
-         data-show-download="true"
-         data-show-resize-grip="true"
-         data-debug="true"
-         data-default-page="1"
-         style="width:100%;max-width:1400px;height:500px;box-sizing:border-box;margin:0 auto;">
-    </div>
-    <script src="pdf-a-go-go.js"></script>
+  <div class="pdfagogo-container" id="pdfagogo-container"
+        data-pdf-url="./example_large.pdf"
+        data-show-search="true"
+        data-show-page-selector="true"
+        data-show-current-page="true"
+        data-show-download="true"
+        data-show-resize-grip="true"
+        data-debug="true"
+        data-default-page="1">
+  </div>
+  <script src="pdf-a-go-go.js"></script>
 </body>
 </html>
