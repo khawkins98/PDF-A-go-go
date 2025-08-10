@@ -138,7 +138,7 @@ You can see this in action in the [HTML download example](//khawkins98.github.io
 
 ## Performance Monitoring
 
-PDF-A-go-go includes a debug mode that provides detailed performance metrics for PDF loading and rendering. To enable debug mode, add the `data-debug="true"` attribute to your container:
+PDF-A-go-go includes a debug mode that provides performance metrics for PDF loading and rendering. To enable debug mode, add the `data-debug="true"` attribute to your container:
 
 ```html
 <div class="pdfagogo-container"
@@ -147,14 +147,7 @@ PDF-A-go-go includes a debug mode that provides detailed performance metrics for
      ...></div>
 ```
 
-When debug mode is enabled, the following metrics are logged to the console:
-
-- Initial render time for all pages
-- Individual page render times (both low and high resolution)
-- Average render times for low and high resolution pages
-- Total number of pages rendered and high-res upgrades
-
-You can also programmatically access these metrics using the `getPerformanceMetrics()` method:
+When debug mode is enabled, a floating overlay is shown and you can programmatically access metrics using `getPerformanceMetrics()`:
 
 ```javascript
 const viewer = document.querySelector('.pdfagogo-container').pdfViewer;
@@ -164,21 +157,22 @@ console.log(metrics);
 
 The metrics object includes:
 
-- `initialRenderTime`: Time taken for initial render of all pages (ms)
-- `averageLowResRenderTime`: Average time to render a page in low resolution (ms)
-- `averageHighResRenderTime`: Average time to upgrade a page to high resolution (ms)
+- `initialRenderTime`: Time for initial render (ms)
+- `averageHighResRenderTime`: Average time to render a page upgrade (ms)
 - `totalPagesRendered`: Total number of pages rendered
 - `totalHighResUpgrades`: Total number of high-res upgrades performed
-- `pageRenderTimes`: Object mapping page numbers to their low-res render times
-- `highResUpgradeTimes`: Object mapping page numbers to their high-res upgrade times
+- `pageRenderTimes`: Object mapping page indices to render times
+- `highResUpgradeTimes`: Object mapping page indices to upgrade times
+
+Note: `getPerformanceMetrics()` returns `null` when debug mode is disabled.
 
 ## Development
 
 To set up a local development environment:
 
 - Fork the repository and create your branch from `main`.
-- Run `yarn install` and `yarn dev` to set up your environment.
-- Compiled JS is available in the local `/dist` folder.
+- Run `npm install` and `npm run dev` to start the dev server.
+- Production build is written to `/dist` via `npm run build`.
 - Please follow the code style and add comments where helpful.
 - Open a pull request with a clear description of your changes.
 
@@ -201,13 +195,6 @@ PDF-A-go-go includes comprehensive automated testing using Playwright, covering 
 - **Intelligent batching** - page creation scales from 10-50 pages per batch
 - **Progressive cleanup timing** - cleanup intervals adapt to document complexity (150ms-1000ms)
 
-### Test Results (Latest)
-
-- **Large documents**: 827 pages load in ~3.0s with 0MB net memory increase
-- **Scroll accuracy**: 99%+ precision across all document positions
-- **Zoom performance**: Complex zoom operations complete in ~2.6s
-- **Memory efficiency**: 0.0MB per MB of PDF (excellent cleanup)
-
 To run the tests:
 
 ```bash
@@ -217,20 +204,21 @@ npm install
 # Run all tests (automatically starts dev server)
 npm test
 
-# Run specific test suites
-npm run test src/tests/zoom.spec.ts        # Zoom functionality
-npm run test src/tests/stress-test.spec.ts # Large document tests
-npm run test src/tests/performance.spec.ts # Performance benchmarks
-
-# Debug mode
+# Debug mode for all tests
 npm run test:debug
+
+# Run specific tests (start dev server in another terminal first)
+# Terminal 1:
+npm run test:serve
+# Terminal 2:
+npx playwright test src/tests/zoom.spec.ts
 ```
 
-Performance thresholds are dynamically adjusted based on document size and device capabilities:
+Performance thresholds (as enforced by tests):
 
-- **Desktop**: Initial render < 5s, Scroll duration scales with document size
-- **Mobile**: Initial render < 10s, CPU throttling accommodated
-- **Large documents**: Special handling for 500+ page documents with extended timeouts
+- **Desktop**: Initial render < 5s
+- **Mobile**: Initial render < 10s (with CPU throttling)
+- **Scroll/CPU**: Reasonable scroll duration and CPU usage under load
 
 The development server runs on port 9000 by default (<http://localhost:9000>).
 
