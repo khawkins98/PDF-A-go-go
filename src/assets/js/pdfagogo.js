@@ -141,6 +141,7 @@ function init(book, id, opts, cb) {
    * @property {boolean} showResizeGrip - Show resize handle
    * @property {string} pdfUrl - Default PDF URL to load
    * @property {boolean} showDownload - Show download button
+   * @property {boolean} showShare - Show share button
    */
   const defaultOptions = {
 
@@ -150,6 +151,7 @@ function init(book, id, opts, cb) {
     showResizeGrip: true,
     pdfUrl: "./example.pdf",
     showDownload: true,
+    showShare: true,
     showFullscreen: true,
     // Show the accessibility instructions block visibly beneath the container
     showAccessibilityControlsVisibly: true,
@@ -219,6 +221,7 @@ function init(book, id, opts, cb) {
     if (map.showResizeGrip !== undefined) opts.showResizeGrip = parseBool(map.showResizeGrip, undefined);
     if (map.showFullscreen !== undefined) opts.showFullscreen = parseBool(map.showFullscreen, undefined);
     if (map.showDownload !== undefined) opts.showDownload = parseBool(map.showDownload, undefined);
+    if (map.showShare !== undefined) opts.showShare = parseBool(map.showShare, undefined);
     // Accessibility visibility toggle
     if (map.showAccessibilityControlsVisibly !== undefined) {
       opts.showAccessibilityControlsVisibly = parseBool(map.showAccessibilityControlsVisibly, undefined);

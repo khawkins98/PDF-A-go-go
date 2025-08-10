@@ -317,7 +317,9 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
   const controls = document.createElement("div");
   controls.className = "pdfagogo-controls";
   let controlsHTML = "";
-  controlsHTML += '<button class="pdfagogo-share" aria-label="Share current page">Share</button>';
+  if (featureOptions.showShare !== false) {
+    controlsHTML += '<button class="pdfagogo-share" aria-label="Share current page">Share</button>';
+  }
   if (featureOptions.showDownload) {
     controlsHTML += '<button class="pdfagogo-download" aria-label="Download PDF">Download PDF</button>';
   }
