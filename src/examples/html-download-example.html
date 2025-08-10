@@ -5,11 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PDF-A-go-go HTML Download Handler Example</title>
   <link rel="stylesheet" href="pdf-a-go-go.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css" />
+
+  <!-- Simple.css is only used for the demo pages, not a required dependency -->
+  <link rel="stylesheet" href="https://cdn.simplecss.org/simple.css">
   <style>
-    body {
-      font-family: 'Segoe UI', 'Helvetica Neue', Arial, 'Liberation Sans', sans-serif;
-    }
     .container {
       max-width: 1200px;
       margin: 0 auto;
@@ -27,10 +26,21 @@
       border-radius: 4px;
     }
   </style>
-</head>
+  </head>
 <body>
+  <header>
+    <h1>PDF-A-go-go</h1>
+    <nav>
+      <a href="./">Basic Demo</a>
+      <a href="./double-spread.html">Large Double Spread (12MB PDF)</a>
+      <a href="./html-download-example.html">HTML Download Handler</a>
+      <a href="./stress-test-large-pdf.html">Stress Test (827 pages)</a>
+      <a href="./remote-pdf-allowed.html">Remote PDF (CORS allowed)</a>
+      <a href="./remote-pdf-cors-fail.html">Remote PDF (expected CORS failure)</a>
+    </nav>
+  </header>
   <div class="container">
-    <h1><a href="./">PDF-A-go-go</a> HTML Download Handler Example</h1>
+    <h2>HTML Download Handler Example</h2>
 
     <div class="description">
       <h2>About this example</h2>
@@ -57,8 +67,7 @@
          data-show-current-page="true"
          data-show-download="true"
          data-debug="true"
-         data-download-timeout="60000"
-         style="width:100%;height:800px;border:1px solid #ddd;margin:20px 0;">
+         data-download-timeout="60000">
     </div>
   </div>
 

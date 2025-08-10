@@ -37,16 +37,6 @@
   justify-content: center;
   gap: 8px 12px;
 }
-.pdfagogo-controls button {
-  margin: 0 10px;
-  padding: 8px 16px;
-  font-size: 16px;
-}
-.pdfagogo-page-indicator {
-  margin-left: 20px;
-  font-size: 16px;
-  color: #333;
-}
 .pdfagogo-a11y-instructions {
   max-width: 1200px;
   margin: 0 auto 20px auto;
@@ -72,11 +62,6 @@
   padding: 6px 10px;
   font-size: 16px;
   width: 220px;
-}
-.pdfagogo-search-controls button {
-  padding: 6px 16px;
-  font-size: 16px;
-  margin-left: 5px;
 }
 .pdfagogo-search-result {
   margin-left: 10px;

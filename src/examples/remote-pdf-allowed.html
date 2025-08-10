@@ -5,25 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PDF-A-go-go - Remote PDF (CORS allowed)</title>
   <link rel="stylesheet" href="pdf-a-go-go.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css" />
-  <style>
-    body {
-      font-family: 'Segoe UI', 'Helvetica Neue', Arial, 'Liberation Sans', sans-serif;
-    }
-  </style>
+
+  <!-- Simple.css is only used for the demo pages, not a required dependency -->
+  <link rel="stylesheet" href="https://cdn.simplecss.org/simple.css">
   <script defer="defer" src="pdf-a-go-go.js"></script>
-  </head>
+</head>
 <body>
-  <div style="max-width:1200px;margin:1rem auto;">
-    <h1><a href="./">PDF-A-go-go</a></h1>
-    <div>A lightweight embeddable PDF viewer. View the project or contribute on
-      <a href="https://github.com/khawkins98/PDF-A-go-go" target="_blank" rel="noopener noreferrer">GitHub</a>.
-    </div>
+  <header>
+    <h1>PDF-A-go-go</h1>
+    <nav>
+      <a href="./">Basic Demo</a>
+      <a href="./double-spread.html">Large Double Spread (12MB PDF)</a>
+      <a href="./html-download-example.html">HTML Download Handler</a>
+      <a href="./stress-test-large-pdf.html">Stress Test (827 pages)</a>
+      <a href="./remote-pdf-allowed.html">Remote PDF (CORS allowed)</a>
+      <a href="./remote-pdf-cors-fail.html">Remote PDF (expected CORS failure)</a>
+    </nav>
     <p>
       Remote PDF that should load successfully via CORS: <code>https://pdfobject.com/pdf/sample.pdf</code>
     </p>
-  </div>
-  <hr>
+  </header>
   <div class="pdfagogo-container" id="pdfagogo-container"
        tabindex="0"
        role="region"

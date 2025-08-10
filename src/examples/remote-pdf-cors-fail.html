@@ -5,25 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PDF-A-go-go - Remote PDF (Expected CORS failure)</title>
   <link rel="stylesheet" href="pdf-a-go-go.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css" />
-  <style>
-    body {
-      font-family: 'Segoe UI', 'Helvetica Neue', Arial, 'Liberation Sans', sans-serif;
-    }
-  </style>
+
+  <!-- Simple.css is only used for the demo pages, not a required dependency -->
+  <link rel="stylesheet" href="https://cdn.simplecss.org/simple.css">
   <script defer="defer" src="pdf-a-go-go.js"></script>
-  </head>
+</head>
 <body>
-  <div style="max-width:1200px;margin:1rem auto;text-align:center;">
-    <h1><a href="./">PDF-A-go-go</a>: CORS Error Demonstration</h1>
-    <div>View the project on
-      <a href="https://github.com/khawkins98/PDF-A-go-go" target="_blank" rel="noopener noreferrer">GitHub</a>.
-    </div>
-    <p style="max-width:1200px;margin:1rem auto;padding:0 1rem;color:#a33;">
+  <header>
+    <h1>PDF-A-go-go</h1>
+    <nav>
+      <a href="./">Basic Demo</a>
+      <a href="./double-spread.html">Large Double Spread (12MB PDF)</a>
+      <a href="./html-download-example.html">HTML Download Handler</a>
+      <a href="./stress-test-large-pdf.html">Stress Test (827 pages)</a>
+      <a href="./remote-pdf-allowed.html">Remote PDF (CORS allowed)</a>
+      <a href="./remote-pdf-cors-fail.html">Remote PDF (expected CORS failure)</a>
+    </nav>
+    <h2>CORS Error Demonstration</h2>
+    <p>
       This example should trigger a CORS error in the console. The viewer will show its error state if the fetch fails due to missing CORS headers on the remote server.
     </p>
-  </div>
-  <hr>
+  </header>
   <div class="pdfagogo-container" id="pdfagogo-container"
        tabindex="0"
        role="region"
