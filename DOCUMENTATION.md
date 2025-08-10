@@ -157,7 +157,7 @@ class RenderQueue {
 **Key Components**:
 
 - **Loading Progress**: Visual feedback during PDF loading
-- **Navigation Controls**: Page selector and share link
+- **Controls**: Share, Download, Fullscreen, Page selector, Current page
 - **Search Interface**: Text search with match navigation
 - **Accessibility**: Screen reader announcements, keyboard support
 
@@ -178,7 +178,6 @@ export function setupControls(container, featureOptions, viewer, book, pdf)
 ```javascript
 async function searchPdf(query)     // Full-text search across pages
 function showMatch(idx)             // Navigate to search match
-function updateNavArrows()          // Update navigation state
 ```
 
 ### 4. PDF Loader (`pdfLoader.js`)
@@ -246,8 +245,11 @@ The PDF viewer is configured through data attributes on the container element:
   data-show-page-selector="true"
   data-show-current-page="true"
   data-show-download="true"
+  data-show-fullscreen="true"
   data-show-resize-grip="true"
   data-default-page="1"
+  data-disable-webgl="true"
+  data-download-timeout="30000"
   data-debug="false"
 ></div>
 ```
@@ -271,25 +273,44 @@ viewer.getZoom(); // Get current zoom level
 // Rendering
 viewer.rerenderPage(ndx); // Force re-render of specific page
 
-// Performance
-viewer.getPerformanceMetrics(); // Get detailed performance data
+// Performance (returns null unless debug mode is enabled)
+viewer.getPerformanceMetrics();
+```
+
+### Accessing the viewer instance
+
+```javascript
+// After initialization, the viewer instance is attached to the container element
+const container = document.querySelector('.pdfagogo-container');
+const viewer = container?.pdfViewer; // ScrollablePdfViewer instance
+
+// Example: programmatically zoom
+viewer?.setZoom(1.25);
 ```
 
 ### Events
 
-The viewer emits events that can be listened to:
+The viewer emits these events:
 
 ```javascript
+// Fired once after the first set of visible pages render
 viewer.on("initialRenderComplete", () => {
-  console.log("All pages initially rendered");
+  console.log("Initial render complete");
 });
 
-viewer.on("pageChange", (pageNumber) => {
+// Fired when a page becomes the most visible (1-based page number)
+viewer.on("seen", (pageNumber) => {
   console.log(`Current page: ${pageNumber}`);
 });
 
-viewer.on("zoomChange", (zoomLevel) => {
-  console.log(`Zoom level changed to: ${zoomLevel * 100}%`);
+// Fired when the set of visible pages changes (array of 1-based page numbers)
+viewer.on("visiblePages", (pages) => {
+  console.log("Visible pages:", pages);
+});
+
+// Fired on zoom changes; payload includes level and percentage
+viewer.on("zoom", ({ level, percentage }) => {
+  console.log(`Zoom changed to ${percentage}% (level: ${level})`);
 });
 ```
 
@@ -512,43 +533,48 @@ async _calculatePlaceholderDimensions() {
 
 ### Performance Metrics
 
-When debug mode is enabled, detailed metrics are collected:
+When debug mode is enabled (`data-debug="true"`), a floating metrics overlay appears and the API returns metrics:
 
 ```javascript
 const metrics = viewer.getPerformanceMetrics();
 // Returns:
 {
-  initialRenderTime: 1234,           // Initial render time (ms)
-  averageLowResRenderTime: 45,       // Average low-res render (ms)
-  averageHighResRenderTime: 120,     // Average high-res render (ms)
-  totalPagesRendered: 10,            // Total pages rendered
-  totalHighResUpgrades: 8,           // High-res upgrades performed
-  pageRenderTimes: {...},            // Per-page render times
-  highResUpgradeTimes: {...}         // Per-page upgrade times
+  initialRenderTime: 1234,           // Initial render duration (ms)
+  averageHighResRenderTime: 120,     // Average render (ms) for page upgrades
+  totalPagesRendered: 10,
+  totalHighResUpgrades: 8,
+  pageRenderTimes: { ... },
+  highResUpgradeTimes: { ... }
 }
+// Note: returns null when debug mode is disabled
 ```
 
 ## Accessibility Features
 
 ### Keyboard Navigation
 
-| Key           | Action                   |
-| ------------- | ------------------------ |
-| `Tab`         | Focus the viewer         |
-| `Left Arrow`  | Previous page            |
-| `Right Arrow` | Next page                |
-| `+`           | Zoom in                  |
-| `-`           | Zoom out                 |
-| `Enter`       | Activate focused element |
+| Key             | Action                   |
+| --------------- | ------------------------ |
+| `Tab`           | Focus the viewer         |
+| `Left Arrow`    | Previous page            |
+| `Right Arrow`   | Next page                |
+| `Ctrl/Cmd +`    | Zoom in                  |
+| `Ctrl/Cmd -`    | Zoom out                 |
+| `Ctrl/Cmd 0`    | Reset zoom to 100%       |
+| `Enter`         | Activate focused element |
 
 ### Screen Reader Support
 
-**ARIA Labels**:
+**Focus & Live Announcements**:
 
 ```javascript
+// Canvases are focusable and labeled with data attributes
 canvas.setAttribute("tabindex", "0");
 canvas.setAttribute("data-page", i + 1);
-canvas.setAttribute("aria-label", `Page ${i + 1} of ${this.pageCount}`);
+
+// Screen reader announcements are provided via a live region
+pageAnnouncement.setAttribute("aria-live", "polite");
+// Content is updated as pages are seen: "Page X of Y"
 ```
 
 **Live Regions**:
@@ -574,16 +600,10 @@ searchResult.setAttribute("aria-live", "polite");
 
 ```
 src/tests/
-├── e2e/                    # End-to-end tests
-├── integration/            # Integration tests
-├── unit/                   # Unit tests
-│   ├── rendering/          # Render-specific tests
-│   ├── ui/                 # UI component tests
-│   └── utils/              # Utility function tests
-├── fixtures/               # Test data
-│   ├── mock-data/          # Mock objects
-│   └── test-pdfs/          # Sample PDFs
-└── performance.spec.ts     # Performance tests
+├── fullscreen.spec.ts      # Fullscreen UI behavior
+├── performance.spec.ts     # Desktop/Mobile perf + scroll
+├── stress-test.spec.ts     # Large PDF stress tests
+└── zoom.spec.ts            # Zoom interactions and boundaries
 ```
 
 ### Performance Testing
@@ -598,10 +618,12 @@ test("should render PDF pages within performance thresholds (desktop)", async ({
   await page.setViewportSize({ width: 1280, height: 800 });
 
   const metrics = await page.evaluate(() => {
-    return window.pdfViewer?.getPerformanceMetrics();
+    const container = document.querySelector('.pdfagogo-container') as any;
+    return container?.pdfViewer?.getPerformanceMetrics();
   });
 
-  expect(metrics.initialRenderTime).toBeLessThan(5000); // 5s threshold
+  // Note: getPerformanceMetrics() returns null unless debug mode is enabled
+  expect(metrics.initialRenderTime).toBeLessThan(5000);
 });
 
 // Mobile performance test with CPU throttling
@@ -615,9 +637,11 @@ test("should render PDF pages within performance thresholds (mobile)", async ({
   await page.setViewportSize({ width: 375, height: 667 });
 
   const metrics = await page.evaluate(() => {
-    return window.pdfViewer?.getPerformanceMetrics();
+    const container = document.querySelector('.pdfagogo-container') as any;
+    return container?.pdfViewer?.getPerformanceMetrics();
   });
 
+  // Note: getPerformanceMetrics() returns null unless debug mode is enabled
   expect(metrics.initialRenderTime).toBeLessThan(10000); // 10s threshold for mobile
 });
 ```
