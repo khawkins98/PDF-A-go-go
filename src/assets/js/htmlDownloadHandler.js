@@ -1,21 +1,21 @@
 /**
  * @file HTML Download Handler for PDF-A-go-go.
- * 
- * This module provides sophisticated handling for URLs that return HTML pages instead of
+ *
+ * This module provides handling for URLs that return HTML pages instead of
  * direct PDF downloads. It's commonly used for institutional repositories, academic
  * websites, and document management systems that use HTML redirect pages or meta refresh
  * tags to initiate PDF downloads.
- * 
+ *
  * Key capabilities:
  * - Automatic detection of meta refresh redirects
  * - Iframe-based safe URL checking and content type detection
  * - Timeout management for download operations
  * - Support for authenticated downloads with cookie preservation
  * - Cross-origin request handling with proper security measures
- * 
+ *
  * The handler uses a proxy iframe system to safely intercept redirects and extract
  * the actual PDF URLs without triggering browser navigation or security restrictions.
- * 
+ *
  * @author PDF-A-go-go Contributors
  * @version 1.0.0
  * @see {@link https://github.com/khawkins98/PDF-A-go-go|GitHub Repository}
@@ -23,30 +23,30 @@
 
 /**
  * HTML Download Handler class for managing PDF downloads from HTML redirect pages.
- * 
+ *
  * This class extends EventTarget to provide event-driven download handling for scenarios
  * where PDF URLs initially return HTML content that redirects to the actual PDF file.
  * Common use cases include institutional repositories, academic paper downloads, and
  * document management systems.
- * 
+ *
  * The handler implements a sophisticated proxy iframe system that:
  * - Safely loads HTML content without affecting the main page
  * - Parses meta refresh tags to extract redirect URLs
  * - Performs content type checking before downloading
  * - Handles authentication and cookies properly
  * - Provides timeout management for slow or failed downloads
- * 
+ *
  * @class HTMLDownloadHandler
  * @extends EventTarget
- * 
+ *
  * @example
  * // Basic usage for institutional repository
  * const handler = new HTMLDownloadHandler({
  *   downloadTimeout: 30000
  * });
- * 
+ *
  * handler.initialize(containerElement);
- * 
+ *
  * try {
  *   const pdfBlob = await handler.handleHTMLDownload(
  *     'https://repository.example.edu/download/12345'
@@ -55,38 +55,38 @@
  * } catch (error) {
  *   console.error('Download failed:', error.message);
  * }
- * 
+ *
  * @example
  * // Advanced usage with event handling
  * const handler = new HTMLDownloadHandler({
  *   downloadTimeout: 45000
  * });
- * 
+ *
  * handler.addEventListener('progress', (event) => {
  *   console.log('Download progress:', event.detail);
  * });
- * 
+ *
  * handler.addEventListener('redirect', (event) => {
  *   console.log('Redirect detected:', event.detail.url);
  * });
- * 
+ *
  * handler.initialize(document.getElementById('pdf-container'));
  * const pdfBlob = await handler.handleHTMLDownload(htmlUrl);
  */
 export class HTMLDownloadHandler extends EventTarget {
   /**
    * Create a new HTMLDownloadHandler instance.
-   * 
+   *
    * @param {Object} [options={}] - Configuration options for the handler
    * @param {number} [options.downloadTimeout=30000] - Timeout in milliseconds for download operations
    * @param {boolean} [options.enableLogging=false] - Enable detailed console logging for debugging
    * @param {boolean} [options.preserveCookies=true] - Include cookies in download requests for authentication
-   * 
+   *
    * @constructor
    * @example
    * // Basic handler with default 30-second timeout
    * const handler = new HTMLDownloadHandler();
-   * 
+   *
    * @example
    * // Handler with custom timeout and logging
    * const handler = new HTMLDownloadHandler({
@@ -97,41 +97,41 @@ export class HTMLDownloadHandler extends EventTarget {
    */
   constructor(options = {}) {
     super();
-    
+
     /** @type {Object} Configuration options for the handler */
     this.options = options;
-    
+
     /** @type {HTMLIFrameElement|null} The iframe element used for HTML content loading */
     this.iframe = null;
-    
+
     /** @type {HTMLElement|null} The container element for rendering iframes */
     this.container = null;
-    
+
     /** @type {number} Timeout in milliseconds for download operations */
     this.downloadTimeout = options.downloadTimeout || 30000;
-    
+
     /** @type {boolean} Whether to enable detailed console logging */
     this.enableLogging = options.enableLogging || false;
-    
+
     /** @type {boolean} Whether to preserve cookies for authenticated downloads */
     this.preserveCookies = options.preserveCookies !== false;
   }
 
   /**
    * Initialize the handler with a container element for iframe rendering.
-   * 
+   *
    * This method prepares the container for iframe-based download handling by setting
    * the appropriate CSS positioning. The container will be used to render hidden
    * iframes that load and analyze HTML content.
-   * 
+   *
    * @param {HTMLElement} container - The container element to render iframes in
    * @throws {Error} When container is null or not an HTMLElement
-   * 
+   *
    * @example
    * // Initialize with existing container
    * const container = document.getElementById('pdf-viewer');
    * handler.initialize(container);
-   * 
+   *
    * @example
    * // Initialize with dynamically created container
    * const container = document.createElement('div');
@@ -143,10 +143,10 @@ export class HTMLDownloadHandler extends EventTarget {
     if (!container || !(container instanceof HTMLElement)) {
       throw new Error('Container must be a valid HTMLElement');
     }
-    
+
     this.container = container;
     this.container.style.position = 'relative';
-    
+
     if (this.enableLogging) {
       console.log('[HTMLDownloadHandler] Initialized with container:', container);
     }
@@ -154,37 +154,37 @@ export class HTMLDownloadHandler extends EventTarget {
 
   /**
    * Handle a URL that returns HTML content instead of a direct PDF download.
-   * 
+   *
    * This method implements a sophisticated multi-step process to extract and download
    * the actual PDF from HTML redirect pages:
-   * 
+   *
    * 1. Creates a proxy iframe system for safe content analysis
    * 2. Loads the HTML content and parses meta refresh tags
    * 3. Extracts potential PDF URLs from redirects and links
    * 4. Validates content types before downloading
    * 5. Downloads the PDF blob with proper authentication
    * 6. Cleans up all temporary DOM elements
-   * 
+   *
    * The method handles various redirect mechanisms including:
    * - Meta refresh tags with delays
    * - JavaScript-based redirects
    * - Direct download links
    * - Authenticated download endpoints
-   * 
+   *
    * @param {string} url - The URL that returned HTML instead of PDF content
    * @returns {Promise<Blob>} Promise that resolves with the downloaded PDF blob
    * @throws {Error} When container is not initialized
    * @throws {Error} When download timeout is exceeded
    * @throws {Error} When no PDF redirect is detected
    * @throws {Error} When PDF download fails or returns invalid content
-   * 
+   *
    * @example
    * // Handle institutional repository URL
    * try {
    *   const pdfBlob = await handler.handleHTMLDownload(
    *     'https://repository.university.edu/handle/123456789/12345'
    *   );
-   *   
+   *
    *   // Create download link for user
    *   const downloadUrl = URL.createObjectURL(pdfBlob);
    *   const link = document.createElement('a');
@@ -195,15 +195,15 @@ export class HTMLDownloadHandler extends EventTarget {
    * } catch (error) {
    *   console.error('Failed to download PDF:', error.message);
    * }
-   * 
+   *
    * @example
    * // Handle with progress monitoring
    * const progressHandler = (event) => {
    *   console.log(`Download progress: ${event.detail.loaded}/${event.detail.total}`);
    * };
-   * 
+   *
    * handler.addEventListener('progress', progressHandler);
-   * 
+   *
    * try {
    *   const pdfBlob = await handler.handleHTMLDownload(htmlUrl);
    *   console.log('Download complete:', pdfBlob.size, 'bytes');
@@ -215,11 +215,11 @@ export class HTMLDownloadHandler extends EventTarget {
     if (!this.container) {
       throw new Error('Handler must be initialized with a container before use');
     }
-    
+
     if (this.enableLogging) {
       console.log('[HTMLDownloadHandler] Starting HTML download handling for:', url);
     }
-    
+
     return new Promise((resolve, reject) => {
       // Set up timeout for the entire download process
       const downloadTimeout = setTimeout(() => {
@@ -229,10 +229,10 @@ export class HTMLDownloadHandler extends EventTarget {
 
       /**
        * Check a URL for PDF content and download if valid.
-       * 
+       *
        * This internal function performs content type validation before attempting
        * to download, preventing unnecessary downloads of non-PDF content.
-       * 
+       *
        * @param {string} urlToCheck - The URL to validate and potentially download
        * @returns {Promise<boolean>} True if URL was a PDF and download succeeded
        * @private
@@ -241,14 +241,14 @@ export class HTMLDownloadHandler extends EventTarget {
         if (this.enableLogging) {
           console.log('[HTMLDownloadHandler] Checking URL:', urlToCheck);
         }
-        
+
         try {
           // Perform HEAD request to check content type without downloading full content
           const headResponse = await fetch(urlToCheck, {
             method: 'HEAD',
             credentials: this.preserveCookies ? 'include' : 'omit'
           });
-          
+
           const contentType = headResponse.headers.get('content-type');
           if (this.enableLogging) {
             console.log('[HTMLDownloadHandler] Content type:', contentType);
@@ -441,16 +441,16 @@ export class HTMLDownloadHandler extends EventTarget {
 
   /**
    * Download a PDF from a validated URL.
-   * 
+   *
    * This method performs the actual PDF download after URL validation. It handles
    * authentication by preserving cookies and validates the downloaded content to
    * ensure it's actually a PDF file.
-   * 
+   *
    * @param {string} url - The validated PDF URL to download
    * @returns {Promise<Blob>} Promise that resolves with the PDF blob
    * @throws {Error} When the HTTP request fails
    * @throws {Error} When the downloaded content is not a PDF
-   * 
+   *
    * @example
    * // Direct PDF download (typically called internally)
    * try {
@@ -459,36 +459,36 @@ export class HTMLDownloadHandler extends EventTarget {
    * } catch (error) {
    *   console.error('Download failed:', error.message);
    * }
-   * 
+   *
    * @private
    */
   async downloadPDF(url) {
     if (this.enableLogging) {
       console.log('[HTMLDownloadHandler] Downloading PDF from:', url);
     }
-    
+
     try {
       const response = await fetch(url, {
         credentials: this.preserveCookies ? 'include' : 'omit'
       });
-      
+
       if (!response.ok) {
         throw new Error(`PDF download failed: ${response.status} ${response.statusText}`);
       }
 
       const blob = await response.blob();
-      
+
       if (this.enableLogging) {
         console.log('[HTMLDownloadHandler] Downloaded blob:', blob.size, 'bytes, type:', blob.type);
       }
-      
+
       // Validate that the downloaded content is actually a PDF
       if (!blob.type.includes('pdf') && blob.size > 0) {
         // Additional validation: check if blob starts with PDF signature
         const arrayBuffer = await blob.slice(0, 4).arrayBuffer();
         const uint8Array = new Uint8Array(arrayBuffer);
         const signature = String.fromCharCode(...uint8Array);
-        
+
         if (!signature.startsWith('%PDF')) {
           throw new Error(`Downloaded file is not a PDF (type: ${blob.type}, signature: ${signature})`);
         }
@@ -504,15 +504,15 @@ export class HTMLDownloadHandler extends EventTarget {
 
   /**
    * Clean up all DOM elements created by the handler.
-   * 
+   *
    * This method removes all iframes and loading indicators created during the
    * download process. It should be called after successful downloads or when
    * errors occur to prevent memory leaks and DOM pollution.
-   * 
+   *
    * @example
    * // Manual cleanup (usually called automatically)
    * handler.cleanup();
-   * 
+   *
    * @example
    * // Cleanup in error handling
    * try {
@@ -528,7 +528,7 @@ export class HTMLDownloadHandler extends EventTarget {
       this.iframe.parentNode.removeChild(this.iframe);
       this.iframe = null;
     }
-    
+
     // Remove any loading indicators
     if (this.container) {
       const loadingDiv = this.container.querySelector('.pdfagogo-html-loading');
@@ -536,7 +536,7 @@ export class HTMLDownloadHandler extends EventTarget {
         loadingDiv.parentNode.removeChild(loadingDiv);
       }
     }
-    
+
     // Remove any proxy iframes that might still exist
     const proxyFrames = document.querySelectorAll('iframe[data-pdfagogo-proxy]');
     proxyFrames.forEach(frame => {
@@ -544,7 +544,7 @@ export class HTMLDownloadHandler extends EventTarget {
         frame.parentNode.removeChild(frame);
       }
     });
-    
+
     if (this.enableLogging) {
       console.log('[HTMLDownloadHandler] Cleanup completed');
     }
@@ -552,30 +552,30 @@ export class HTMLDownloadHandler extends EventTarget {
 
   /**
    * Parse meta refresh content to extract delay and URL.
-   * 
+   *
    * This static utility method parses the content attribute of HTML meta refresh tags
    * to extract the delay time and redirect URL. It handles various formats commonly
    * used in institutional repositories and document management systems.
-   * 
+   *
    * Supported formats:
    * - "5; url=http://example.com/file.pdf"
    * - "0;URL='/file.pdf'"
    * - "3; url=\"/path/to/file.pdf?foo=bar\""
    * - "10;url='https://example.com/doc.pdf'"
-   * 
+   *
    * @param {string} content - The content attribute from a meta refresh tag
    * @returns {{delay: number, url: string}|null} Object with delay (seconds) and URL, or null if parsing fails
-   * 
+   *
    * @example
    * // Parse standard meta refresh
    * const result = HTMLDownloadHandler.parseMetaRefresh('5; url=http://example.com/doc.pdf');
    * console.log(result); // { delay: 5, url: 'http://example.com/doc.pdf' }
-   * 
+   *
    * @example
    * // Parse with quotes and complex URL
    * const result = HTMLDownloadHandler.parseMetaRefresh('0; url="/download?id=123&format=pdf"');
    * console.log(result); // { delay: 0, url: '/download?id=123&format=pdf' }
-   * 
+   *
    * @static
    */
   static parseMetaRefresh(content) {
@@ -607,31 +607,31 @@ export class HTMLDownloadHandler extends EventTarget {
 
   /**
    * Check if a URL might be a PDF based on common patterns.
-   * 
+   *
    * This static utility method performs heuristic analysis of URLs to determine
    * if they're likely to point to PDF files. It's used to prioritize which URLs
    * to check during the redirect analysis process.
-   * 
+   *
    * @param {string} url - The URL to analyze
    * @returns {boolean} True if the URL appears to be a PDF link
-   * 
+   *
    * @example
    * // Direct PDF file
    * HTMLDownloadHandler.mightBePdfUrl('https://example.com/document.pdf'); // true
-   * 
+   *
    * @example
    * // Download endpoint
    * HTMLDownloadHandler.mightBePdfUrl('https://repo.edu/download/12345'); // true
-   * 
+   *
    * @example
    * // Regular web page
    * HTMLDownloadHandler.mightBePdfUrl('https://example.com/about.html'); // false
-   * 
+   *
    * @static
    */
   static mightBePdfUrl(url) {
     if (!url || typeof url !== 'string') return false;
-    
+
     const lowerUrl = url.toLowerCase();
     return lowerUrl.endsWith('.pdf') ||
            lowerUrl.includes('/pdf/') ||
