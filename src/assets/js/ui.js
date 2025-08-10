@@ -1,6 +1,6 @@
 /**
  * @file UI Components and Controls for PDF-A-go-go.
- * 
+ *
  * This module provides comprehensive UI functionality for the PDF viewer including:
  * - Loading progress indicators with visual feedback
  * - Navigation controls (previous/next, page selector, download)
@@ -8,10 +8,10 @@
  * - Accessibility features (screen reader support, keyboard navigation)
  * - Error handling and user feedback
  * - Mobile-responsive design and touch interaction
- * 
+ *
  * All UI components are designed with accessibility in mind, featuring proper
  * ARIA labels, keyboard navigation support, and screen reader compatibility.
- * 
+ *
  * @author PDF-A-go-go Contributors
  * @version 1.0.0
  * @see {@link https://github.com/khawkins98/PDF-A-go-go|GitHub Repository}
@@ -19,21 +19,21 @@
 
 /**
  * Creates and inserts a loading progress bar inside the given container.
- * 
+ *
  * The loading bar provides visual feedback during PDF loading with both
  * a progress bar and percentage text. It's designed to be accessible
  * and provides clear indication of loading status.
- * 
+ *
  * @param {HTMLElement} container - The container element to insert the loading bar into
  * @returns {HTMLProgressElement} The created progress bar element for updating progress
- * 
+ *
  * @example
  * const container = document.getElementById('pdf-container');
  * const progressBar = createLoadingBar(container);
- * 
+ *
  * // Later, update the progress
  * updateLoadingBar(progressBar, 0.5); // 50% complete
- * 
+ *
  * @example
  * // The loading bar creates this structure:
  * // <div class="pdfagogo-loading">
@@ -58,36 +58,36 @@ export function createLoadingBar(container) {
 
 /**
  * Updates the loading progress bar value and percentage text display.
- * 
+ *
  * This function handles both determinate progress (with specific percentage)
  * and indeterminate progress (when exact progress is unknown). It updates
  * both the visual progress bar and the text percentage display.
- * 
+ *
  * @param {HTMLProgressElement} progressBar - The progress bar element to update
  * @param {number|null} value - Progress value between 0-1, or null for indeterminate progress
- * 
+ *
  * @example
  * // Update to 75% complete
  * updateLoadingBar(progressBar, 0.75);
- * 
+ *
  * @example
  * // Set to indeterminate state (spinning/unknown progress)
  * updateLoadingBar(progressBar, null);
- * 
+ *
  * @example
  * // Typical usage in a loading sequence
  * const progressBar = createLoadingBar(container);
- * 
+ *
  * // Start with indeterminate
  * updateLoadingBar(progressBar, null);
- * 
+ *
  * // Update with actual progress as it becomes available
  * fetch('/api/pdf-data')
  *   .then(response => {
  *     const reader = response.body.getReader();
  *     const contentLength = response.headers.get('Content-Length');
  *     let receivedLength = 0;
- *     
+ *
  *     return new ReadableStream({
  *       start(controller) {
  *         function pump() {
@@ -109,9 +109,9 @@ export function createLoadingBar(container) {
  */
 export function updateLoadingBar(progressBar, value) {
   if (!progressBar) return;
-  
+
   const percentSpan = document.querySelector('.pdfagogo-loading-percent');
-  
+
   if (typeof value === "number") {
     // Determinate progress - show specific percentage
     progressBar.value = value;
@@ -125,11 +125,11 @@ export function updateLoadingBar(progressBar, value) {
 
 /**
  * Removes the loading bar from the DOM completely.
- * 
+ *
  * This function safely removes the loading indicator once PDF loading
  * is complete or has failed. It handles cases where the loading bar
  * might not exist or has already been removed.
- * 
+ *
  * @example
  * // After successful PDF load
  * loadPdf(url)
@@ -151,35 +151,61 @@ export function removeLoadingBar() {
 
 /**
  * Displays an error message to the user in place of the loading indicator.
- * 
+ *
  * This function replaces the loading bar content with an error message,
  * providing clear feedback when PDF loading fails. The error is displayed
  * in a user-friendly format with appropriate styling.
- * 
+ *
  * @param {string} message - The error message to display to the user
- * 
+ *
  * @example
  * // Handle network error
  * showError('PDF not found. Please check the URL and try again.');
- * 
+ *
  * @example
  * // Handle parsing error
  * showError('Invalid PDF file. The file may be corrupted.');
- * 
+ *
  * @example
  * // Handle timeout error
  * showError('Loading timeout. Please check your connection and try again.');
  */
 export function showError(message) {
-  const loadingDiv = document.querySelector(".pdfagogo-loading");
-  if (loadingDiv) {
-    loadingDiv.innerHTML = `<div class="pdfagogo-loading-error">${message}</div>`;
+  // Try to reuse the existing loading overlay; create one if missing
+  let loadingDiv = document.querySelector(".pdfagogo-loading");
+  const container = document.querySelector('.pdfagogo-container');
+  if (!loadingDiv && container) {
+    loadingDiv = document.createElement('div');
+    loadingDiv.className = 'pdfagogo-loading';
+    loadingDiv.style.maxWidth = '600px';
+    loadingDiv.style.margin = '2rem auto';
+    loadingDiv.style.textAlign = 'center';
+    loadingDiv.style.padding = '1.5rem 0';
+    container.appendChild(loadingDiv);
   }
+  if (!loadingDiv) return;
+
+  const pdfUrl = (container && container.getAttribute('data-pdf-url')) || '#';
+
+  // Escape message to avoid HTML injection
+  const safeMessage = String(message)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  loadingDiv.innerHTML = `
+    <div class="pdfagogo-loading-text" style="margin-bottom:0.5rem;">Could not load this PDF</div>
+    <div class="pdfagogo-loading-error">This may be due to CORS restrictions, a network issue, or the file being unavailable.</div>
+    <div class="pdfagogo-error-actions">
+      <a class="primary" href="${pdfUrl}" target="_blank" rel="noopener noreferrer">Attempt to open directly</a>
+    </div>
+    <details class="pdfagogo-error-details"><summary>Technical details</summary><pre>${safeMessage}</pre></details>
+  `;
 }
 
 /**
  * Sets up all main UI controls and wires up their event listeners.
- * 
+ *
  * This is the primary UI initialization function that creates and configures:
  * - Search controls with text input and match navigation
  * - Navigation controls (previous/next buttons, page selector)
@@ -187,15 +213,14 @@ export function showError(message) {
  * - Accessibility features (screen reader announcements, keyboard navigation)
  * - Page tracking and URL fragment support
  * - Mobile-responsive touch interactions
- * 
+ *
  * The function handles feature toggles through the featureOptions parameter,
  * allowing selective enabling/disabling of UI components. All controls are
  * designed with accessibility in mind and include proper ARIA labels.
- * 
+ *
  * @param {HTMLElement} container - The main viewer container element
  * @param {Object} featureOptions - Feature toggles and configuration options
  * @param {boolean} [featureOptions.showSearch=true] - Enable search functionality
- * @param {boolean} [featureOptions.showPrevNext=true] - Show previous/next navigation buttons
  * @param {boolean} [featureOptions.showPageSelector=true] - Show page number input field
  * @param {boolean} [featureOptions.showCurrentPage=true] - Show current page indicator
  * @param {boolean} [featureOptions.showDownload=true] - Show download button
@@ -205,14 +230,14 @@ export function showError(message) {
  * @param {Function} book.numPages - Returns total number of pages
  * @param {Function} book.getPage - Retrieves a specific page
  * @param {Object} pdf - The loaded PDF.js document instance
- * 
+ *
  * @example
  * // Basic setup with all features enabled
  * setupControls(
  *   document.getElementById('pdf-container'),
  *   {
  *     showSearch: true,
- *     showPrevNext: true,
+
  *     showPageSelector: true,
  *     showCurrentPage: true,
  *     showDownload: true
@@ -221,14 +246,14 @@ export function showError(message) {
  *   bookObject,
  *   pdfDocument
  * );
- * 
+ *
  * @example
  * // Minimal setup with only navigation
  * setupControls(
  *   container,
  *   {
  *     showSearch: false,
- *     showPrevNext: true,
+
  *     showPageSelector: false,
  *     showCurrentPage: true,
  *     showDownload: false
@@ -237,7 +262,7 @@ export function showError(message) {
  *   book,
  *   pdf
  * );
- * 
+ *
  * @example
  * // The function creates this UI structure:
  * // <div class="pdfagogo-search-controls">
@@ -259,57 +284,47 @@ export function showError(message) {
  * // <div class="pdfagogo-page-announcement" aria-live="polite"></div>
  * // <div class="pdfagogo-a11y-instructions"></div>
  */
+import { setupSearchControls } from './search.js';
+
 export function setupControls(container, featureOptions, viewer, book, pdf) {
-  // Remove any existing controls
+  // Remove any existing controls to prevent duplicates
   [
     "pdfagogo-search-controls",
     "pdfagogo-controls",
     "pdfagogo-page-announcement",
-    "pdfagogo-a11y-instructions",
+    "pdfagogo-a11y-instructions"
   ].forEach((cls) => {
     const el = document.querySelector("." + cls);
     if (el && el.parentNode) el.parentNode.removeChild(el);
   });
 
-  // Search controls
-  let searchControls, searchBox, searchBtn, searchResult, nextMatchBtn, prevMatchBtn;
-  if (featureOptions.showSearch) {
-    searchControls = document.createElement("div");
-    searchControls.className = "pdfagogo-search-controls";
-    searchControls.innerHTML = `
-      <input class="pdfagogo-search-box" type="text" placeholder="Search text..." aria-label="Search text" />
-      <button class="pdfagogo-search-btn">Search</button>
-      <span class="pdfagogo-search-result"></span>
-    `;
-    container.parentNode.insertBefore(searchControls, container);
-    searchBox = searchControls.querySelector(".pdfagogo-search-box");
-    searchBtn = searchControls.querySelector(".pdfagogo-search-btn");
-    searchResult = searchControls.querySelector(".pdfagogo-search-result");
-    // Add next/prev match buttons
-    nextMatchBtn = document.createElement("button");
-    nextMatchBtn.textContent = "Next Match";
-    nextMatchBtn.className = "pdfagogo-next-match-btn";
-    prevMatchBtn = document.createElement("button");
-    prevMatchBtn.textContent = "Prev Match";
-    prevMatchBtn.className = "pdfagogo-prev-match-btn";
-    searchControls.appendChild(prevMatchBtn);
-    searchControls.appendChild(nextMatchBtn);
+  // Ensure a wrapper exists so we can fullscreen the viewer and its controls together
+  let wrapper = container.closest('.pdfagogo-viewer-wrapper');
+  if (!wrapper) {
+    wrapper = document.createElement('div');
+    wrapper.className = 'pdfagogo-viewer-wrapper';
+    const parent = container.parentNode;
+    if (parent) {
+      parent.insertBefore(wrapper, container);
+      wrapper.appendChild(container);
+    }
   }
+
+  // Search controls are handled by the dedicated module
+  let setPageByNumber = null; // will be defined below then passed into search module
 
   // Main controls
   const controls = document.createElement("div");
   controls.className = "pdfagogo-controls";
   let controlsHTML = "";
-  if (featureOptions.showPrevNext) {
-    controlsHTML +=
-      '<button class="pdfagogo-prev" aria-label="Previous page">Previous</button>';
-    controlsHTML +=
-      '<button class="pdfagogo-next" aria-label="Next page">Next</button>';
+  if (featureOptions.showShare !== false) {
+    controlsHTML += '<button class="pdfagogo-share" aria-label="Share current page">Share</button>';
   }
-  controlsHTML +=
-    '<button class="pdfagogo-share" aria-label="Share current page">Share</button>';
   if (featureOptions.showDownload) {
     controlsHTML += '<button class="pdfagogo-download" aria-label="Download PDF">Download PDF</button>';
+  }
+  if (featureOptions.showFullscreen !== false) {
+    controlsHTML += '<button class="pdfagogo-fullscreen" aria-label="Enter fullscreen" title="Enter fullscreen">Fullscreen</button>';
   }
   if (featureOptions.showPageSelector) {
     controlsHTML +=
@@ -321,13 +336,11 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       '<span class="pdfagogo-page-indicator" aria-live="polite"></span>';
   }
   controls.innerHTML = controlsHTML;
-  container.parentNode.insertBefore(
-    controls,
-    container.nextSibling
-  );
+  // Insert controls inside the wrapper (below the container)
+  wrapper.insertBefore(controls, container.nextSibling);
 
   // Page announcement for screen readers
-  let pageAnnouncement = document.querySelector(".pdfagogo-page-announcement");
+  let pageAnnouncement = wrapper.querySelector(".pdfagogo-page-announcement");
   if (!pageAnnouncement) {
     pageAnnouncement = document.createElement("div");
     pageAnnouncement.className = "pdfagogo-page-announcement";
@@ -338,31 +351,29 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     pageAnnouncement.style.height = "1px";
     pageAnnouncement.style.overflow = "hidden";
     pageAnnouncement.setAttribute("aria-live", "polite");
-    container.parentNode.insertBefore(
-      pageAnnouncement,
-      controls.nextSibling
-    );
+    wrapper.insertBefore(pageAnnouncement, controls.nextSibling);
   }
 
-  // Accessibility instructions
-  let a11yInstructions = document.querySelector(".pdfagogo-a11y-instructions");
-  if (!a11yInstructions) {
+  // Accessibility instructions (visible block can be toggled by featureOptions)
+  let a11yInstructions = wrapper.querySelector(".pdfagogo-a11y-instructions");
+  if (!a11yInstructions && featureOptions.showAccessibilityControlsVisibly) {
     a11yInstructions = document.createElement("div");
     a11yInstructions.className = "pdfagogo-a11y-instructions";
     a11yInstructions.setAttribute("aria-live", "polite");
     a11yInstructions.innerHTML = `
       <strong>Accessibility:</strong><br>
       - Use <kbd>Tab</kbd> to focus the reader.<br>
-      - Use <kbd>Left Arrow</kbd> or click/tap the left side to go to the previous page.<br>
-      - Use <kbd>Right Arrow</kbd> or click/tap the right side to go to the next page.<br>
+      - Use <kbd>Up or Left Arrow</kbd> to go to the previous page.<br>
+      - Use <kbd>Down or Right Arrow</kbd> to go to the next page.<br>
       - Use <kbd>+</kbd> or <kbd>-</kbd> to zoom in/out.<br>
-      - Use the buttons below for navigation, sharing, and searching.<br>
+      - Use the buttons above for navigation, sharing, and searching.<br>
       - The current page is announced for screen readers.
     `;
-    container.parentNode.insertBefore(
-      a11yInstructions,
-      pageAnnouncement.nextSibling
-    );
+    // Place a11y instructions below the container as well, after controls
+    wrapper.insertBefore(a11yInstructions, controls.nextSibling);
+  } else if (a11yInstructions && !featureOptions.showAccessibilityControlsVisibly) {
+    // If present but disabled, remove from DOM
+    if (a11yInstructions.parentNode) a11yInstructions.parentNode.removeChild(a11yInstructions);
   }
 
   // Track the current page number using the 'seen' event
@@ -370,28 +381,18 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
 
   // --- Event wiring and logic ---
 
-  // Navigation buttons
-  const prevBtn = document.querySelector(".pdfagogo-prev");
-  const nextBtn = document.querySelector(".pdfagogo-next");
-  if (nextBtn) nextBtn.onclick = () => viewer.flip_forward();
-  if (prevBtn) prevBtn.onclick = () => viewer.flip_back();
-  if (!featureOptions.showPrevNext) {
-    if (prevBtn) prevBtn.style.display = "none";
-    if (nextBtn) nextBtn.style.display = "none";
-  }
-
   // Share button
-  const shareBtn = document.querySelector(".pdfagogo-share");
+  const shareBtn = controls.querySelector(".pdfagogo-share");
   if (shareBtn)
     shareBtn.onclick = () => {
       const page = currentPage + 1;
-      const shareUrl = `${window.location.origin}${window.location.pathname}#pdf-page=${page}`;
+      const shareUrl = `${window.location.origin}${window.location.pathname}#pdf-page-${page}`;
       navigator.clipboard.writeText(shareUrl);
       alert("Share link copied to clipboard:\n" + shareUrl);
     };
 
   // Download button
-  const downloadBtn = document.querySelector(".pdfagogo-download");
+  const downloadBtn = controls.querySelector(".pdfagogo-download");
   if (downloadBtn) {
     downloadBtn.onclick = () => {
       const link = document.createElement('a');
@@ -403,10 +404,30 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     };
   }
 
+  // Fullscreen button
+  const fullscreenBtn = controls.querySelector('.pdfagogo-fullscreen');
+  if (fullscreenBtn) {
+    const updateFsButton = () => {
+      const isFs = !!document.fullscreenElement && wrapper === document.fullscreenElement;
+      fullscreenBtn.textContent = isFs ? 'Exit Fullscreen' : 'Fullscreen';
+      fullscreenBtn.setAttribute('aria-label', isFs ? 'Exit fullscreen' : 'Enter fullscreen');
+      fullscreenBtn.title = isFs ? 'Exit fullscreen' : 'Enter fullscreen';
+    };
+    fullscreenBtn.onclick = () => {
+      if (document.fullscreenElement) {
+        if (document.exitFullscreen) document.exitFullscreen();
+      } else {
+        if (wrapper.requestFullscreen) wrapper.requestFullscreen();
+      }
+    };
+    document.addEventListener('fullscreenchange', updateFsButton);
+    updateFsButton();
+  }
+
   // Page selector
-  const gotoPageInput = document.querySelector(".pdfagogo-goto-page");
-  const gotoBtn = document.querySelector(".pdfagogo-goto-btn");
-  function setPageByNumber(pageNum) {
+  const gotoPageInput = controls.querySelector(".pdfagogo-goto-page");
+  const gotoBtn = controls.querySelector(".pdfagogo-goto-btn");
+  function baseSetPageByNumber(pageNum) {
     if (!viewer || !book) return;
     if (
       typeof pageNum !== "number" ||
@@ -422,6 +443,8 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       return;
     }
   }
+  // Initialize the navigation function variable
+  setPageByNumber = baseSetPageByNumber;
   if (gotoBtn)
     gotoBtn.onclick = function () {
       const val = gotoPageInput ? parseInt(gotoPageInput.value, 10) : NaN;
@@ -440,7 +463,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
   }
 
   // Current page indicator
-  const pageIndicator = document.querySelector(
+  const pageIndicator = controls.querySelector(
     ".pdfagogo-page-indicator"
   );
   function updatePage(n) {
@@ -452,114 +475,13 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       pageAnnouncement.textContent = `Page ${currentPage} of ${totalPages}`;
   }
   viewer.on("seen", updatePage);
-  updatePage(0);
+  updatePage(1); // Start at page 1 since that's what's initially visible
   if (!featureOptions.showCurrentPage) {
     if (pageIndicator) pageIndicator.style.display = "none";
   }
 
-  // SEARCH FUNCTIONALITY
-  let matchPages = [];
-  let currentMatchIdx = 0;
-  let matchHighlights = {}; // {pageNum: [highlightBox, ...]}
-  let prevMatchPage = null; // Track previous match page index
-  async function searchPdf(query) {
-    matchPages = [];
-    currentMatchIdx = 0;
-    matchHighlights = {};
-    window.__pdfagogo__highlights = {};
-    for (let i = 0; i < pdf.numPages; i++) {
-      const page = await pdf.getPage(i + 1);
-      const textContent = await page.getTextContent();
-      const items = textContent.items;
-      const text = items.map((item) => item.str).join(" ").toLowerCase();
-      if (text.includes(query)) {
-        matchPages.push(i);
-        // Find bounding boxes for matches on this page
-        const boxes = [];
-        for (let j = 0; j < items.length; j++) {
-          const item = items[j];
-          const itemText = item.str.toLowerCase();
-          const idx = itemText.indexOf(query);
-          if (idx !== -1) {
-            const x = item.transform[4];
-            const y = item.transform[5] - (item.height || 10);
-            boxes.push({
-              x: x,
-              y: y,
-              width: item.width,
-              height: item.height || 10,
-            });
-          }
-        }
-        matchHighlights[i] = boxes;
-      }
-    }
-  }
-  function showMatch(idx) {
-    if (matchPages.length === 0) {
-      window.__pdfagogo__highlights = {};
-      return;
-    }
-    currentMatchIdx =
-      ((idx % matchPages.length) + matchPages.length) % matchPages.length; // wrap around
-    const pageNum = matchPages[currentMatchIdx] + 1; // 1-based
-    const pageIdx = matchPages[currentMatchIdx];
-    // Highlight only the current match
-    const highlights = matchHighlights[pageIdx] || [];
-    // Set global highlights for viewer
-    window.__pdfagogo__highlights = {};
-    window.__pdfagogo__highlights[pageIdx] = highlights;
-    setPageByNumber(pageNum);
-    // Only re-render the current and previous match pages
-    if (typeof viewer.rerenderPage === 'function') {
-      viewer.rerenderPage(pageIdx);
-      if (prevMatchPage !== null && prevMatchPage !== pageIdx) {
-        // Clear highlights for previous page and re-render
-        window.__pdfagogo__highlights[prevMatchPage] = [];
-        viewer.rerenderPage(prevMatchPage);
-      }
-      prevMatchPage = pageIdx;
-    } else if (typeof viewer._renderAllPages === 'function') {
-      viewer._renderAllPages();
-    } else if (typeof viewer.go_to_page === 'function') {
-      viewer.go_to_page(viewer.currentPage || 0);
-    }
-    if (searchResult)
-      searchResult.textContent = `Match ${currentMatchIdx + 1} of ${
-        matchPages.length
-      } (page ${pageNum})`;
-  }
-  if (searchBtn)
-    searchBtn.onclick = async function () {
-      const query = searchBox ? searchBox.value.trim().toLowerCase() : "";
-      if (!query) return;
-      if (searchResult) searchResult.textContent = "Searching...";
-      await searchPdf(query);
-      if (matchPages.length > 0) {
-        showMatch(0);
-      } else {
-        if (searchResult) searchResult.textContent = "Not found";
-      }
-    };
-  if (nextMatchBtn)
-    nextMatchBtn.onclick = function () {
-      if (matchPages.length > 0) {
-        showMatch(currentMatchIdx + 1);
-      }
-    };
-  if (prevMatchBtn)
-    prevMatchBtn.onclick = function () {
-      if (matchPages.length > 0) {
-        showMatch(currentMatchIdx - 1);
-      }
-    };
-  if (searchBox)
-    searchBox.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" && searchBtn) searchBtn.click();
-    });
-  if (!featureOptions.showSearch) {
-    if (searchControls) searchControls.style.display = "none";
-  }
+  // Initialize search controls (delegated to search module)
+  setupSearchControls(container, featureOptions, viewer, book, pdf, setPageByNumber);
 
   // Keyboard navigation for accessibility
   container.addEventListener("keydown", function (event) {
@@ -567,6 +489,12 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       viewer.flip_back();
       event.preventDefault();
     } else if (event.key === "ArrowRight") {
+      viewer.flip_forward();
+      event.preventDefault();
+    } else if (event.key === "ArrowUp") {
+      viewer.flip_back();
+      event.preventDefault();
+    } else if (event.key === "ArrowDown") {
       viewer.flip_forward();
       event.preventDefault();
     } else if (event.key === "+" || event.key === "=") {
@@ -578,59 +506,9 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     }
   });
 
-  // Hide/show navigation arrows on first/last page
-  function updateNavArrows() {
-    if (!prevBtn || !nextBtn) return;
-    let isFirst, isLast;
-    isFirst = currentPage === 0;
-    isLast = currentPage >= pdf.numPages;
-    prevBtn.style.visibility = isFirst ? 'hidden' : '';
-    nextBtn.style.visibility = isLast ? 'hidden' : '';
-    setTimeout(() => {
-      const leftHint = document.querySelector('.pdfagogo-hint-left');
-      const rightHint = document.querySelector('.pdfagogo-hint-right');
-      if (leftHint) leftHint.style.display = isFirst ? 'none' : '';
-      if (rightHint) rightHint.style.display = isLast ? 'none' : '';
-    }, 100);
-  }
-  viewer.on("seen", updateNavArrows);
-  updateNavArrows();
-
-  // Dynamically add overlay hint zones for click navigation
-  setTimeout(() => {
-    let leftZone = document.querySelector('.pdfagogo-hint-left');
-    let rightZone = document.querySelector('.pdfagogo-hint-right');
-    if (!leftZone) {
-      leftZone = document.createElement("div");
-      leftZone.className = "pdfagogo-hint-zone pdfagogo-hint-left";
-      const leftArrow = document.createElement("span");
-      leftArrow.className = "pdfagogo-hint-arrow";
-      leftArrow.setAttribute("aria-hidden", "true");
-      leftArrow.innerHTML = "&#8592;";
-      leftZone.appendChild(leftArrow);
-      container.appendChild(leftZone);
-    }
-    if (!rightZone) {
-      rightZone = document.createElement("div");
-      rightZone.className = "pdfagogo-hint-zone pdfagogo-hint-right";
-      const rightArrow = document.createElement("span");
-      rightArrow.className = "pdfagogo-hint-arrow";
-      rightArrow.setAttribute("aria-hidden", "true");
-      rightArrow.innerHTML = "&#8594;";
-      rightZone.appendChild(rightArrow);
-      container.appendChild(rightZone);
-    }
-    leftZone.addEventListener("mouseenter", () => leftZone.classList.add("active"));
-    leftZone.addEventListener("mouseleave", () => leftZone.classList.remove("active"));
-    rightZone.addEventListener("mouseenter", () => rightZone.classList.add("active"));
-    rightZone.addEventListener("mouseleave", () => rightZone.classList.remove("active"));
-    leftZone.addEventListener("click", () => viewer.flip_back());
-    rightZone.addEventListener("click", () => viewer.flip_forward());
-  }, 100);
-
   // --- Hash-based page navigation ---
   function getPageFromHash() {
-    const match = window.location.hash.match(/pdf-page=(\d+)/);
+    const match = window.location.hash.match(/pdf-page-(\d+)/);
     if (match) {
       const pageNum = parseInt(match[1], 10);
       if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= pdf.numPages) {
@@ -652,7 +530,10 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
   }
   // Wait for initial render before going to hash page
   viewer.on('initialRenderComplete', () => {
-    console.log('initialRenderComplete');
+    // Update visible pages to sync the page counter with what's actually shown
+    if (typeof viewer._updateVisiblePages === 'function') {
+      viewer._updateVisiblePages();
+    }
     goToHashPage();
   });
 
@@ -666,7 +547,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       window.__pdfagogo__pageSetBy = 'defaultPage';
     }
   }
-  // When navigating to a page, update the hash
+  // When navigating to a page, update the hash as well
   const originalSetPageByNumber = setPageByNumber;
   setPageByNumber = function(pageNum) {
     if (!viewer || !pdf) return;
@@ -679,7 +560,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       alert("Invalid page number");
       return;
     }
-    window.location.hash = `pdf-page=${pageNum}`;
+    window.location.hash = `pdf-page-${pageNum}`;
     originalSetPageByNumber(pageNum);
   };
 
@@ -729,26 +610,15 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
 
     /**
      * Handler for when the user releases the resize grip (mouse/touch up).
-     * Cleans up event listeners, redraws the PDF pages, and restores the scroll position to the current page.
+     * Cleans up event listeners. Note: PDF pages maintain their scale - only container height changes.
      */
     async function onMouseUp(e) {
       isResizing = false;
       document.body.style.cursor = '';
-      // document.removeEventListener('mousemove', onMouseMove);
-      // document.removeEventListener('mouseup', onMouseUp);
-      // document.removeEventListener('touchmove', onMouseMove);
-      // document.removeEventListener('touchend', onMouseUp);
-      // Only redraw after resizing ends
-      // Store the current page index so we can restore the scroll position after redraw
-      let currentPage = (typeof viewer.showNdx === 'number') ? viewer.showNdx : (viewer.currentPage || 0);
-
-      // Trigger window resize event to redraw pages at new dimensions
-      window.dispatchEvent(new Event('resize'));
-
-      // Restore the scroll position to the same page after resizing
-      if (typeof viewer?.go_to_page === 'function') {
-        viewer.go_to_page(currentPage);
-      }
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      // Note: We no longer trigger window resize events to maintain consistent PDF page scale
+      // The container height change provides more vertical space without affecting page rendering
       e.preventDefault();
     }
 

@@ -8,32 +8,38 @@ PDF-A-go-go is a simple, embeddable PDF viewer project. It is designed to be lig
 
 ## Future plans
 
-This project is very fresh (rolled on 6 May 2025). I may yet publish to npm or change it completely.
+This project is very fresh (rolled on May 2025, refactored in Aug 2025). I may yet publish to npm or change it completely.
 
 ## Demo
 
 - [Basic demo](https://khawkins98.github.io/PDF-A-go-go/)
-- [Large double spread demo](https://khawkins98.github.io/PDF-A-go-go/double-spread.html#pdf-page=10) (12MB PDF)
+- [Large double spread demo](https://khawkins98.github.io/PDF-A-go-go/double-spread.html#pdf-page-10) (12MB PDF)
 - [Load iFrame with meta redirect](https://khawkins98.github.io/PDF-A-go-go/html-download-example.html)
+- [Large PDF stress test (827 pages)](https://khawkins98.github.io/PDF-A-go-go/stress-test-large-pdf.html)
+- [Remote PDF (CORS allowed)](https://khawkins98.github.io/PDF-A-go-go/remote-pdf-allowed.html)
+- [Remote PDF (expected CORS failure)](https://khawkins98.github.io/PDF-A-go-go/remote-pdf-cors-fail.html)
 
 ## Features
 
-- 📖 Side-scroll-style PDF viewing
-- 🦾 Accessible (keyboard navigation, ARIA labels, screen reader support)
-- ⚡ Fast, lightweight, and dependency-minimal
-- 🎨 Customizable UI (show/hide controls)
-- 📱 Mobile friendly
-- 🎯 Set a default page to open via embed options
-- 🔗 Shareable page links
-- 🪶 Lightweight, embeddable PDF viewer
-- ⌨️ Keyboard and accessible navigation
-- 🔍 Search with next/prev match
-- 🔝 Resizable viewer
-- 📑 Page selector and navigation controls
-- 🔍 Basic search within PDFs
-- ⬇️ Download PDF button
-- 🌐 Smart handling of HTML-wrapped PDF downloads
-- 🛠️ Based on [pdf.js](https://github.com/mozilla/pdf.js)
+- 📖 **Vertical scroll PDF viewing** with smooth native momentum
+- 🔍 **Advanced zoom support** (pinch-to-zoom, Ctrl+Plus/Minus, mouse wheel)
+- 📏 **Accurate scroll positioning** - scroll bar reflects true document position
+- 🧠 **Intelligent memory management** - automatically scales for small and large documents (tested up to 827 pages)
+- 🦾 **Fully accessible** (keyboard navigation, ARIA labels, screen reader support)
+- ⚡ **Performance optimized** with adaptive batching and unified scaling algorithms
+- 🎨 **Customizable UI** (show/hide controls)
+- 📱 **Mobile responsive** with touch-optimized interactions
+- 🎯 **Deep linking** - set default page via embed options
+- 🔗 **Shareable page links** with URL fragments
+- 🪶 **Lightweight** - minimal dependencies, embeddable
+- ⌨️ **Comprehensive keyboard navigation**
+- 🔍 **Full-text search** with highlighting and match navigation
+- 🔝 **Resizable viewer** with drag handle
+- 📑 **Complete navigation controls** (page selector, share link)
+- ⬇️ **PDF download** functionality
+- 🖥️ **Fullscreen toggle** for viewer and controls
+- 🌐 **Smart HTML download handling** for institutional repositories
+- 🛠️ **Built on** [pdf.js](https://github.com/mozilla/pdf.js) with performance enhancements
 
 ## Usage and features
 
@@ -45,36 +51,64 @@ Include the JS and CSS in your HTML, and add a container:
 <div class="pdfagogo-container" id="pdfagogo-container"
      data-pdf-url="./example.pdf"
      data-show-search="true"
-     data-show-prev-next="true"
+     data-show-share="true"
      data-show-page-selector="true"
      data-show-current-page="true"
      data-show-download="true"
+     data-show-fullscreen="true"
      data-show-resize-grip="true"
+     data-show-accessibility-controls-visibly="true"
      style="width:100vw;max-width:100%;box-sizing:border-box;overflow-x:hidden;"></div>
 ```
 
 Set options via data attributes on the container:
 
 - `data-pdf-url` (string): PDF URL to load (default: sample PDF)
-- `data-show-prev-next` (true/false): Show previous/next page buttons (default: true)
 - `data-show-page-selector` (true/false): Show page selector input (default: true)
 - `data-show-current-page` (true/false): Show current page indicator (default: true)
 - `data-show-search` (true/false): Show search controls (default: true)
+- `data-show-share` (true/false): Show a Share button (default: true)
 - `data-show-download` (true/false): Show a Download PDF button (default: true)
+- `data-show-fullscreen` (true/false): Show a Fullscreen toggle (default: true)
 - `data-show-resize-grip` (true/false): Show a bar to allow the user to resize the height (default: true)
+- `data-show-accessibility-controls-visibly` (true/false): Show a visible accessibility instructions block below the viewer (default: true)
 - `data-default-page` (number): Default page to open if no #page=N in URL (1-based)
 - `data-background-color` (string): Background color (optional)
 - `data-box-border` (number): Box border size (optional)
 - `data-margin`, `data-margin-top`, `data-margin-left` (number): Margins (optional)
 - `data-disable-webgl` (true/false): Disable WebGL rendering in PDF.js (default: true / WebGL off).
   - **Note:** Disabling WebGL (the default) seems to be more performant in most browsers.
-- `data-momentum` (number): Controls the speed of grab-and-scroll (momentum) for fast navigation. Default is 0.5. Higher values allow faster scrolling when dragging the document horizontally.
+
+## Zoom Functionality
+
+PDF-A-go-go supports multiple zoom methods for better document readability:
+
+### Touch Devices
+
+- **Pinch-to-zoom**: Use two fingers to pinch in/out to zoom in/out
+- Zoom range: 25% to 500%
+
+### Desktop/Keyboard
+
+- **Ctrl + Plus** (or **Ctrl + =**): Zoom in
+- **Ctrl + Minus**: Zoom out
+- **Ctrl + 0**: Reset zoom to 100%
+- **Mouse wheel + Ctrl**: Scroll wheel while holding Ctrl to zoom
+
+**Note**: For keyboard zoom shortcuts to work, the PDF viewer must be focused. Click on the PDF viewer area first, then use the keyboard shortcuts.
+
+### Zoom Behavior
+
+- Zoom uses CSS scaling for smooth performance (no PDF re-rendering required)
+- Zoom is centered at the top of the viewing area
+- When zoomed in, horizontal scrolling becomes available
+- Zoom level ranges from 25% to 500% in 10% increments
 
 ## HTML Download Handler
 
 ---
 
-Note this is an advanced feature and may require some customisation or adaptation. It is quite experimental. See more in https://github.com/khawkins98/PDF-A-go-go/pull/7
+Note this is an advanced feature and may require some customisation or adaptation. It is quite experimental. See more in <https://github.com/khawkins98/PDF-A-go-go/pull/7>
 
 - This currently has only been tested against iframes using meta redirects
 - CORS must be set correctly (this is best used when the source and target page are the same)
@@ -106,10 +140,9 @@ Options:
 
 You can see this in action in the [HTML download example](//khawkins98.github.io/PDF-A-go-go/html-download-example.html).
 
-
 ## Performance Monitoring
 
-PDF-A-go-go includes a debug mode that provides detailed performance metrics for PDF loading and rendering. To enable debug mode, add the `data-debug="true"` attribute to your container:
+PDF-A-go-go includes a debug mode that provides performance metrics for PDF loading and rendering. To enable debug mode, add the `data-debug="true"` attribute to your container:
 
 ```html
 <div class="pdfagogo-container"
@@ -118,14 +151,7 @@ PDF-A-go-go includes a debug mode that provides detailed performance metrics for
      ...></div>
 ```
 
-When debug mode is enabled, the following metrics are logged to the console:
-
-- Initial render time for all pages
-- Individual page render times (both low and high resolution)
-- Average render times for low and high resolution pages
-- Total number of pages rendered and high-res upgrades
-
-You can also programmatically access these metrics using the `getPerformanceMetrics()` method:
+When debug mode is enabled, a floating overlay is shown and you can programmatically access metrics using `getPerformanceMetrics()`:
 
 ```javascript
 const viewer = document.querySelector('.pdfagogo-container').pdfViewer;
@@ -135,32 +161,43 @@ console.log(metrics);
 
 The metrics object includes:
 
-- `initialRenderTime`: Time taken for initial render of all pages (ms)
-- `averageLowResRenderTime`: Average time to render a page in low resolution (ms)
-- `averageHighResRenderTime`: Average time to upgrade a page to high resolution (ms)
+- `initialRenderTime`: Time for initial render (ms)
+- `averageHighResRenderTime`: Average time to render a page upgrade (ms)
 - `totalPagesRendered`: Total number of pages rendered
 - `totalHighResUpgrades`: Total number of high-res upgrades performed
-- `pageRenderTimes`: Object mapping page numbers to their low-res render times
-- `highResUpgradeTimes`: Object mapping page numbers to their high-res upgrade times
+- `pageRenderTimes`: Object mapping page indices to render times
+- `highResUpgradeTimes`: Object mapping page indices to upgrade times
+
+Note: `getPerformanceMetrics()` returns `null` when debug mode is disabled.
 
 ## Development
 
 To set up a local development environment:
 
 - Fork the repository and create your branch from `main`.
-- Run `yarn install` and `yarn dev` to set up your environment.
-- Compiled JS is available in the local `/dist` folder.
+- Run `npm install` and `npm run dev` to start the dev server.
+- Production build is written to `/dist` via `npm run build`.
 - Please follow the code style and add comments where helpful.
 - Open a pull request with a clear description of your changes.
 
-## Testing
+## Performance & Testing
 
-PDF-A-go-go includes automated performance tests using Playwright. These tests measure:
+PDF-A-go-go includes comprehensive automated testing using Playwright, covering functionality, performance, and scalability:
 
-- Initial render time
-- Low and high resolution render times
-- CPU usage
-- Mobile performance (with CPU throttling)
+### Test Coverage
+
+- **Zoom functionality** (15 test scenarios including pinch, keyboard, boundaries)
+- **Large document handling** (827-page PDF stress tests)
+- **Memory management** (adaptive cleanup and buffer sizing)
+- **Scroll accuracy** (precise positioning across all document sizes)
+- **Performance benchmarks** (render times, CPU usage, memory efficiency)
+
+### Performance Optimizations
+
+- **Unified scaling algorithms** - single codebase handles all document sizes efficiently
+- **Adaptive memory management** - buffer sizes scale automatically (4-20 pages depending on document size and device)
+- **Intelligent batching** - page creation scales from 10-50 pages per batch
+- **Progressive cleanup timing** - cleanup intervals adapt to document complexity (150ms-1000ms)
 
 To run the tests:
 
@@ -168,27 +205,26 @@ To run the tests:
 # Install dependencies
 npm install
 
-# Run tests (this will automatically start the dev server)
+# Run all tests (automatically starts dev server)
 npm test
 
-# Run tests with debugging enabled
+# Debug mode for all tests
 npm run test:debug
+
+# Run specific tests (start dev server in another terminal first)
+# Terminal 1:
+npm run test:serve
+# Terminal 2:
+npx playwright test src/tests/zoom.spec.ts
 ```
 
-The test suite includes:
+Performance thresholds (as enforced by tests):
 
-- Desktop performance testing with standard viewport (1280x800)
-- Mobile performance testing with:
-  - Reduced viewport (375x667)
-  - CPU throttling (4x slowdown)
-  - Extended timeouts for mobile conditions
+- **Desktop**: Initial render < 5s
+- **Mobile**: Initial render < 10s (with CPU throttling)
+- **Scroll/CPU**: Reasonable scroll duration and CPU usage under load
 
-Performance thresholds are set to:
-
-- Desktop: Initial render < 5s, Average CPU < 80%
-- Mobile: Initial render < 10s, Average CPU < 90%
-
-The development server runs on port 9000 by default (http://localhost:9000).
+The development server runs on port 9000 by default (<http://localhost:9000>).
 
 ## License
 

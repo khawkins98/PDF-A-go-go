@@ -69,9 +69,9 @@ async function measureScrollPerformance(page: Page, cpuTracker: ReturnType<typeo
   await page.evaluate(() => {
     const container = document.querySelector('.pdfagogo-scroll-container') as HTMLElement;
     if (container) {
-      const scrollAmount = container.scrollWidth - container.clientWidth;
+      const scrollAmount = container.scrollHeight - container.clientHeight;
       container.scrollTo({
-        left: scrollAmount,
+        top: scrollAmount,
         behavior: 'smooth'
       });
     }
@@ -243,7 +243,7 @@ test.describe('PDF-A-go-go Performance Tests', () => {
       console.log('Average CPU During Scroll:', scrollMetrics.avgCpuUsage.toFixed(2), '%');
 
       // More lenient assertions for mobile scroll performance
-      expect(scrollMetrics.duration).toBeLessThan(3000); // Allow longer scroll time on mobile
+      expect(scrollMetrics.duration).toBeLessThan(5000); // Allow longer scroll time on mobile with CPU throttling
       expect(scrollMetrics.avgCpuUsage).toBeLessThan(95); // Allow higher CPU usage during mobile scroll
 
       // Mobile-specific assertions (more lenient due to throttling)

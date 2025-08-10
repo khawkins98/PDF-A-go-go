@@ -1,6 +1,6 @@
 /**
  * @file Scrollable PDF Viewer: Core rendering and interaction engine for PDF-A-go-go.
- * 
+ *
  * This module provides the main ScrollablePdfViewer class that handles:
  * - PDF page rendering with render queue management
  * - Memory management and performance optimization
@@ -8,10 +8,10 @@
  * - Accessibility features and keyboard navigation
  * - Performance monitoring and debug capabilities
  * - Mobile and desktop optimization
- * 
+ *
  * The viewer uses a sophisticated render queue system to manage page rendering
  * efficiently, with automatic memory cleanup and performance tracking.
- * 
+ *
  * @author PDF-A-go-go Contributors
  * @version 1.0.0
  * @see {@link https://github.com/khawkins98/PDF-A-go-go|GitHub Repository}
@@ -21,60 +21,66 @@ import EventEmitter from "events";
 
 /**
  * Render queue system for managing PDF page rendering tasks.
- * 
+ *
  * This class implements a priority-based task queue that processes rendering
  * operations using requestAnimationFrame for optimal performance. It ensures
  * that high-priority tasks (visible pages) are rendered before lower-priority
  * tasks (off-screen pages).
- * 
+ *
  * @class RenderQueue
  * @example
  * const queue = new RenderQueue();
- * 
+ *
  * // Add a high-priority task
  * queue.add(() => renderVisiblePage(1), true);
- * 
+ *
  * // Add a normal priority task
  * queue.add(() => renderOffscreenPage(5));
- * 
+ *
  * // Clear all pending tasks
  * queue.clear();
  */
 class RenderQueue {
   /**
    * Create a new render queue instance.
-   * 
+   *
    * @constructor
    */
   constructor() {
     /** @type {Array<Function>} Array of pending render tasks */
     this.queue = [];
-    
+
     /** @type {boolean} Whether the queue is currently processing tasks */
     this.isProcessing = false;
-    
+
     /** @type {Function|null} The currently executing task */
     this.currentTask = null;
   }
 
   /**
    * Add a rendering task to the queue.
-   * 
+   *
    * Tasks can be added with normal or high priority. High-priority tasks
    * are added to the front of the queue and will be processed before
    * normal priority tasks.
-   * 
+   *
    * @param {Function} task - The rendering task function to execute
    * @param {boolean} [priority=false] - Whether this is a high-priority task
-   * 
+   *
    * @example
    * // Add a normal priority task
    * queue.add(() => renderPage(5));
-   * 
+   *
    * // Add a high-priority task (will be processed first)
    * queue.add(() => renderVisiblePage(2), true);
    */
   add(task, priority = false) {
+    // Validate that the task is a function
+    if (typeof task !== 'function') {
+      console.error('[RenderQueue] Invalid task added to render queue. Expected function, got:', typeof task, task);
+      return;
+    }
+
     if (priority) {
       // High-priority tasks go to the front of the queue
       this.queue.unshift(task);
@@ -91,10 +97,10 @@ class RenderQueue {
 
   /**
    * Clear all pending tasks from the queue.
-   * 
+   *
    * This method removes all queued tasks but does not interrupt
    * the currently executing task.
-   * 
+   *
    * @example
    * // Clear all pending renders when user navigates away
    * queue.clear();
@@ -106,11 +112,11 @@ class RenderQueue {
 
   /**
    * Process the next task in the queue using requestAnimationFrame.
-   * 
+   *
    * This method uses requestAnimationFrame to ensure rendering tasks
    * are executed at the optimal time for smooth performance. It handles
    * errors gracefully and continues processing even if individual tasks fail.
-   * 
+   *
    * @private
    */
   process() {
@@ -122,28 +128,52 @@ class RenderQueue {
     this.isProcessing = true;
     this.currentTask = this.queue.shift();
 
+    // Validate that we have a valid function to execute
+    if (typeof this.currentTask !== 'function') {
+      console.warn('[RenderQueue] Invalid task in render queue:', typeof this.currentTask);
+      this.currentTask = null;
+      this.process(); // Skip to next task
+      return;
+    }
+
     requestAnimationFrame(() => {
-      Promise.resolve(this.currentTask())
-        .then(() => {
-          this.currentTask = null;
-          this.process(); // Process next task
-        })
-        .catch(err => {
-          console.error('Render task failed:', err);
-          this.currentTask = null;
-          this.process(); // Continue with next task even if current fails
-        });
+      // Double-check that currentTask is still a function (race condition protection)
+      if (typeof this.currentTask !== 'function') {
+        this.currentTask = null;
+        this.process();
+        return;
+      }
+
+      // Store the task in a local variable to prevent race conditions
+      const taskToExecute = this.currentTask;
+
+      try {
+        Promise.resolve(taskToExecute())
+          .then(() => {
+            this.currentTask = null;
+            this.process(); // Process next task
+          })
+          .catch(err => {
+            console.error('[RenderQueue] Render task failed:', err);
+            this.currentTask = null;
+            this.process(); // Continue with next task even if current fails
+          });
+      } catch (error) {
+        console.error('[RenderQueue] Error calling currentTask:', error);
+        this.currentTask = null;
+        this.process();
+      }
     });
   }
 }
 
 /**
  * Main scrollable PDF viewer class with comprehensive rendering and interaction capabilities.
- * 
+ *
  * This class extends EventEmitter to provide a rich event-driven interface for PDF viewing.
  * It handles all aspects of PDF rendering, user interaction, performance optimization,
  * and accessibility features.
- * 
+ *
  * Key features:
  * - Horizontal scrolling PDF viewer with smooth navigation
  * - Render queue system for optimal performance
@@ -152,14 +182,14 @@ class RenderQueue {
  * - Accessibility support (ARIA labels, keyboard navigation)
  * - Performance monitoring and debug capabilities
  * - Touch and mouse interaction support
- * 
+ *
  * @class ScrollablePdfViewer
  * @extends EventEmitter
- * 
+ *
  * @fires ScrollablePdfViewer#initialRenderComplete - When initial page rendering is complete
  * @fires ScrollablePdfViewer#pageChange - When the current page changes
  * @fires ScrollablePdfViewer#seen - When a page becomes visible
- * 
+ *
  * @example
  * const viewer = new ScrollablePdfViewer({
  *   app: document.getElementById('pdf-container'),
@@ -179,10 +209,10 @@ class RenderQueue {
 export class ScrollablePdfViewer extends EventEmitter {
   /**
    * Create a new ScrollablePdfViewer instance.
-   * 
+   *
    * Initializes the PDF viewer with the provided configuration, sets up the DOM structure,
    * configures device-specific optimizations, and begins the initial page rendering process.
-   * 
+   *
    * @param {Object} config - Configuration object for the viewer
    * @param {HTMLElement} config.app - The container element for the viewer
    * @param {Object} config.book - PDF book object with page access methods
@@ -194,7 +224,7 @@ export class ScrollablePdfViewer extends EventEmitter {
    * @param {boolean} [config.options.debug=false] - Enable debug mode with performance metrics
    * @param {string} [config.options.backgroundColor] - Background color for pages
    * @param {number} [config.options.margin] - Page margin settings
-   * 
+   *
    * @constructor
    * @example
    * const viewer = new ScrollablePdfViewer({
@@ -214,35 +244,35 @@ export class ScrollablePdfViewer extends EventEmitter {
    */
   constructor({ app, book, options }) {
     super();
-    
+
     /** @type {HTMLElement} The main container element */
     this.app = app;
-    
+
     /** @type {Object} PDF book object providing page access */
     this.book = book;
-    
+
     /** @type {Object} Configuration options for the viewer */
     this.options = options || {};
-    
+
     /** @type {number} Total number of pages in the PDF */
     this.pageCount = book.numPages();
-    
+
     /** @type {number} Currently visible/active page (0-based index) */
     this.currentPage = 0;
-    
+
     /** @type {Object<number, HTMLCanvasElement>} Cache of rendered page canvases */
     this.pageCanvases = {};
-    
+
     /** @type {RenderQueue} Queue for managing rendering tasks */
     this.renderQueue = new RenderQueue();
 
     // Device detection and optimization settings
     /** @type {boolean} Whether the device is detected as mobile */
     this.isMobile = window.innerWidth <= 768;
-    
+
     /** @type {number} Maximum number of pages to keep in memory cache */
     this.maxCachedPages = this.isMobile ? 3 : 5;
-    
+
     /** @type {number} Range of pages to render around the current view */
     this.visibleRange = this.isMobile ? 1 : 2; // Pages to render around current view
 
@@ -257,16 +287,39 @@ export class ScrollablePdfViewer extends EventEmitter {
     this.pagesContainer = document.createElement("div");
     this.pagesContainer.className = "pdfagogo-pages-container";
     this.pagesContainer.style.display = "flex";
-    this.pagesContainer.style.flexDirection = "row";
+    this.pagesContainer.style.flexDirection = "column";
     this.pagesContainer.style.alignItems = "center";
     this.pagesContainer.style.minWidth = "100%";
     this.pagesContainer.style.height = "100%";
     this.scrollContainer.appendChild(this.pagesContainer);
 
+    // Create left/right edge overlays that allow page-level scrolling
+    // when the user scrolls over the extreme left/right areas. This
+    // prevents the user from feeling "trapped" inside the PDF container.
+    this.leftEdgeOverlay = document.createElement('div');
+    this.rightEdgeOverlay = document.createElement('div');
+    this.leftEdgeOverlay.className = 'pdfagogo-edge-overlay left';
+    this.rightEdgeOverlay.className = 'pdfagogo-edge-overlay right';
+    this.leftEdgeOverlay.setAttribute('aria-hidden', 'true');
+    this.rightEdgeOverlay.setAttribute('aria-hidden', 'true');
+    this.app.appendChild(this.leftEdgeOverlay);
+    this.app.appendChild(this.rightEdgeOverlay);
+
+    // Route wheel events on the overlays to the window so the whole page scrolls
+    const wheelToWindow = (e) => {
+      // Allow zoom gestures to be handled elsewhere
+      if (e.ctrlKey || e.metaKey) return;
+      e.preventDefault();
+      // Use deltaY directly for natural scrolling
+      window.scrollBy({ top: e.deltaY, left: 0, behavior: 'auto' });
+    };
+    this.leftEdgeOverlay.addEventListener('wheel', wheelToWindow, { passive: false });
+    this.rightEdgeOverlay.addEventListener('wheel', wheelToWindow, { passive: false });
+
     // Debug and performance monitoring setup
     /** @type {boolean} Whether debug mode is enabled */
     this.debug = typeof this.options.debug === 'boolean' ? this.options.debug : false;
-    
+
     /**
      * Performance metrics collection object.
      * @type {Object}
@@ -297,6 +350,19 @@ export class ScrollablePdfViewer extends EventEmitter {
     /** @type {Set<number>} Set of currently visible page indices */
     this._visiblePages = new Set();
 
+    // Zoom functionality
+    /** @type {number} Current zoom level (1.0 = 100%) */
+    this.zoomLevel = 1.0;
+
+    /** @type {number} Minimum zoom level */
+    this.minZoom = 0.25;
+
+    /** @type {number} Maximum zoom level */
+    this.maxZoom = 5.0;
+
+    /** @type {number} Zoom increment for keyboard shortcuts */
+    this.zoomStep = 0.1;
+
     // Initialize event handlers and begin rendering
     this._setupEventHandlers();
     this._initializePages();
@@ -304,33 +370,34 @@ export class ScrollablePdfViewer extends EventEmitter {
 
   /**
    * Set up all event handlers for user interaction and system events.
-   * 
+   *
    * This method configures handlers for:
    * - Window resize events
    * - Scroll events for page tracking
    * - Mouse and touch interaction
    * - Wheel scrolling with momentum
    * - Memory management events
-   * 
+   *
    * @private
    */
   _setupEventHandlers() {
     this._setupResizeHandler();
     this._setupScrollHandler();
-    this._setupGrabAndScroll();
-    this._setupWheelScrollHandler();
+    this._setupBasicScrolling();
+    this._setupZoomHandlers();
 
     // Memory management event handlers
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
-        // Clean up memory when page becomes hidden
-        this._cleanupOffscreenPages(true);
+        // Use normal cleanup that respects buffer for all document sizes
+        this._cleanupOffscreenPages(false);
       }
     });
 
     // Handle memory pressure events (if supported by browser)
     if ('onmemorypressure' in window) {
       window.addEventListener('memorypressure', () => {
+        // On memory pressure, force cleanup for all document sizes
         this._cleanupOffscreenPages(true);
       });
     }
@@ -338,13 +405,13 @@ export class ScrollablePdfViewer extends EventEmitter {
 
   /**
    * Initialize all PDF pages with placeholder canvases and begin rendering.
-   * 
+   *
    * This method performs a two-phase initialization:
    * 1. Creates placeholder canvases for all pages off-screen
    * 2. Moves them to the visible container and renders visible pages
-   * 
+   *
    * This approach ensures smooth initial loading without layout shifts.
-   * 
+   *
    * @private
    * @async
    * @fires ScrollablePdfViewer#initialRenderComplete
@@ -365,7 +432,7 @@ export class ScrollablePdfViewer extends EventEmitter {
     offscreenContainer.style.zIndex = '-1';
     offscreenContainer.className = 'pdfagogo-pages-container';
     offscreenContainer.style.display = 'flex';
-    offscreenContainer.style.flexDirection = 'row';
+    offscreenContainer.style.flexDirection = 'column';
     offscreenContainer.style.alignItems = 'center';
     offscreenContainer.style.minWidth = '100%';
     offscreenContainer.style.height = '100%';
@@ -373,23 +440,54 @@ export class ScrollablePdfViewer extends EventEmitter {
 
     // First pass: Create placeholder canvases for all pages
     const pageSetupPromises = [];
-    for (let i = 0; i < this.pageCount; i++) {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'pdfagogo-page-wrapper';
 
-      const canvas = document.createElement("canvas");
-      canvas.className = "pdfagogo-page-canvas";
-      canvas.setAttribute("tabindex", "0");
-      canvas.setAttribute("data-page", i + 1);
-      canvas.setAttribute("data-resolution", "placeholder");
+    if (this.debug) {
+      console.log(`[PDF-A-go-go Debug] Creating ${this.pageCount} page placeholders...`);
+    }
 
-      wrapper.appendChild(canvas);
-      this.pageCanvases[i] = canvas;
-      offscreenContainer.appendChild(wrapper);
+    // Use adaptive batching for all documents - scales naturally with document size
+    const batchSize = Math.max(10, Math.min(50, Math.ceil(this.pageCount / 10)));
+    const totalBatches = Math.ceil(this.pageCount / batchSize);
+
+    for (let batch = 0; batch < totalBatches; batch++) {
+      const startIdx = batch * batchSize;
+      const endIdx = Math.min(startIdx + batchSize, this.pageCount);
+
+      if (this.debug) {
+        console.log(`[PDF-A-go-go Debug] Creating batch ${batch + 1}/${totalBatches}: pages ${startIdx + 1}-${endIdx} (batch size: ${batchSize})`);
+      }
+
+      for (let i = startIdx; i < endIdx; i++) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'pdfagogo-page-wrapper';
+        wrapper.id = `pdf-page-${i + 1}`;
+
+        const canvas = document.createElement("canvas");
+        canvas.className = "pdfagogo-page-canvas";
+        canvas.setAttribute("tabindex", "0");
+        canvas.setAttribute("data-page", i + 1);
+        canvas.setAttribute("data-resolution", "placeholder");
+
+        wrapper.appendChild(canvas);
+        this.pageCanvases[i] = canvas;
+        offscreenContainer.appendChild(wrapper);
+      }
+
+      // Yield control back to browser between batches (except last batch)
+      if (batch < totalBatches - 1) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+    }
+
+    if (this.debug) {
+      console.log(`[PDF-A-go-go Debug] Created ${Object.keys(this.pageCanvases).length} page canvases`);
     }
 
     // Wait for all page dimensions to be calculated
     await Promise.all(pageSetupPromises);
+
+    // Get typical page dimensions from the first page for accurate placeholder sizing
+    await this._calculatePlaceholderDimensions();
 
     // Move all prepared pages to the visible container at once
     while (offscreenContainer.firstChild) {
@@ -415,7 +513,40 @@ export class ScrollablePdfViewer extends EventEmitter {
     if (!canvas) return;
 
     const startTime = this.debug ? performance.now() : 0;
-    const scale = this.options.scale || window.devicePixelRatio || 1.8;
+
+    // Calculate optimal scale for high-quality rendering
+    const devicePixelRatio = window.devicePixelRatio || 1;
+    const targetWidth = this._getPageWidth();
+
+    // Much more aggressive scaling for desktop displays
+    let baseScale;
+    if (this.isMobile) {
+      // Mobile: conservative scaling to preserve performance
+      baseScale = Math.max(2.0, devicePixelRatio * 1.5);
+    } else {
+      // Desktop: aggressive scaling for crisp text and graphics
+      baseScale = Math.max(3.0, devicePixelRatio * 2.0);
+    }
+
+    // Scale up significantly for larger page widths
+    // Target 3-4+ pixels per CSS pixel for excellent desktop quality
+    const sizeMultiplier = Math.max(1.5, Math.min(3.5, targetWidth / 300));
+
+    let scale = this.options.scale || (baseScale * sizeMultiplier);
+
+    // Safety check: cap maximum canvas dimensions to prevent memory issues
+    // while still allowing very high quality
+    const maxCanvasWidth = 4096; // Maximum reasonable canvas width
+    if (targetWidth * scale > maxCanvasWidth) {
+      const oldScale = scale;
+      scale = maxCanvasWidth / targetWidth;
+      if (this.debug) {
+        console.log(
+          `%c⚠️ Scale capped from ${oldScale.toFixed(2)}x to ${scale.toFixed(2)}x to prevent excessive canvas size`,
+          'color: #FF9800;'
+        );
+      }
+    }
 
     // Add visual debug indicator for rendering start
     if (this.debug) {
@@ -444,24 +575,42 @@ export class ScrollablePdfViewer extends EventEmitter {
         return;
       }
 
-      const targetHeight = this._getPageHeight();
+      // Use width-based sizing for better legibility
+      const targetWidth = this._getPageWidth();
       const aspect = pg.width / pg.height;
-      const width = targetHeight * aspect;
+      const height = targetWidth / aspect;
 
       // Set canvas dimensions and styles in one go
       const wrapper = canvas.parentElement;
-      wrapper.style.width = width + "px";
-      wrapper.style.height = targetHeight + "px";
-      canvas.style.width = width + "px";
-      canvas.style.height = targetHeight + "px";
-      canvas.width = width * scale;
-      canvas.height = targetHeight * scale;
+      wrapper.style.width = targetWidth + "px";
+      wrapper.style.height = height + "px";
+      canvas.style.width = targetWidth + "px";
+      canvas.style.height = height + "px";
+      canvas.width = targetWidth * scale;
+      canvas.height = height * scale;
 
-      // Render directly to the canvas
+      // Render directly to the canvas with optimal quality settings
       const ctx = canvas.getContext("2d", {
         alpha: false,
-        willReadFrequently: true
+        willReadFrequently: true,
+        desynchronized: false // Ensure consistent rendering
       });
+
+      // Configure context for high-quality rendering
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+
+      // Additional high-quality rendering settings
+      ctx.textRenderingOptimization = 'optimizeQuality';
+      ctx.font = 'inherit'; // Ensure proper font inheritance
+
+      // Enable font smoothing for better text clarity
+      if (ctx.fontKerning !== undefined) {
+        ctx.fontKerning = 'normal';
+      }
+      if (ctx.textRendering !== undefined) {
+        ctx.textRendering = 'optimizeLegibility';
+      }
 
       if (pg.img) {
         ctx.drawImage(pg.img, 0, 0, canvas.width, canvas.height);
@@ -474,10 +623,12 @@ export class ScrollablePdfViewer extends EventEmitter {
         this.metrics.totalHighResUpgrades++;
         this._updateDebugInfo();
         console.log(`%c✨ Rendered page ${ndx + 1} in ${duration.toFixed(1)}ms`, 'color: #4CAF50; font-weight: bold;');
+        console.log(`%c   Source: ${pg.width}×${pg.height} (PDF scale: ${scale.toFixed(2)}x)`, 'color: #9C27B0;');
+        console.log(`%c   Canvas: ${canvas.width}×${canvas.height} (display scale: ${scale.toFixed(2)}x, DPR: ${devicePixelRatio})`, 'color: #2196F3;');
       }
 
       if (callback) callback();
-    }, highlights);
+    }, highlights, scale);
   }
 
   _updateVisiblePages() {
@@ -488,32 +639,39 @@ export class ScrollablePdfViewer extends EventEmitter {
     let maxVisiblePage = null;
     let maxVisibleRatio = 0;
 
-    // Extend the visible area to include pages that are nearly visible
-    const extendedLeft = containerRect.left - containerRect.width * 0.5;
-    const extendedRight = containerRect.right + containerRect.width * 0.5;
+    // Extend the visible area vertically to include pages that are nearly visible
+    const extendedTop = containerRect.top - containerRect.height * 0.5;
+    const extendedBottom = containerRect.bottom + containerRect.height * 0.5;
 
-    const wrappers = container.querySelectorAll('.pdfagogo-page-wrapper');
-    wrappers.forEach(wrapper => {
+    const wrappers = this.pagesContainer.querySelectorAll('.pdfagogo-page-wrapper');
+
+
+    wrappers.forEach((wrapper, index) => {
       const pageNum = parseInt(wrapper.querySelector('canvas')?.getAttribute('data-page'), 10);
-      if (!pageNum) return;
+      if (isNaN(pageNum) || pageNum < 1) return;
 
       const rect = wrapper.getBoundingClientRect();
-      if (rect.right > extendedLeft && rect.left < extendedRight) {
+      const isVisible = rect.bottom > extendedTop && rect.top < extendedBottom;
 
-        const visibleWidth = Math.min(rect.right, containerRect.right) -
-                           Math.max(rect.left, containerRect.left);
-        const percentVisible = visibleWidth / rect.width;
+
+
+      if (isVisible) {
+        const visibleHeight = Math.min(rect.bottom, containerRect.bottom) -
+                              Math.max(rect.top, containerRect.top);
+        const percentVisible = visibleHeight / rect.height;
         visiblePages.add(pageNum);
 
         if (percentVisible > maxVisibleRatio) {
           maxVisibleRatio = percentVisible;
           maxVisiblePage = pageNum;
         }
+
+
       }
     });
 
     // Update current page if we found a most visible page
-    if (maxVisiblePage !== null && maxVisibleRatio > 0.5) {
+    if (maxVisiblePage !== null && maxVisibleRatio > 0.25) {
       const newPage = maxVisiblePage - 1;
       if (this.currentPage !== newPage) {
         this.currentPage = newPage;
@@ -543,7 +701,11 @@ export class ScrollablePdfViewer extends EventEmitter {
     const visiblePages = Array.from(this._visiblePages);
     const start = Math.min(...visiblePages);
     const end = Math.max(...visiblePages);
-    const buffer = this.isMobile ? 1 : 2;
+
+    // Adaptive buffer size - scales naturally with document size and device
+    const baseBuffer = this.isMobile ? 2 : 4;
+    const scalingFactor = Math.ceil(this.pageCount / 100);
+    const buffer = Math.max(baseBuffer, Math.min(baseBuffer * scalingFactor, this.isMobile ? 10 : 20));
 
     const keepRange = new Set();
     for (let i = start - buffer; i <= end + buffer; i++) {
@@ -622,9 +784,6 @@ export class ScrollablePdfViewer extends EventEmitter {
 
     // Update dimensions for all pages
     const resizePromises = [];
-    // for (let i = 0; i < this.pageCount; i++) {
-    //   resizePromises.push(this._setPageDimensions(i));
-    // }
 
     await Promise.all(resizePromises);
 
@@ -634,21 +793,6 @@ export class ScrollablePdfViewer extends EventEmitter {
     // Update visible pages and re-render them
     await this._updateVisiblePages();
     const visiblePages = Array.from(this._visiblePages);
-
-    // Render visible pages in low res
-    // const renderPromises = [];
-    // for (const pageNum of visiblePages) {
-    //   renderPromises.push(
-    //     new Promise(resolve => {
-    //       this.renderQueue.add(
-    //         () => this._renderPage(pageNum - 1, resolve),
-    //         true // Priority render for visible pages
-    //       );
-    //     })
-    //   );
-    // }
-
-    // await Promise.all(renderPromises);
 
     // Queue high-res renders for visible pages
     visiblePages.forEach(pageNum => {
@@ -669,205 +813,258 @@ export class ScrollablePdfViewer extends EventEmitter {
         clearTimeout(scrollTimeout);
       }
 
-      // Update visible pages immediately if enough time has passed
-      // if (now - lastScrollTime > 32) { // ~30fps
-      //   this._updateVisiblePages();
-      //   lastScrollTime = now;
-      // }
+      // Update visible pages immediately for responsive feedback
+      this._updateVisiblePages();
 
-      // // Set a new timeout for final update
-      // scrollTimeout = setTimeout(() => {
-      //   this._updateVisiblePages();
-      //   scrollTimeout = null;
-      // }, 100);
+      // Also set a timeout for cleanup and memory management
+      // Scale cleanup delay naturally with document size to reduce churn
+      const cleanupDelay = Math.min(1000, 150 + Math.ceil(this.pageCount / 10));
+
+      scrollTimeout = setTimeout(() => {
+        this._updateVisiblePages();
+        this._cleanupOffscreenPages();
+        scrollTimeout = null;
+      }, cleanupDelay);
     });
   }
 
-  _getPageWidth() {
-    // Try to get the width of the second page's rendered image (or first if not available)
-    let pageIdx = 1;
-    if (this.pageCount < 2) pageIdx = 0;
-    const canvas = this.pageCanvases[pageIdx];
-    if (canvas && canvas.clientWidth) {
-      return canvas.clientWidth;
-    }
-    // Fallback: estimate based on container height and aspect ratio
-    const containerHeight = this.scrollContainer.clientHeight || 600;
-    return containerHeight * 0.7;
-  }
+  /**
+   * Calculate and set proper dimensions for all placeholder pages.
+   * This ensures the scroll container has accurate total height from the start.
+   */
+  async _calculatePlaceholderDimensions() {
+    return new Promise((resolve) => {
+      // Get first page to calculate typical aspect ratio
+      this.book.getPage(0, (err, firstPage) => {
+        if (err) {
+          console.warn('Could not get first page for dimension calculation:', err);
+          resolve();
+          return;
+        }
 
-  _getPageHeight() {
-    return this.scrollContainer.clientHeight || 600;
+        // Calculate target width more reliably during initialization
+        const containerWidth = this.scrollContainer.clientWidth || this.scrollContainer.offsetWidth || 800;
+        const targetWidth = this.isMobile ? containerWidth * 0.95 : containerWidth * 0.90;
+
+        const aspectRatio = firstPage.width / firstPage.height;
+        const expectedHeight = targetWidth / aspectRatio;
+
+        if (this.debug) {
+          console.log(`[PDF-A-go-go Debug] Container width: ${containerWidth}px, Target width: ${targetWidth}px, Expected height: ${expectedHeight}px (aspect: ${aspectRatio.toFixed(2)})`);
+        }
+
+        // Apply calculated dimensions to all placeholder pages
+        Object.keys(this.pageCanvases).forEach(pageIndex => {
+          const canvas = this.pageCanvases[pageIndex];
+          const wrapper = canvas.parentElement;
+
+          if (canvas.getAttribute('data-resolution') === 'placeholder') {
+            wrapper.style.width = targetWidth + 'px';
+            wrapper.style.height = expectedHeight + 'px';
+            canvas.style.width = targetWidth + 'px';
+            canvas.style.height = expectedHeight + 'px';
+
+            // Set small canvas size for placeholder to save memory
+            canvas.width = 32;
+            canvas.height = 32;
+          }
+        });
+
+        resolve();
+      });
+    });
   }
 
   /**
-   * Enables grab-and-scroll functionality for the PDF viewer.
-   *
-   * Velocity Calculation:
-   * - During dragging, the last few mouse positions and timestamps are recorded.
-   * - On drag end, velocity is calculated as the difference in X position between the first and last recorded points, divided by the time between them.
-   * - This velocity is then used to apply inertia (momentum) scrolling, simulating a natural flick effect.
-   * - The strength of the inertia can be controlled via the `dragMomentum` property.
-   *
-   * To adjust the momentum/inertia, set `this.dragMomentum` (default: 1.5).
+   * Calculate the target width for PDF pages based on container width.
+   * Uses 90% of container width for better legibility, with responsive breakpoints.
+   * @returns {number} Target page width in pixels
    */
-  _setupGrabAndScroll() {
-    const container = this.scrollContainer;
-    let isDown = false;
-    let startX;
-    let scrollLeft;
-    let positions = [];
-    let animationFrame;
-    const momentum = typeof this.options.momentum === 'number' ? this.options.momentum : 0.3;
+  _getPageWidth() {
+    // Try to get the width of an already rendered page first
+    let pageIdx = 1;
+    if (this.pageCount < 2) pageIdx = 0;
+    const canvas = this.pageCanvases[pageIdx];
+    if (canvas && canvas.clientWidth && canvas.clientWidth > 32) {
+      return canvas.clientWidth;
+    }
 
-    container.style.cursor = 'grab';
+    // Calculate based on container width (use same logic as placeholder calculation)
+    const containerWidth = this.scrollContainer.clientWidth || this.scrollContainer.offsetWidth || 800;
 
-    const recordPosition = (x) => {
-      const now = Date.now();
-      positions.push({ x, time: now });
-      // Keep only the last 5 positions
-      if (positions.length > 5) positions.shift();
-    };
-
-    /**
-     * Calculate velocity for inertia scrolling.
-     * Uses the first and last recorded positions to determine average velocity over the drag.
-     * @returns {number} Velocity in pixels per millisecond
-     */
-    const getVelocity = () => {
-      if (positions.length < 2) return 0;
-      const first = positions[0];
-      const last = positions[positions.length - 1];
-      const dx = last.x - first.x;
-      const dt = last.time - first.time;
-      return dt > 0 ? dx / dt : 0;
-    };
-
-    const onStart = (e) => {
-      isDown = true;
-      container.style.cursor = 'grabbing';
-      container.classList.add('grabbing');
-      startX = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
-      scrollLeft = container.scrollLeft;
-      positions = [{ x: startX, time: Date.now() }];
-      // Cancel any ongoing animation
-      if (animationFrame) {
-        cancelAnimationFrame(animationFrame);
-        animationFrame = null;
-      }
-    };
-
-    const onMove = (e) => {
-      if (!isDown) return;
-      e.preventDefault();
-      const x = e.type.startsWith('touch') ? e.touches[0].pageX : e.pageX;
-      recordPosition(x);
-      const walk = x - startX;
-      container.scrollLeft = scrollLeft - walk;
-    };
-
-    const onEnd = () => {
-      if (!isDown) return;
-      isDown = false;
-      container.style.cursor = 'grab';
-      container.classList.remove('grabbing');
-      const velocity = getVelocity();
-      // Apply inertia if velocity is significant
-      if (Math.abs(velocity) > 0.2) {
-        const startVelocity = velocity * momentum * 16; // 16ms per frame
-        const startTime = Date.now();
-        const startScroll = container.scrollLeft;
-        const animate = () => {
-          const elapsed = Date.now() - startTime;
-          const deceleration = 0.002; // pixels per ms^2
-          const remaining = startVelocity * Math.exp(-deceleration * elapsed);
-          if (Math.abs(remaining) > 0.01 && elapsed < 500) {
-            container.scrollLeft = startScroll - (startVelocity / deceleration) * (1 - Math.exp(-deceleration * elapsed));
-            animationFrame = requestAnimationFrame(animate);
-          }
-        };
-        animationFrame = requestAnimationFrame(animate);
-      }
-    };
-
-    // Mouse events
-    container.addEventListener('mousedown', onStart);
-    container.addEventListener('mousemove', onMove);
-    container.addEventListener('mouseup', onEnd);
-    container.addEventListener('mouseleave', onEnd);
-
-    // Touch events
-    // container.addEventListener('touchstart', onStart, { passive: false });
-    // container.addEventListener('touchmove', onMove, { passive: false });
-    // container.addEventListener('touchend', onEnd);
-    // container.addEventListener('touchcancel', onEnd);
+    // Use different percentages based on screen size for optimal legibility
+    if (this.isMobile) {
+      return containerWidth * 0.95; // 95% on mobile for better use of limited space
+    } else {
+      return containerWidth * 0.90; // 90% on desktop as planned
+    }
   }
 
-  _setupWheelScrollHandler() {
-    let lastWheelTime = Date.now();
-    let wheelVelocity = 0;
-    let wheelAnimationFrame;
-    const momentum = typeof this.options.momentum === 'number' ? this.options.momentum : 1.5;
+  /**
+   * Sets up basic scroll container styling.
+   * Native scrolling behavior is now preferred over custom drag mechanics.
+   */
+  _setupBasicScrolling() {
+    const container = this.scrollContainer;
+    container.style.cursor = 'default';
 
-    this.scrollContainer.addEventListener('wheel', (e) => {
-      const now = Date.now();
-      const dt = now - lastWheelTime;
+    // Remove any grab-related classes that might exist
+    container.classList.remove('grabbing');
+  }
 
-      // Cancel any existing animation
-      if (wheelAnimationFrame) {
-        cancelAnimationFrame(wheelAnimationFrame);
-        wheelAnimationFrame = null;
-      }
+  /**
+   * Set up zoom event handlers for pinch gestures and keyboard shortcuts.
+   * @private
+   */
+  _setupZoomHandlers() {
+    // Make the container focusable for proper zoom control
+    if (!this.app.hasAttribute('tabindex')) {
+      this.app.setAttribute('tabindex', '0');
+    }
 
-      // Handle both vertical and horizontal scrolling
-      let deltaX = e.deltaX;
-      let deltaY = e.deltaY;
-
-      // If shift is held, treat vertical scroll as horizontal
-      if (e.shiftKey) {
-        deltaX = deltaY;
-        deltaY = 0;
-      }
-
-      // If it's primarily horizontal scrolling or touchpad gesture
-      // if (Math.abs(deltaX) > Math.abs(deltaY) || e.deltaMode === 0) {
-
-      // Only handle horizontal scrolling here - let vertical scroll pass through
-      if (Math.abs(deltaX) > Math.abs(deltaY)) {
-
-        e.preventDefault();
-
-        // Calculate new velocity
-        const delta = deltaX * momentum;
-        wheelVelocity = dt > 0 ? delta / dt : 0;
-
-        // Apply immediate scroll
-        this.scrollContainer.scrollLeft += delta;
-
-        // Apply momentum if the scroll was fast enough
-        if (Math.abs(wheelVelocity) > 0.1) {
-          const startVelocity = wheelVelocity;
-          const startTime = now;
-          const startScroll = this.scrollContainer.scrollLeft;
-
-          const animate = () => {
-            const elapsed = Date.now() - startTime;
-            const deceleration = 0.002; // pixels per ms^2
-            const remaining = startVelocity * Math.exp(-deceleration * elapsed);
-
-            if (Math.abs(remaining) > 0.01 && elapsed < 300) {
-              this.scrollContainer.scrollLeft = startScroll +
-                (startVelocity / deceleration) * (1 - Math.exp(-deceleration * elapsed));
-              wheelAnimationFrame = requestAnimationFrame(animate);
-            }
-          };
-          wheelAnimationFrame = requestAnimationFrame(animate);
+    // Keyboard zoom handlers (Ctrl + Plus/Minus) - only when PDF container is focused
+    this.app.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey)) {
+        switch (e.key) {
+          case '+':
+          case '=':
+            e.preventDefault();
+            this.zoomIn();
+            break;
+          case '-':
+            e.preventDefault();
+            this.zoomOut();
+            break;
+          case '0':
+            e.preventDefault();
+            this.resetZoom();
+            break;
         }
       }
+    });
 
-      lastWheelTime = now;
+    // Touch handlers for pinch zoom
+    let lastTouchDistance = 0;
+    let isPinching = false;
+
+    this.scrollContainer.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        isPinching = true;
+        lastTouchDistance = this._getTouchDistance(e.touches[0], e.touches[1]);
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    this.scrollContainer.addEventListener('touchmove', (e) => {
+      if (isPinching && e.touches.length === 2) {
+        e.preventDefault();
+        const currentDistance = this._getTouchDistance(e.touches[0], e.touches[1]);
+        const distanceChange = currentDistance - lastTouchDistance;
+
+        // Apply zoom based on distance change
+        const zoomChange = distanceChange * 0.01; // Sensitivity factor
+        this.setZoom(this.zoomLevel + zoomChange);
+
+        lastTouchDistance = currentDistance;
+      }
+    }, { passive: false });
+
+    this.scrollContainer.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) {
+        isPinching = false;
+      }
+    });
+
+    // Mouse wheel zoom with Ctrl held
+    this.scrollContainer.addEventListener('wheel', (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const delta = e.deltaY;
+        const zoomChange = delta > 0 ? -this.zoomStep : this.zoomStep;
+        this.setZoom(this.zoomLevel + zoomChange);
+      }
     }, { passive: false });
   }
+
+  /**
+   * Calculate distance between two touch points.
+   * @param {Touch} touch1 - First touch point
+   * @param {Touch} touch2 - Second touch point
+   * @returns {number} Distance between touch points
+   * @private
+   */
+  _getTouchDistance(touch1, touch2) {
+    const dx = touch1.clientX - touch2.clientX;
+    const dy = touch1.clientY - touch2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  /**
+   * Set the zoom level to a specific value.
+   * @param {number} zoom - Target zoom level (1.0 = 100%)
+   * @param {boolean} [animate=true] - Whether to animate the zoom change
+   */
+  setZoom(zoom, animate = true) {
+    // Clamp zoom level to valid range
+    zoom = Math.max(this.minZoom, Math.min(this.maxZoom, zoom));
+
+    if (zoom === this.zoomLevel) return;
+
+    this.zoomLevel = zoom;
+
+    // Apply transform to pages container
+    const transform = `scale(${zoom})`;
+    this.pagesContainer.style.transform = transform;
+    this.pagesContainer.style.transformOrigin = 'center top';
+
+    if (animate) {
+      this.pagesContainer.style.transition = 'transform 0.2s ease-out';
+      setTimeout(() => {
+        this.pagesContainer.style.transition = '';
+      }, 200);
+    }
+
+    // Emit zoom change event
+    this.emit('zoom', {
+      level: this.zoomLevel,
+      percentage: Math.round(this.zoomLevel * 100)
+    });
+
+    if (this.debug) {
+      console.log(`[PDF-A-go-go Debug] Zoom level: ${(this.zoomLevel * 100).toFixed(0)}%`);
+    }
+  }
+
+  /**
+   * Zoom in by one step.
+   */
+  zoomIn() {
+    this.setZoom(this.zoomLevel + this.zoomStep);
+  }
+
+  /**
+   * Zoom out by one step.
+   */
+  zoomOut() {
+    this.setZoom(this.zoomLevel - this.zoomStep);
+  }
+
+  /**
+   * Reset zoom to 100%.
+   */
+  resetZoom() {
+    this.setZoom(1.0);
+  }
+
+  /**
+   * Get the current zoom level.
+   * @returns {number} Current zoom level (1.0 = 100%)
+   */
+  getZoom() {
+    return this.zoomLevel;
+  }
+
+
 
   rerenderPage(ndx) {
     console.log("rerenderPage",ndx);
@@ -963,32 +1160,40 @@ export class ScrollablePdfViewer extends EventEmitter {
   }
 
   scrollBy(pages) {
-    const pageWidth = this._getPageWidth() + 24;
+    // Get the actual height of a rendered page wrapper, or estimate based on our width calculation
+    const firstPageWrapper = this.pageCanvases[0]?.parentElement;
+    let pageHeight;
+
+    if (firstPageWrapper && firstPageWrapper.style.height) {
+      // Use actual rendered page height if available
+      pageHeight = parseInt(firstPageWrapper.style.height) + 48; // 48px for margins (1.5rem * 2 + extra)
+    } else {
+      // Fallback: estimate based on typical PDF aspect ratio
+      const targetWidth = this._getPageWidth();
+      const estimatedHeight = targetWidth / 0.77; // Typical letter size aspect ratio
+      pageHeight = estimatedHeight + 48;
+    }
+
     this.scrollContainer.scrollBy({
-      left: pageWidth * pages,
+      top: pageHeight * pages,
       behavior: "smooth"
     });
   }
 
   // Change the view to show a specific page
   go_to_page(pageNum) {
-    // Center the given page
     const wrapper = this.pageCanvases[pageNum]?.parentElement;
     if (!wrapper) return;
 
-    const containerWidth = this.scrollContainer.clientWidth;
-    const wrapperRect = wrapper.getBoundingClientRect();
-    const containerRect = this.scrollContainer.getBoundingClientRect();
-
-    // Calculate scroll position to center the page
-    const scrollLeft = wrapper.offsetLeft - (containerWidth - wrapperRect.width) / 2;
-
-    this.scrollContainer.scrollTo({
-      left: Math.max(0, scrollLeft),
-      behavior: "smooth"
+    // Use the browser's native scrolling to bring the page into view instead of calculating coordinates
+    // This pairs naturally with hash-based navigation (e.g. #pdf-page-2)
+    wrapper.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center"
     });
 
-    // Update current page immediately
+    // Update current page state immediately
     this.currentPage = pageNum;
     this.emit("seen", pageNum + 1); // Emit 1-based page number
 

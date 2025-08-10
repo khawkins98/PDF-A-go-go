@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- @@HEAD@@ -->
+  <title>PDF-A-go-go: Remote PDF (Expected CORS failure)</title>
+  <script defer="defer" src="pdf-a-go-go.js"></script>
+</head>
+<body>
+  <header>
+    <h1><a href="./index.html">PDF-A-go-go</a>: Remote PDF (expected CORS failure)</h1>
+    <!-- @@NAV@@ -->
+  </header>
+  <main>
+    <p>
+      This example should trigger a CORS error in the console. The viewer will show its error state if the fetch fails due to missing CORS headers on the remote server.
+    </p>
+    <div class="pdfagogo-container" id="pdfagogo-container"
+        tabindex="0"
+        role="region"
+        aria-label="PDF Viewer"
+        aria-live="polite"
+        aria-atomic="true"
+        data-pdf-url="https://www.princexml.com/samples/icelandic/dictionary.pdf"
+        data-show-search="true"
+        data-show-prev-next="true"
+        data-show-page-selector="true"
+        data-show-current-page="true"
+        data-show-download="true"
+        data-debug="true"
+        style="width:100%;max-width:1400px;height:700px;box-sizing:border-box;margin:1rem auto;border:1px solid #ddd;border-radius:4px;background:#fff;">
+    </div>
+  </main>
+</body>
+</html>
+
+
