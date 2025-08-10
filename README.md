@@ -4,7 +4,34 @@
 [![Open issues](https://img.shields.io/github/issues/khawkins98/PDF-A-go-go.svg)](https://github.com/khawkins98/PDF-A-go-go/issues)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-PDF-A-go-go is a simple, embeddable PDF viewer project. It is designed to be lightweight and easy to integrate into your own applications.
+PDF-A-go-go is a drop‑in PDF viewer you can embed with a single script tag. Add a tiny CSS file for polish, set options with `data-*` attributes, and you’re done—no framework, no build step, no init code. It works almost anywhere you can write HTML.
+
+## Why PDF-A-go-go?
+
+- **One‑line install**: Include one JS file, optionally one small CSS file.
+- **Tiny footprint**: Real‑world transfer sizes in the demo are about 120 KB for the core viewer JS, ~490 KB for JS dependencies, and ~4 KB for CSS.
+- **Works almost anywhere**: Static HTML, CMS templates, site builders, static‑site generators, no `<iframe>` required.
+- **Super flexible embed**: Configure everything via `data-*` attributes—no custom JS required.
+- **Accessible and fast**: Keyboard navigation, ARIA labels, screen‑reader support, and performance‑minded rendering.
+
+## Quick start (one line of JS)
+
+Paste this into any HTML page. Replace the `data-pdf-url` with your PDF.
+
+```html
+<!-- Optional but recommended: small CSS for sensible defaults -->
+<link rel="stylesheet" href="https://khawkins98.github.io/PDF-A-go-go/pdf-a-go-go.css">
+
+<!-- One line to add the viewer -->
+<script defer src="https://khawkins98.github.io/PDF-A-go-go/pdf-a-go-go.js"></script>
+
+<!-- Drop a container anywhere on the page -->
+<div class="pdfagogo-container"
+     data-pdf-url="./example.pdf"
+     style="width:100%;max-width:100%;box-sizing:border-box"></div>
+```
+
+That’s it. No initialization code—`pdf-a-go-go.js` auto‑boots and reads options from your container.
 
 ## Future plans
 
@@ -31,7 +58,7 @@ This project is very fresh (rolled on May 2025, refactored in Aug 2025). I may y
 - 📱 **Mobile responsive** with touch-optimized interactions
 - 🎯 **Deep linking** - set default page via embed options
 - 🔗 **Shareable page links** with URL fragments
-- 🪶 **Lightweight** - minimal dependencies, embeddable
+- 🪶 **Lightweight** - minimal dependencies, embeddable (single script tag + small CSS)
 - ⌨️ **Comprehensive keyboard navigation**
 - 🔍 **Full-text search** with highlighting and match navigation
 - 🔝 **Resizable viewer** with drag handle
@@ -47,7 +74,7 @@ Include the JS and CSS in your HTML, and add a container:
 
 ```html
 <link rel="stylesheet" href="pdf-a-go-go.css">
-<script src="pdf-a-go-go.js"></script>
+<script defer src="https://khawkins98.github.io/PDF-A-go-go/pdf-a-go-go.js"></script>
 <div class="pdfagogo-container" id="pdfagogo-container"
      data-pdf-url="./example.pdf"
      data-show-search="true"
@@ -61,7 +88,7 @@ Include the JS and CSS in your HTML, and add a container:
      style="width:100vw;max-width:100%;box-sizing:border-box;overflow-x:hidden;"></div>
 ```
 
-Set options via data attributes on the container:
+Set options via `data-*` attributes on the container (no init code required):
 
 - `data-pdf-url` (string): PDF URL to load (default: sample PDF)
 - `data-show-page-selector` (true/false): Show page selector input (default: true)
@@ -78,6 +105,16 @@ Set options via data attributes on the container:
 - `data-margin`, `data-margin-top`, `data-margin-left` (number): Margins (optional)
 - `data-disable-webgl` (true/false): Disable WebGL rendering in PDF.js (default: true / WebGL off).
   - **Note:** Disabling WebGL (the default) seems to be more performant in most browsers.
+
+### Embedding flexibility
+
+You can place the `pdfagogo-container` almost anywhere:
+
+- Inside CMS templates (WordPress/Drupal), static site builders, or hand‑written HTML
+- In responsive layouts; the viewer fills the container width
+- In an `<iframe>` for sandboxed embeds
+
+Use inline styles or your own stylesheet to size the container. The viewer will adapt to the space you give it.
 
 ## Zoom Functionality
 
