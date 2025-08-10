@@ -242,6 +242,7 @@ The PDF viewer is configured through data attributes on the container element:
   id="pdfagogo-container"
   data-pdf-url="./document.pdf"
   data-show-search="true"
+  data-show-share="true"
   data-show-page-selector="true"
   data-show-current-page="true"
   data-show-download="true"
@@ -402,6 +403,7 @@ const currentZoom = viewer.getZoom(); // Get current level
 | `data-show-page-selector`                  | boolean | `true`            | Show page input field                                |
 | `data-show-current-page`                   | boolean | `true`            | Show current page indicator                          |
 | `data-show-search`                         | boolean | `true`            | Show search controls                                 |
+| `data-show-share`                          | boolean | `true`            | Show share button                                    |
 | `data-show-download`                       | boolean | `true`            | Show download button                                 |
 | `data-show-resize-grip`                    | boolean | `true`            | Show resize handle                                   |
 | `data-show-accessibility-controls-visibly` | boolean | `true`            | Show visible accessibility instructions under viewer |

@@ -51,6 +51,7 @@ Include the JS and CSS in your HTML, and add a container:
 <div class="pdfagogo-container" id="pdfagogo-container"
      data-pdf-url="./example.pdf"
      data-show-search="true"
+     data-show-share="true"
      data-show-page-selector="true"
      data-show-current-page="true"
      data-show-download="true"
@@ -66,6 +67,7 @@ Set options via data attributes on the container:
 - `data-show-page-selector` (true/false): Show page selector input (default: true)
 - `data-show-current-page` (true/false): Show current page indicator (default: true)
 - `data-show-search` (true/false): Show search controls (default: true)
+- `data-show-share` (true/false): Show a Share button (default: true)
 - `data-show-download` (true/false): Show a Download PDF button (default: true)
 - `data-show-fullscreen` (true/false): Show a Fullscreen toggle (default: true)
 - `data-show-resize-grip` (true/false): Show a bar to allow the user to resize the height (default: true)
