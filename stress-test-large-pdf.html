@@ -9,11 +9,11 @@
 
 
 
-  <title>PDF-A-go-go: a simple, embeddable PDF viewer project</title>
+  <title>PDF-A-go-go: Large PDF Stress Test (827 pages)</title>
 </head>
 <body>
   <header>
-    <h1><a href="./index.html">PDF-A-go-go</a></h1>
+    <h1><a href="./index.html">PDF-A-go-go</a>: Large PDF Stress Test (827 pages)</h1>
     <nav>
   <a href="./">Overview</a>
   <a href="./double-spread.html">12MB PDF</a>
@@ -26,27 +26,19 @@
 
   </header>
   <main>
-    <p>A lightweight embeddable PDF viewer. <a href="https://github.com/khawkins98/PDF-A-go-go" target="_blank" rel="noopener noreferrer">See the docs on GitHub</a>.
-    </p>
-    <script defer="defer" src="pdf-a-go-go.js"></script>
+    <p>This is a large PDF example (827 pages) for stress testing.</p>
     <div class="pdfagogo-container" id="pdfagogo-container"
-         tabindex="0"
-         role="region"
-         aria-label="PDF Viewer"
-         aria-live="polite"
-         aria-atomic="true"
-         data-pdf-url="./example.pdf"
-         data-show-search="true"
-         data-show-prev-next="true"
-         data-show-page-selector="true"
-         data-show-current-page="true"
-         data-show-download="true"
-         data-show-share="false"
-         data-show-accessibility-controls-visibly="true"
-         disabled-data-momentum="2"
-         data-debug="false"
-        >
+          data-pdf-url="./example_large.pdf"
+          data-show-search="true"
+          data-show-page-selector="true"
+          data-show-accessibility-controls-visibly="false"
+          data-show-current-page="true"
+          data-show-download="true"
+          data-show-resize-grip="true"
+          data-debug="true"
+          data-default-page="1">
       </div>
-  </main>
+    </main>
+    <script src="pdf-a-go-go.js"></script>
 </body>
 </html>

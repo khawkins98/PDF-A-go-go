@@ -9,11 +9,12 @@
 
 
 
-  <title>PDF-A-go-go: a simple, embeddable PDF viewer project</title>
+  <title>PDF-A-go-go: Remote PDF (CORS allowed)</title>
+  <script defer="defer" src="pdf-a-go-go.js"></script>
 </head>
 <body>
   <header>
-    <h1><a href="./index.html">PDF-A-go-go</a></h1>
+    <h1><a href="./index.html">PDF-A-go-go</a>: Remote PDF (CORS allowed)</h1>
     <nav>
   <a href="./">Overview</a>
   <a href="./double-spread.html">12MB PDF</a>
@@ -26,27 +27,24 @@
 
   </header>
   <main>
-    <p>A lightweight embeddable PDF viewer. <a href="https://github.com/khawkins98/PDF-A-go-go" target="_blank" rel="noopener noreferrer">See the docs on GitHub</a>.
+    <p>
+      Remote PDF that should load successfully via CORS: <code>https://pdfobject.com/pdf/sample.pdf</code>
     </p>
-    <script defer="defer" src="pdf-a-go-go.js"></script>
     <div class="pdfagogo-container" id="pdfagogo-container"
-         tabindex="0"
-         role="region"
-         aria-label="PDF Viewer"
-         aria-live="polite"
-         aria-atomic="true"
-         data-pdf-url="./example.pdf"
-         data-show-search="true"
-         data-show-prev-next="true"
-         data-show-page-selector="true"
-         data-show-current-page="true"
-         data-show-download="true"
-         data-show-share="false"
-         data-show-accessibility-controls-visibly="true"
-         disabled-data-momentum="2"
-         data-debug="false"
-        >
-      </div>
+        tabindex="0"
+        role="region"
+        aria-label="PDF Viewer"
+        aria-live="polite"
+        aria-atomic="true"
+        data-pdf-url="https://pdfobject.com/pdf/sample.pdf"
+        data-show-search="true"
+        data-show-prev-next="true"
+        data-show-page-selector="true"
+        data-show-current-page="true"
+        data-show-download="true"
+        data-debug="true"
+        style="width:100%;max-width:1400px;height:700px;box-sizing:border-box;margin:1rem auto;border:1px solid #ddd;border-radius:4px;background:#fff;">
+    </div>
   </main>
 </body>
 </html>
