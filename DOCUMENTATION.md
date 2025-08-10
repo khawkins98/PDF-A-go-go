@@ -250,6 +250,7 @@ The PDF viewer is configured through data attributes on the container element:
   data-default-page="1"
   data-disable-webgl="true"
   data-download-timeout="30000"
+  data-show-accessibility-controls-visibly="true"
   data-debug="false"
 ></div>
 ```
@@ -401,6 +402,7 @@ const currentZoom = viewer.getZoom(); // Get current level
 | `data-show-search`        | boolean | `true`            | Show search controls        |
 | `data-show-download`      | boolean | `true`            | Show download button        |
 | `data-show-resize-grip`   | boolean | `true`            | Show resize handle          |
+| `data-show-accessibility-controls-visibly` | boolean | `true` | Show visible accessibility instructions under viewer |
 
 ### Appearance Options
 

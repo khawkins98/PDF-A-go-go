@@ -56,6 +56,7 @@ Include the JS and CSS in your HTML, and add a container:
      data-show-download="true"
      data-show-fullscreen="true"
      data-show-resize-grip="true"
+     data-show-accessibility-controls-visibly="true"
      style="width:100vw;max-width:100%;box-sizing:border-box;overflow-x:hidden;"></div>
 ```
 
@@ -68,6 +69,7 @@ Set options via data attributes on the container:
 - `data-show-download` (true/false): Show a Download PDF button (default: true)
 - `data-show-fullscreen` (true/false): Show a Fullscreen toggle (default: true)
 - `data-show-resize-grip` (true/false): Show a bar to allow the user to resize the height (default: true)
+- `data-show-accessibility-controls-visibly` (true/false): Show a visible accessibility instructions block below the viewer (default: true)
 - `data-default-page` (number): Default page to open if no #page=N in URL (1-based)
 - `data-background-color` (string): Background color (optional)
 - `data-box-border` (number): Box border size (optional)

@@ -334,12 +334,8 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       '<span class="pdfagogo-page-indicator" aria-live="polite"></span>';
   }
   controls.innerHTML = controlsHTML;
-  // Insert controls inside the wrapper (above the container)
-  if (wrapper.firstChild === container) {
-    wrapper.insertBefore(controls, container);
-  } else {
-    wrapper.appendChild(controls);
-  }
+  // Insert controls inside the wrapper (below the container)
+  wrapper.insertBefore(controls, container.nextSibling);
 
   // Page announcement for screen readers
   let pageAnnouncement = wrapper.querySelector(".pdfagogo-page-announcement");
@@ -356,9 +352,9 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     wrapper.insertBefore(pageAnnouncement, controls.nextSibling);
   }
 
-  // Accessibility instructions
+  // Accessibility instructions (visible block can be toggled by featureOptions)
   let a11yInstructions = wrapper.querySelector(".pdfagogo-a11y-instructions");
-  if (!a11yInstructions) {
+  if (!a11yInstructions && featureOptions.showAccessibilityControlsVisibly) {
     a11yInstructions = document.createElement("div");
     a11yInstructions.className = "pdfagogo-a11y-instructions";
     a11yInstructions.setAttribute("aria-live", "polite");
@@ -368,10 +364,14 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       - Use <kbd>Up or Left Arrow</kbd> to go to the previous page.<br>
       - Use <kbd>Down or Right Arrow</kbd> to go to the next page.<br>
       - Use <kbd>+</kbd> or <kbd>-</kbd> to zoom in/out.<br>
-      - Use the buttons below for navigation, sharing, and searching.<br>
+      - Use the buttons above for navigation, sharing, and searching.<br>
       - The current page is announced for screen readers.
     `;
-    wrapper.insertBefore(a11yInstructions, pageAnnouncement.nextSibling);
+    // Place a11y instructions below the container as well, after controls
+    wrapper.insertBefore(a11yInstructions, controls.nextSibling);
+  } else if (a11yInstructions && !featureOptions.showAccessibilityControlsVisibly) {
+    // If present but disabled, remove from DOM
+    if (a11yInstructions.parentNode) a11yInstructions.parentNode.removeChild(a11yInstructions);
   }
 
   // Track the current page number using the 'seen' event

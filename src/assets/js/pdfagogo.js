@@ -151,6 +151,8 @@ function init(book, id, opts, cb) {
     pdfUrl: "./example.pdf",
     showDownload: true,
     showFullscreen: true,
+    // Show the accessibility instructions block visibly beneath the container
+    showAccessibilityControlsVisibly: true,
   };
   // --- END: Option defaults ---
 
@@ -217,6 +219,10 @@ function init(book, id, opts, cb) {
     if (map.showResizeGrip !== undefined) opts.showResizeGrip = parseBool(map.showResizeGrip, undefined);
     if (map.showFullscreen !== undefined) opts.showFullscreen = parseBool(map.showFullscreen, undefined);
     if (map.showDownload !== undefined) opts.showDownload = parseBool(map.showDownload, undefined);
+    // Accessibility visibility toggle
+    if (map.showAccessibilityControlsVisibly !== undefined) {
+      opts.showAccessibilityControlsVisibly = parseBool(map.showAccessibilityControlsVisibly, undefined);
+    }
 
     // Behavioral options
     if (map.momentum !== undefined) opts.momentum = parseFloat(map.momentum) || 1.5;

@@ -1,7 +1,10 @@
+.pdfagogo-viewer-wrapper {
+  display: grid;
+  gap: 1rem;
+}
 .pdfagogo-container {
   width: 100%;
   height: 80vh;
-  margin: 40px auto 10px auto;
   border: 1px solid #ccc;
   padding: 1rem 0;
   background: #353535;
