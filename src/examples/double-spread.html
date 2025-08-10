@@ -2,36 +2,34 @@
 <html lang="en">
 <head>
   <!-- @@HEAD@@ -->
-  <title>PDF-A-go-go: Accessible PDF viewer with search</title>
+  <title>PDF-A-go-go: Large Double Spread (12MB PDF)</title>
 </head>
 <body>
   <header>
     <h1>PDF-A-go-go: Large Double Spread (12MB PDF)</h1>
     <!-- @@NAV@@ -->
+  </header>
+  <main>
     <p>
       This is an example of a large double spread PDF.
     </p>
-  </header>
-  <!--
-    UI controls (search, prev/next, page selector, etc) can be enabled/disabled via data attributes.
-    See README.md for details.
-  -->
-  <script defer="defer" src="pdf-a-go-go.js"></script>
-  <div class="pdfagogo-container" id="pdfagogo-container"
-      tabindex="0"
-      role="region"
-      aria-label="PDF Viewer"
-      aria-live="polite"
-      aria-atomic="true"
-      data-pdf-url="./example_spread.pdf"
-      data-default-page="3"
-      data-show-resize-grip="false"
-      data-show-prev-next="false"
-      data-show-search="true"
-       data-show-accessibility-controls-visibly="true"
-      disabled-data-momentum="2"
-      data-debug="true"
-    >
-  </div>
+    <script defer="defer" src="pdf-a-go-go.js"></script>
+    <div class="pdfagogo-container" id="pdfagogo-container"
+        tabindex="0"
+        role="region"
+        aria-label="PDF Viewer"
+        aria-live="polite"
+        aria-atomic="true"
+        data-pdf-url="./example_spread.pdf"
+        data-default-page="3"
+        data-show-resize-grip="false"
+        data-show-prev-next="false"
+        data-show-search="true"
+        data-show-accessibility-controls-visibly="true"
+        disabled-data-momentum="2"
+        data-debug="true"
+        >
+      </div>
+  </main>
 </body>
 </html>

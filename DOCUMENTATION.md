@@ -282,7 +282,7 @@ viewer.getPerformanceMetrics();
 
 ```javascript
 // After initialization, the viewer instance is attached to the container element
-const container = document.querySelector('.pdfagogo-container');
+const container = document.querySelector(".pdfagogo-container");
 const viewer = container?.pdfViewer; // ScrollablePdfViewer instance
 
 // Example: programmatically zoom
@@ -322,10 +322,12 @@ PDF-A-go-go provides comprehensive zoom capabilities across all input methods:
 ### Zoom Methods
 
 **Touch Devices**:
+
 - **Pinch-to-zoom**: Use two fingers to pinch in/out for intuitive zooming
 - Smooth, responsive scaling with momentum
 
 **Desktop/Keyboard**:
+
 - **Ctrl + Plus** (or **Ctrl + =**): Zoom in by 10%
 - **Ctrl + Minus**: Zoom out by 10%
 - **Ctrl + 0**: Reset zoom to 100%
@@ -336,10 +338,10 @@ PDF-A-go-go provides comprehensive zoom capabilities across all input methods:
 ```javascript
 // Zoom levels and behavior
 const zoomConfig = {
-  minZoom: 0.25,      // 25% minimum zoom
-  maxZoom: 5.0,       // 500% maximum zoom
-  zoomStep: 0.1,      // 10% increments
-  defaultZoom: 1.0    // 100% default
+  minZoom: 0.25, // 25% minimum zoom
+  maxZoom: 5.0, // 500% maximum zoom
+  zoomStep: 0.1, // 10% increments
+  defaultZoom: 1.0, // 100% default
 };
 ```
 
@@ -366,22 +368,22 @@ Zoom uses CSS transforms for optimal performance:
 
 ```javascript
 // Programmatically focus the viewer
-document.querySelector('.pdfagogo-container').focus();
+document.querySelector(".pdfagogo-container").focus();
 
 // Container must have tabindex for focus
-container.setAttribute('tabindex', '0');
+container.setAttribute("tabindex", "0");
 ```
 
 ### Zoom Event Handling
 
 ```javascript
 // Listen for zoom changes
-viewer.on('zoomChange', (newZoomLevel) => {
+viewer.on("zoomChange", (newZoomLevel) => {
   console.log(`Zoom: ${(newZoomLevel * 100).toFixed(0)}%`);
 
   // Update UI or perform actions based on zoom level
   if (newZoomLevel > 2.0) {
-    console.log('High zoom level - consider showing detail controls');
+    console.log("High zoom level - consider showing detail controls");
   }
 });
 
@@ -394,15 +396,15 @@ const currentZoom = viewer.getZoom(); // Get current level
 
 ### Display Options
 
-| Option                    | Type    | Default           | Description                 |
-| ------------------------- | ------- | ----------------- | --------------------------- |
-| `data-pdf-url`            | string  | `"./example.pdf"` | PDF URL to load             |
-| `data-show-page-selector` | boolean | `true`            | Show page input field       |
-| `data-show-current-page`  | boolean | `true`            | Show current page indicator |
-| `data-show-search`        | boolean | `true`            | Show search controls        |
-| `data-show-download`      | boolean | `true`            | Show download button        |
-| `data-show-resize-grip`   | boolean | `true`            | Show resize handle          |
-| `data-show-accessibility-controls-visibly` | boolean | `true` | Show visible accessibility instructions under viewer |
+| Option                                     | Type    | Default           | Description                                          |
+| ------------------------------------------ | ------- | ----------------- | ---------------------------------------------------- |
+| `data-pdf-url`                             | string  | `"./example.pdf"` | PDF URL to load                                      |
+| `data-show-page-selector`                  | boolean | `true`            | Show page input field                                |
+| `data-show-current-page`                   | boolean | `true`            | Show current page indicator                          |
+| `data-show-search`                         | boolean | `true`            | Show search controls                                 |
+| `data-show-download`                       | boolean | `true`            | Show download button                                 |
+| `data-show-resize-grip`                    | boolean | `true`            | Show resize handle                                   |
+| `data-show-accessibility-controls-visibly` | boolean | `true`            | Show visible accessibility instructions under viewer |
 
 ### Appearance Options
 
@@ -436,6 +438,7 @@ const currentZoom = viewer.getZoom(); // Get current level
 PDF-A-go-go uses a unified approach that automatically adapts to document size, eliminating special-case code:
 
 **Adaptive Batching**:
+
 ```javascript
 // Single formula for all document sizes
 const batchSize = Math.max(10, Math.min(50, Math.ceil(pageCount / 10)));
@@ -443,15 +446,20 @@ const batchSize = Math.max(10, Math.min(50, Math.ceil(pageCount / 10)));
 ```
 
 **Natural Buffer Scaling**:
+
 ```javascript
 // Memory buffer scales with document size
 const baseBuffer = isMobile ? 2 : 4;
 const scalingFactor = Math.ceil(pageCount / 100);
-const buffer = Math.max(baseBuffer, Math.min(baseBuffer * scalingFactor, isMobile ? 10 : 20));
+const buffer = Math.max(
+  baseBuffer,
+  Math.min(baseBuffer * scalingFactor, isMobile ? 10 : 20)
+);
 // Results: 5 pages = 4 buffer, 827 pages = 20 buffer
 ```
 
 **Progressive Cleanup Timing**:
+
 ```javascript
 // Cleanup intervals adapt to document complexity
 const cleanupDelay = Math.min(1000, 150 + Math.ceil(pageCount / 10));
@@ -472,8 +480,8 @@ class RenderQueue {
 
   add(task, priority = false) {
     // Validate task is a function
-    if (typeof task !== 'function') {
-      console.error('Invalid task added to render queue');
+    if (typeof task !== "function") {
+      console.error("Invalid task added to render queue");
       return;
     }
 
@@ -487,7 +495,7 @@ class RenderQueue {
 
   process() {
     // Race condition protection
-    if (typeof this.currentTask !== 'function') {
+    if (typeof this.currentTask !== "function") {
       this.currentTask = null;
       this.process();
       return;
@@ -505,17 +513,20 @@ class RenderQueue {
 ### Intelligent Memory Management
 
 **Adaptive Buffer Sizes**:
+
 - Small documents (≤100 pages): 4 page buffer
 - Medium documents (101-500 pages): 4-20 page buffer
 - Large documents (500+ pages): 20 page buffer
 - Mobile devices: 50% of desktop buffer sizes
 
 **Smart Cleanup Strategy**:
+
 - `visibilitychange`: Normal cleanup (preserves buffer)
 - `memorypressure`: Aggressive cleanup (forces cleanup)
 - Scroll-based: Delayed cleanup with adaptive timing
 
 **Placeholder Dimension Calculation**:
+
 ```javascript
 // Ensures accurate scroll bar positioning for all document sizes
 async _calculatePlaceholderDimensions() {
@@ -555,15 +566,15 @@ const metrics = viewer.getPerformanceMetrics();
 
 ### Keyboard Navigation
 
-| Key             | Action                   |
-| --------------- | ------------------------ |
-| `Tab`           | Focus the viewer         |
-| `Left Arrow`    | Previous page            |
-| `Right Arrow`   | Next page                |
-| `Ctrl/Cmd +`    | Zoom in                  |
-| `Ctrl/Cmd -`    | Zoom out                 |
-| `Ctrl/Cmd 0`    | Reset zoom to 100%       |
-| `Enter`         | Activate focused element |
+| Key           | Action                   |
+| ------------- | ------------------------ |
+| `Tab`         | Focus the viewer         |
+| `Left Arrow`  | Previous page            |
+| `Right Arrow` | Next page                |
+| `Ctrl/Cmd +`  | Zoom in                  |
+| `Ctrl/Cmd -`  | Zoom out                 |
+| `Ctrl/Cmd 0`  | Reset zoom to 100%       |
+| `Enter`       | Activate focused element |
 
 ### Screen Reader Support
 
@@ -620,7 +631,7 @@ test("should render PDF pages within performance thresholds (desktop)", async ({
   await page.setViewportSize({ width: 1280, height: 800 });
 
   const metrics = await page.evaluate(() => {
-    const container = document.querySelector('.pdfagogo-container') as any;
+    const container = document.querySelector(".pdfagogo-container") as any;
     return container?.pdfViewer?.getPerformanceMetrics();
   });
 
@@ -639,7 +650,7 @@ test("should render PDF pages within performance thresholds (mobile)", async ({
   await page.setViewportSize({ width: 375, height: 667 });
 
   const metrics = await page.evaluate(() => {
-    const container = document.querySelector('.pdfagogo-container') as any;
+    const container = document.querySelector(".pdfagogo-container") as any;
     return container?.pdfViewer?.getPerformanceMetrics();
   });
 
