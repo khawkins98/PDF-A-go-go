@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDF-A-go-go: Accessible PDF viewer with search</title>
+  <title>PDF-A-go-go - Remote PDF (CORS allowed)</title>
   <link rel="stylesheet" href="pdf-a-go-go.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css" />
   <style>
@@ -11,7 +11,11 @@
       font-family: 'Segoe UI', 'Helvetica Neue', Arial, 'Liberation Sans', sans-serif;
     }
   </style>
-</head>
+  <script defer="defer" src="pdf-a-go-go.js"></script>
+  <!--
+    This page demonstrates loading a remote PDF with permissive CORS headers.
+  -->
+  </head>
 <body>
   <div style="max-width:1200px;margin:1rem auto;text-align:center;background:#e3e3e3;padding:1rem;border-radius:6px;">
     <h1 style="margin:0;"><a href="./" style="text-decoration:none;color:inherit;">PDF-A-go-go</a></h1>
@@ -19,28 +23,27 @@
       <a href="https://github.com/khawkins98/PDF-A-go-go" target="_blank" rel="noopener noreferrer">GitHub</a>.
     </div>
   </div>
-  <p style="text-align: center;">
-    This is an example of a large double spread PDF.
+
+  <p style="text-align:center;margin:0 1rem;">
+    Remote PDF that should load successfully via CORS: <code>https://pdfobject.com/pdf/sample.pdf</code>
   </p>
-  <!--
-    UI controls (search, prev/next, page selector, etc) can be enabled/disabled via data attributes.
-    See README.md for details.
-  -->
-  <script defer="defer" src="pdf-a-go-go.js"></script>
+
   <div class="pdfagogo-container" id="pdfagogo-container"
        tabindex="0"
        role="region"
        aria-label="PDF Viewer"
        aria-live="polite"
        aria-atomic="true"
-       data-pdf-url="./example_spread.pdf"
-       data-default-page="3"
-       data-show-resize-grip="false"
-       data-show-prev-next="false"
+       data-pdf-url="https://pdfobject.com/pdf/sample.pdf"
        data-show-search="true"
-       disabled-data-momentum="2"
+       data-show-prev-next="true"
+       data-show-page-selector="true"
+       data-show-current-page="true"
+       data-show-download="true"
        data-debug="true"
-      >
-    </div>
+       style="width:100%;max-width:1400px;height:700px;box-sizing:border-box;margin:1rem auto;border:1px solid #ddd;border-radius:4px;background:#fff;">
+  </div>
 </body>
 </html>
+
+

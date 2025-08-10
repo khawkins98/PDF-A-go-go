@@ -16,6 +16,8 @@ This project is very fresh (rolled on May 2025, refactored in Aug 2025). I may y
 - [Large double spread demo](https://khawkins98.github.io/PDF-A-go-go/double-spread.html#pdf-page-10) (12MB PDF)
 - [Load iFrame with meta redirect](https://khawkins98.github.io/PDF-A-go-go/html-download-example.html)
 - [Large PDF stress test (827 pages)](https://khawkins98.github.io/PDF-A-go-go/stress-test-large-pdf.html)
+- [Remote PDF (CORS allowed)](https://khawkins98.github.io/PDF-A-go-go/remote-pdf-allowed.html)
+- [Remote PDF (expected CORS failure)](https://khawkins98.github.io/PDF-A-go-go/remote-pdf-cors-fail.html)
 
 ## Features
 

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF-A-go-go - Remote PDF (Expected CORS failure)</title>
+  <link rel="stylesheet" href="pdf-a-go-go.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css" />
+  <style>
+    body {
+      font-family: 'Segoe UI', 'Helvetica Neue', Arial, 'Liberation Sans', sans-serif;
+    }
+  </style>
+  <script defer="defer" src="pdf-a-go-go.js"></script>
+  <!--
+    This page demonstrates an expected CORS failure when attempting to load a remote PDF
+    that does not provide permissive CORS headers for cross-origin fetching.
+  -->
+  </head>
+<body>
+  <div style="max-width:1200px;margin:1rem auto;text-align:center;">
+    <h1><a href="./">PDF-A-go-go</a>: CORS Error Demonstration</h1>
+    <div>View the project on
+      <a href="https://github.com/khawkins98/PDF-A-go-go" target="_blank" rel="noopener noreferrer">GitHub</a>.
+    </div>
+  </div>
+  <p style="max-width:1200px;margin:1rem auto;padding:0 1rem;color:#a33;">
+    This example should trigger a CORS error in the console. The viewer will show its error state if the fetch fails due to missing CORS headers on the remote server.
+  </p>
+  <div class="pdfagogo-container" id="pdfagogo-container"
+       tabindex="0"
+       role="region"
+       aria-label="PDF Viewer"
+       aria-live="polite"
+       aria-atomic="true"
+       data-pdf-url="https://www.princexml.com/samples/icelandic/dictionary.pdf"
+       data-show-search="true"
+       data-show-prev-next="true"
+       data-show-page-selector="true"
+       data-show-current-page="true"
+       data-show-download="true"
+       data-debug="true"
+       style="width:100%;max-width:1400px;height:700px;box-sizing:border-box;margin:1rem auto;border:1px solid #ddd;border-radius:4px;background:#fff;">
+  </div>
+</body>
+</html>
+
+

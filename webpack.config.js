@@ -39,6 +39,8 @@ const base = {
         { from: 'src/examples/html-download-example.html', to: 'html-download-example.html' },
         { from: 'src/examples/html-download-example-iframe.html', to: 'html-download-example-iframe.html' },
         { from: 'src/examples/stress-test-large-pdf.html', to: 'stress-test-large-pdf.html' },
+        { from: 'src/examples/remote-pdf-allowed.html', to: 'remote-pdf-allowed.html' },
+        { from: 'src/examples/remote-pdf-cors-fail.html', to: 'remote-pdf-cors-fail.html' },
         { from: 'src/examples/example.pdf', to: 'example.pdf' },
         { from: 'src/examples/example_large.pdf', to: 'example_large.pdf' },
         { from: 'src/examples/example_spread.pdf', to: 'example_spread.pdf' },

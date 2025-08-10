@@ -171,10 +171,36 @@ export function removeLoadingBar() {
  * showError('Loading timeout. Please check your connection and try again.');
  */
 export function showError(message) {
-  const loadingDiv = document.querySelector(".pdfagogo-loading");
-  if (loadingDiv) {
-    loadingDiv.innerHTML = `<div class="pdfagogo-loading-error">${message}</div>`;
+  // Try to reuse the existing loading overlay; create one if missing
+  let loadingDiv = document.querySelector(".pdfagogo-loading");
+  const container = document.querySelector('.pdfagogo-container');
+  if (!loadingDiv && container) {
+    loadingDiv = document.createElement('div');
+    loadingDiv.className = 'pdfagogo-loading';
+    loadingDiv.style.maxWidth = '600px';
+    loadingDiv.style.margin = '2rem auto';
+    loadingDiv.style.textAlign = 'center';
+    loadingDiv.style.padding = '1.5rem 0';
+    container.appendChild(loadingDiv);
   }
+  if (!loadingDiv) return;
+
+  const pdfUrl = (container && container.getAttribute('data-pdf-url')) || '#';
+
+  // Escape message to avoid HTML injection
+  const safeMessage = String(message)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  loadingDiv.innerHTML = `
+    <div class="pdfagogo-loading-text" style="margin-bottom:0.5rem;">Could not load this PDF</div>
+    <div class="pdfagogo-loading-error">This may be due to CORS restrictions, a network issue, or the file being unavailable.</div>
+    <div class="pdfagogo-error-actions">
+      <a class="primary" href="${pdfUrl}" target="_blank" rel="noopener noreferrer">Attempt to open directly</a>
+    </div>
+    <details class="pdfagogo-error-details"><summary>Technical details</summary><pre>${safeMessage}</pre></details>
+  `;
 }
 
 /**
