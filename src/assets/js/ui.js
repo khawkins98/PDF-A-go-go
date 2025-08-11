@@ -534,19 +534,21 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     if (typeof viewer._updateVisiblePages === 'function') {
       viewer._updateVisiblePages();
     }
-    goToHashPage();
+    const hashPage = getPageFromHash();
+    if (hashPage) {
+      goToHashPage();
+    } else if (featureOptions.defaultPage) {
+      const defPage = parseInt(featureOptions.defaultPage, 10);
+      if (!isNaN(defPage) && defPage >= 1 && defPage <= pdf.numPages) {
+        setPageByNumber(defPage);
+        window.__pdfagogo__pageSetBy = 'defaultPage';
+      }
+    }
   });
 
   // Listen for hash changes
   window.addEventListener("hashchange", goToHashPage);
-  // If no hash, use defaultPage from options
-  if (!getPageFromHash() && featureOptions.defaultPage) {
-    const defPage = parseInt(featureOptions.defaultPage, 10);
-    if (!isNaN(defPage) && defPage >= 1 && defPage <= pdf.numPages) {
-      setPageByNumber(defPage);
-      window.__pdfagogo__pageSetBy = 'defaultPage';
-    }
-  }
+  // Default page is now handled after initial render to ensure pages are ready
   // When navigating to a page, update the hash as well
   const originalSetPageByNumber = setPageByNumber;
   setPageByNumber = function(pageNum) {
@@ -560,9 +562,30 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       alert("Invalid page number");
       return;
     }
-    window.location.hash = `pdf-page-${pageNum}`;
+
+    // Update the URL hash without triggering browser's default anchor scroll
+    const newUrl = `${window.location.pathname}${window.location.search}#pdf-page-${pageNum}`;
+    if (window.history && typeof window.history.replaceState === 'function') {
+      window.history.replaceState(null, '', newUrl);
+    } else {
+      window.location.hash = `pdf-page-${pageNum}`;
+    }
     originalSetPageByNumber(pageNum);
   };
+
+  // Fallback: if no hash and defaultPage is provided, attempt to set it shortly after init
+  // This covers rare cases where the initialRenderComplete event might fire before listeners attach
+  if (!getPageFromHash() && featureOptions.defaultPage) {
+    const defPage = parseInt(featureOptions.defaultPage, 10);
+    if (!isNaN(defPage) && defPage >= 1 && defPage <= pdf.numPages) {
+      setTimeout(() => {
+        if (!window.__pdfagogo__pageSetBy) {
+          setPageByNumber(defPage);
+          window.__pdfagogo__pageSetBy = 'defaultPage-fallback';
+        }
+      }, 400);
+    }
+  }
 
   // --- Resize grip feature: enabled by default, can be disabled with featureOptions.resize === false ---
   if (featureOptions.showResizeGrip !== false) {

@@ -316,6 +316,9 @@ export class ScrollablePdfViewer extends EventEmitter {
     this.leftEdgeOverlay.addEventListener('wheel', wheelToWindow, { passive: false });
     this.rightEdgeOverlay.addEventListener('wheel', wheelToWindow, { passive: false });
 
+    // Ensure the right overlay never overlaps the vertical scrollbar area
+    this._updateOverlayPositions();
+
     // Debug and performance monitoring setup
     /** @type {boolean} Whether debug mode is enabled */
     this.debug = typeof this.options.debug === 'boolean' ? this.options.debug : false;
@@ -500,6 +503,8 @@ export class ScrollablePdfViewer extends EventEmitter {
     const visiblePages = Array.from(this._visiblePages);
 
     // Emit initialRenderComplete event
+    // After layout is established, recalculate overlay positions in case scrollbars appeared
+    this._updateOverlayPositions();
     this.emit('initialRenderComplete');
 
     if (this.debug) {
@@ -774,6 +779,8 @@ export class ScrollablePdfViewer extends EventEmitter {
       // Set new timeout to wait for resize to finish
       resizeTimeout = setTimeout(() => {
         this._handleResize();
+        // Recalculate overlay positions after layout changes
+        this._updateOverlayPositions();
         resizeTimeout = null;
       }, 300);
     });
@@ -975,7 +982,7 @@ export class ScrollablePdfViewer extends EventEmitter {
       }
     });
 
-    // Mouse wheel zoom with Ctrl held
+    // Mouse wheel zoom with Ctrl/Cmd held (primary handler on container)
     this.scrollContainer.addEventListener('wheel', (e) => {
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
@@ -983,6 +990,21 @@ export class ScrollablePdfViewer extends EventEmitter {
         const zoomChange = delta > 0 ? -this.zoomStep : this.zoomStep;
         this.setZoom(this.zoomLevel + zoomChange);
       }
+    }, { passive: false });
+
+    // Fallback: If the viewer is focused, allow Ctrl/Cmd + wheel to zoom even if the pointer
+    // is not currently over the scroll container (helps automated tests and usability).
+    const isViewerFocused = () => {
+      const active = document.activeElement;
+      return active === this.app || (active && this.app.contains(active));
+    };
+    window.addEventListener('wheel', (e) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      if (!isViewerFocused()) return;
+      e.preventDefault();
+      const delta = e.deltaY;
+      const zoomChange = delta > 0 ? -this.zoomStep : this.zoomStep;
+      this.setZoom(this.zoomLevel + zoomChange);
     }, { passive: false });
   }
 
@@ -1185,13 +1207,12 @@ export class ScrollablePdfViewer extends EventEmitter {
     const wrapper = this.pageCanvases[pageNum]?.parentElement;
     if (!wrapper) return;
 
-    // Use the browser's native scrolling to bring the page into view instead of calculating coordinates
-    // This pairs naturally with hash-based navigation (e.g. #pdf-page-2)
-    wrapper.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-      inline: "center"
-    });
+    // Scroll the internal container only, avoiding automatic window scroll on page load
+    const containerRect = this.scrollContainer.getBoundingClientRect();
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const currentScrollTop = this.scrollContainer.scrollTop;
+    const targetTop = currentScrollTop + (wrapperRect.top - containerRect.top);
+    this.scrollContainer.scrollTo({ top: targetTop, behavior: 'smooth' });
 
     // Update current page state immediately
     this.currentPage = pageNum;
@@ -1199,6 +1220,22 @@ export class ScrollablePdfViewer extends EventEmitter {
 
     if (this.debug) {
       console.log(`[PDF-A-go-go Debug] Navigated to page ${pageNum + 1}`);
+    }
+  }
+
+  /**
+   * Update overlay positions so the right overlay does not cover the scrollbar.
+   * Calculates the native scrollbar width and offsets the right overlay by that amount.
+   * Safe on platforms with overlay or zero-width scrollbars (offset = 0).
+   * @private
+   */
+  _updateOverlayPositions() {
+    try {
+      if (!this.rightEdgeOverlay || !this.scrollContainer) return;
+      const scrollbarWidth = Math.max(0, this.scrollContainer.offsetWidth - this.scrollContainer.clientWidth);
+      this.rightEdgeOverlay.style.right = `${scrollbarWidth}px`;
+    } catch (_) {
+      // no-op: best-effort adjustment
     }
   }
 }
