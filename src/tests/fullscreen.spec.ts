@@ -15,13 +15,16 @@ test.describe('PDF-A-go-go Fullscreen Control', () => {
     // Ensure the wrapper and button exist
     const hasElements = await page.evaluate(() => {
       const wrapper = document.querySelector('.pdfagogo-viewer-wrapper');
-      const btn = document.querySelector<HTMLButtonElement>('.pdfagogo-controls .pdfagogo-fullscreen');
-      return { hasWrapper: !!wrapper, hasBtn: !!btn, btnText: btn?.textContent?.trim() };
+      const btn = document.querySelector<HTMLButtonElement>('.pdfagogo-toolbar .pdfagogo-fullscreen');
+      // Check for SVG icon or any content
+      const hasContent = btn ? (btn.querySelector('svg') !== null || btn.textContent?.trim()) : false;
+      return { hasWrapper: !!wrapper, hasBtn: !!btn, hasContent };
     });
 
     expect(hasElements.hasWrapper).toBe(true);
     expect(hasElements.hasBtn).toBe(true);
-    expect(hasElements.btnText).toMatch(/Fullscreen|Exit Fullscreen/i);
+    // Button now uses SVG icon
+    expect(hasElements.hasContent).toBeTruthy();
 
     // Stub requestFullscreen to verify it is called
     await page.evaluate(() => {
@@ -36,7 +39,7 @@ test.describe('PDF-A-go-go Fullscreen Control', () => {
     });
 
     // Click the fullscreen button
-    await page.click('.pdfagogo-controls .pdfagogo-fullscreen');
+    await page.click('.pdfagogo-toolbar .pdfagogo-fullscreen');
 
     // Verify our stub was invoked
     const fsRequested = await page.evaluate(() => (window as any).__fsRequested === true);

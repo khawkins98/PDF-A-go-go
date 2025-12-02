@@ -289,7 +289,7 @@ import { setupSearchControls } from './search.js';
 export function setupControls(container, featureOptions, viewer, book, pdf) {
   // Remove any existing controls to prevent duplicates
   [
-    "pdfagogo-search-controls",
+    "pdfagogo-toolbar",
     "pdfagogo-controls",
     "pdfagogo-page-announcement",
     "pdfagogo-a11y-instructions"
@@ -313,31 +313,52 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
   // Search controls are handled by the dedicated module
   let setPageByNumber = null; // will be defined below then passed into search module
 
-  // Main controls
-  const controls = document.createElement("div");
-  controls.className = "pdfagogo-controls";
-  let controlsHTML = "";
-  if (featureOptions.showShare !== false) {
-    controlsHTML += '<button class="pdfagogo-share" aria-label="Share current page">Share</button>';
+  // Check if toolbar should be shown (default: true)
+  const showToolbar = featureOptions.showToolbar !== false;
+
+  // Create unified top toolbar (inside the container)
+  const toolbar = document.createElement("div");
+  toolbar.className = "pdfagogo-toolbar";
+  if (!showToolbar) {
+    toolbar.style.display = 'none';
   }
+
+  let toolbarHTML = '';
+
+  // Left section: page navigation with prev/next buttons and editable page input
+  // Icons from Lucide (https://lucide.dev) - MIT License
+  toolbarHTML += '<div class="pdfagogo-toolbar-section pdfagogo-toolbar-left">';
+  if (featureOptions.showPageSelector !== false || featureOptions.showCurrentPage !== false) {
+    toolbarHTML += '<div class="pdfagogo-page-nav">';
+    toolbarHTML += '<button class="pdfagogo-prev-page" aria-label="Previous page" title="Previous page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>';
+    toolbarHTML += '<input class="pdfagogo-goto-page" type="text" inputmode="numeric" pattern="\\d*" min="1" aria-label="Current page" title="Go to page" />';
+    toolbarHTML += '<span class="pdfagogo-page-total" aria-live="polite"></span>';
+    toolbarHTML += '<button class="pdfagogo-next-page" aria-label="Next page" title="Next page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>';
+    toolbarHTML += '</div>';
+  }
+  toolbarHTML += '</div>';
+
+  // Center section: search (handled by search module, placeholder for spacing)
+  toolbarHTML += '<div class="pdfagogo-toolbar-section pdfagogo-toolbar-center"></div>';
+
+  // Right section: zoom + actions
+  // Icons from Lucide (https://lucide.dev) - MIT License
+  toolbarHTML += '<div class="pdfagogo-toolbar-section pdfagogo-toolbar-right">';
+  toolbarHTML += '<span class="pdfagogo-zoom-indicator" aria-live="polite"></span>';
   if (featureOptions.showDownload) {
-    controlsHTML += '<button class="pdfagogo-download" aria-label="Download PDF">Download PDF</button>';
+    toolbarHTML += '<button class="pdfagogo-download" aria-label="Download PDF" title="Download PDF"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button>';
   }
   if (featureOptions.showFullscreen !== false) {
-    controlsHTML += '<button class="pdfagogo-fullscreen" aria-label="Enter fullscreen" title="Enter fullscreen">Fullscreen</button>';
+    toolbarHTML += '<button class="pdfagogo-fullscreen" aria-label="Fullscreen" title="Fullscreen"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>';
   }
-  if (featureOptions.showPageSelector) {
-    controlsHTML +=
-      '<input class="pdfagogo-goto-page" type="number" min="0" max="999" style="width:60px;" placeholder="Page #" aria-label="Go to page" />';
-    controlsHTML += '<button class="pdfagogo-goto-btn">Go</button>';
+  if (featureOptions.showShare !== false) {
+    toolbarHTML += '<button class="pdfagogo-share" aria-label="Share link" title="Copy link to this page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>';
   }
-  if (featureOptions.showCurrentPage) {
-    controlsHTML +=
-      '<span class="pdfagogo-page-indicator" aria-live="polite"></span>';
-  }
-  controls.innerHTML = controlsHTML;
-  // Insert controls inside the wrapper (below the container)
-  wrapper.insertBefore(controls, container.nextSibling);
+  toolbarHTML += '</div>';
+
+  toolbar.innerHTML = toolbarHTML;
+  // Insert toolbar at the top of the container
+  container.insertBefore(toolbar, container.firstChild);
 
   // Page announcement for screen readers
   let pageAnnouncement = wrapper.querySelector(".pdfagogo-page-announcement");
@@ -351,26 +372,27 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     pageAnnouncement.style.height = "1px";
     pageAnnouncement.style.overflow = "hidden";
     pageAnnouncement.setAttribute("aria-live", "polite");
-    wrapper.insertBefore(pageAnnouncement, controls.nextSibling);
+    wrapper.appendChild(pageAnnouncement);
   }
 
-  // Accessibility instructions (visible block can be toggled by featureOptions)
+  // Accessibility instructions (collapsible, visible block can be toggled by featureOptions)
   let a11yInstructions = wrapper.querySelector(".pdfagogo-a11y-instructions");
   if (!a11yInstructions && featureOptions.showAccessibilityControlsVisibly) {
-    a11yInstructions = document.createElement("div");
+    a11yInstructions = document.createElement("details");
     a11yInstructions.className = "pdfagogo-a11y-instructions";
-    a11yInstructions.setAttribute("aria-live", "polite");
     a11yInstructions.innerHTML = `
-      <strong>Accessibility:</strong><br>
-      - Use <kbd>Tab</kbd> to focus the reader.<br>
-      - Use <kbd>Up or Left Arrow</kbd> to go to the previous page.<br>
-      - Use <kbd>Down or Right Arrow</kbd> to go to the next page.<br>
-      - Use <kbd>+</kbd> or <kbd>-</kbd> to zoom in/out.<br>
-      - Use the buttons above for navigation, sharing, and searching.<br>
-      - The current page is announced for screen readers.
+      <summary>Keyboard shortcuts</summary>
+      <ul>
+        <li><kbd>Tab</kbd> to focus the viewer</li>
+        <li><kbd>↑</kbd> / <kbd>←</kbd> previous page</li>
+        <li><kbd>↓</kbd> / <kbd>→</kbd> next page</li>
+        <li><kbd>Ctrl</kbd>+<kbd>+</kbd> / <kbd>-</kbd> zoom in/out</li>
+        <li><kbd>Ctrl</kbd>+<kbd>0</kbd> reset zoom</li>
+        <li><kbd>Ctrl</kbd>+<kbd>F</kbd> search</li>
+      </ul>
     `;
-    // Place a11y instructions below the container as well, after controls
-    wrapper.insertBefore(a11yInstructions, controls.nextSibling);
+    // Place a11y instructions below the container
+    wrapper.appendChild(a11yInstructions);
   } else if (a11yInstructions && !featureOptions.showAccessibilityControlsVisibly) {
     // If present but disabled, remove from DOM
     if (a11yInstructions.parentNode) a11yInstructions.parentNode.removeChild(a11yInstructions);
@@ -382,17 +404,25 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
   // --- Event wiring and logic ---
 
   // Share button
-  const shareBtn = controls.querySelector(".pdfagogo-share");
-  if (shareBtn)
+  // Icons from Lucide (https://lucide.dev) - MIT License
+  const shareBtn = toolbar.querySelector(".pdfagogo-share");
+  if (shareBtn) {
+    const originalHTML = shareBtn.innerHTML;
     shareBtn.onclick = () => {
       const page = currentPage + 1;
       const shareUrl = `${window.location.origin}${window.location.pathname}#pdf-page-${page}`;
       navigator.clipboard.writeText(shareUrl);
-      alert("Share link copied to clipboard:\n" + shareUrl);
+      shareBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+      shareBtn.classList.add("copied");
+      setTimeout(() => {
+        shareBtn.innerHTML = originalHTML;
+        shareBtn.classList.remove("copied");
+      }, 1500);
     };
+  }
 
   // Download button
-  const downloadBtn = controls.querySelector(".pdfagogo-download");
+  const downloadBtn = toolbar.querySelector(".pdfagogo-download");
   if (downloadBtn) {
     downloadBtn.onclick = () => {
       const link = document.createElement('a');
@@ -405,13 +435,17 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
   }
 
   // Fullscreen button
-  const fullscreenBtn = controls.querySelector('.pdfagogo-fullscreen');
+  // Icons from Lucide (https://lucide.dev) - MIT License
+  const fullscreenBtn = toolbar.querySelector('.pdfagogo-fullscreen');
   if (fullscreenBtn) {
+    const fsIconEnter = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>';
+    const fsIconExit = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>';
     const updateFsButton = () => {
       const isFs = !!document.fullscreenElement && wrapper === document.fullscreenElement;
-      fullscreenBtn.textContent = isFs ? 'Exit Fullscreen' : 'Fullscreen';
+      fullscreenBtn.innerHTML = isFs ? fsIconExit : fsIconEnter;
       fullscreenBtn.setAttribute('aria-label', isFs ? 'Exit fullscreen' : 'Enter fullscreen');
       fullscreenBtn.title = isFs ? 'Exit fullscreen' : 'Enter fullscreen';
+      fullscreenBtn.classList.toggle('active', isFs);
     };
     fullscreenBtn.onclick = () => {
       if (document.fullscreenElement) {
@@ -424,9 +458,12 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     updateFsButton();
   }
 
-  // Page selector
-  const gotoPageInput = controls.querySelector(".pdfagogo-goto-page");
-  const gotoBtn = controls.querySelector(".pdfagogo-goto-btn");
+  // Page navigation elements
+  const gotoPageInput = toolbar.querySelector(".pdfagogo-goto-page");
+  const pageTotalSpan = toolbar.querySelector(".pdfagogo-page-total");
+  const prevPageBtn = toolbar.querySelector(".pdfagogo-prev-page");
+  const nextPageBtn = toolbar.querySelector(".pdfagogo-next-page");
+
   function baseSetPageByNumber(pageNum) {
     if (!viewer || !book) return;
     if (
@@ -435,7 +472,11 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       pageNum < 1 ||
       pageNum > book.numPages()
     ) {
-      alert("Invalid page number");
+      // Flash the input to indicate invalid value
+      if (gotoPageInput) {
+        gotoPageInput.classList.add("invalid");
+        setTimeout(() => gotoPageInput.classList.remove("invalid"), 500);
+      }
       return;
     }
     if (typeof viewer.go_to_page === "function") {
@@ -443,42 +484,85 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       return;
     }
   }
+
   // Initialize the navigation function variable
   setPageByNumber = baseSetPageByNumber;
-  if (gotoBtn)
-    gotoBtn.onclick = function () {
-      const val = gotoPageInput ? parseInt(gotoPageInput.value, 10) : NaN;
+
+  // Page input change handler
+  if (gotoPageInput) {
+    gotoPageInput.addEventListener('change', function() {
+      const val = parseInt(gotoPageInput.value, 10);
       setPageByNumber(val);
-    };
-  if (gotoPageInput && gotoBtn) {
-    gotoPageInput.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter' || e.keyCode === 13) {
-        gotoBtn.click();
-      }
+    });
+    // Select all text on focus for easy editing
+    gotoPageInput.addEventListener('focus', function() {
+      gotoPageInput.select();
     });
   }
-  if (!featureOptions.showPageSelector) {
-    if (gotoPageInput) gotoPageInput.style.display = "none";
-    if (gotoBtn) gotoBtn.style.display = "none";
+
+  // Prev/Next page buttons
+  if (prevPageBtn) {
+    prevPageBtn.onclick = () => {
+      if (currentPage > 1) {
+        setPageByNumber(currentPage - 1);
+      }
+    };
+  }
+  if (nextPageBtn) {
+    nextPageBtn.onclick = () => {
+      if (currentPage < book.numPages()) {
+        setPageByNumber(currentPage + 1);
+      }
+    };
   }
 
-  // Current page indicator
-  const pageIndicator = controls.querySelector(
-    ".pdfagogo-page-indicator"
-  );
+  // Update page display and button states
   function updatePage(n) {
     currentPage = parseInt(n);
     const totalPages = book.numPages();
-    if (pageIndicator)
-      pageIndicator.textContent = `Page: ${currentPage} / ${totalPages}`;
-    if (pageAnnouncement)
+
+    // Update input with current page
+    if (gotoPageInput) {
+      gotoPageInput.value = currentPage;
+    }
+
+    // Update total pages display
+    if (pageTotalSpan) {
+      pageTotalSpan.textContent = totalPages;
+    }
+
+    // Update prev/next button states
+    if (prevPageBtn) {
+      prevPageBtn.disabled = currentPage <= 1;
+      prevPageBtn.classList.toggle('disabled', currentPage <= 1);
+    }
+    if (nextPageBtn) {
+      nextPageBtn.disabled = currentPage >= totalPages;
+      nextPageBtn.classList.toggle('disabled', currentPage >= totalPages);
+    }
+
+    // Screen reader announcement
+    if (pageAnnouncement) {
       pageAnnouncement.textContent = `Page ${currentPage} of ${totalPages}`;
+    }
   }
   viewer.on("seen", updatePage);
   updatePage(1); // Start at page 1 since that's what's initially visible
-  if (!featureOptions.showCurrentPage) {
-    if (pageIndicator) pageIndicator.style.display = "none";
-  }
+
+  // Zoom indicator - show when zoomed, hide at 100%
+  const zoomIndicator = toolbar.querySelector(".pdfagogo-zoom-indicator");
+  if (zoomIndicator) zoomIndicator.style.display = "none"; // Hidden by default
+  viewer.on("zoom", ({ level, percentage }) => {
+    if (zoomIndicator) {
+      if (Math.abs(level - 1.0) < 0.01) {
+        // At or very close to 100%, hide indicator
+        zoomIndicator.style.display = "none";
+      } else {
+        zoomIndicator.style.display = "";
+        zoomIndicator.textContent = `${percentage}%`;
+      }
+    }
+  });
 
   // Initialize search controls (delegated to search module)
   setupSearchControls(container, featureOptions, viewer, book, pdf, setPageByNumber);

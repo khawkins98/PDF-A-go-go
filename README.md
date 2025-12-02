@@ -263,6 +263,12 @@ Performance thresholds (as enforced by tests):
 
 The development server runs on port 9000 by default (<http://localhost:9000>).
 
+## Credits
+
+- **[PDF.js](https://github.com/mozilla/pdf.js)** - Mozilla's PDF rendering library (Apache 2.0 License)
+- **[Lucide](https://lucide.dev)** - Beautiful open-source icons (MIT License)
+- **[embed-pdf-viewer](https://github.com/embedpdf/embed-pdf-viewer)** - UI design inspiration
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).

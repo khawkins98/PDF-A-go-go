@@ -1,3 +1,8 @@
+/**
+ * PDF-A-go-go Styles
+ * Icons: Lucide (https://lucide.dev) - MIT License
+ */
+
 .pdfagogo-viewer-wrapper {
   display: grid;
   gap: 1rem;
@@ -6,10 +11,11 @@
   width: 100%;
   height: 80vh;
   border: 1px solid #ccc;
-  padding: 1rem 0;
-  background: #353535;
+  padding: 0;
+  background: #e4e4e4;
   text-align: center;
   position: relative;
+  overflow: hidden;
 }
 /* Wrapper to group controls + viewer for fullscreen */
 .pdfagogo-viewer-wrapper:fullscreen {
@@ -30,46 +36,279 @@
   outline: 3px solid #1976d2;
   outline-offset: 2px;
 }
-.pdfagogo-controls {
-  max-width: 1200px;
-  margin: 0 auto 20px auto;
-  text-align: center;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 8px 12px;
+/* Page input invalid state */
+.pdfagogo-goto-page.invalid {
+  animation: pdfagogo-shake 0.3s ease;
+  border-color: #d32f2f;
+  background: #ffebee;
 }
+@keyframes pdfagogo-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+/* Accessibility instructions - collapsible */
 .pdfagogo-a11y-instructions {
   max-width: 1200px;
   margin: 0 auto 20px auto;
-  font-size: 1rem;
-  color: #333;
+  font-size: 0.9rem;
+  color: #555;
   background: #f5f5f5;
-  padding: 10px;
+  padding: 8px 12px;
   border-radius: 6px;
 }
-.pdfagogo-search-controls {
-  max-width: 1200px;
-  margin: 0 auto 10px auto;
+.pdfagogo-a11y-instructions summary {
+  cursor: pointer;
+  font-weight: 500;
+  color: #333;
+}
+.pdfagogo-a11y-instructions ul {
+  margin: 8px 0 0 0;
+  padding-left: 20px;
+}
+.pdfagogo-a11y-instructions li {
+  margin: 4px 0;
+}
+.pdfagogo-a11y-instructions kbd {
+  background: #e0e0e0;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: inherit;
+  font-size: 0.85em;
+}
+/* Top toolbar */
+.pdfagogo-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #fff;
+  border-bottom: 1px solid #ddd;
+  font-size: 14px;
+  position: relative;
+  z-index: 10;
+  min-height: 44px;
+  box-sizing: border-box;
+}
+.pdfagogo-toolbar-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+}
+.pdfagogo-toolbar-left {
+  flex: 0 0 auto;
+}
+.pdfagogo-toolbar-center {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+.pdfagogo-toolbar-right {
+  flex: 0 0 auto;
+}
+/* Toolbar buttons */
+.pdfagogo-toolbar button {
+  background: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  padding: 6px 8px;
+  color: #555;
+  border-radius: 4px;
+  line-height: 1;
+  transition: background 0.15s, border-color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  box-sizing: border-box;
+  margin: 0
+}
+.pdfagogo-toolbar button svg {
+  display: block;
+  flex-shrink: 0;
+}
+.pdfagogo-toolbar button:hover {
+  background: #e8e8e8;
+  border-color: #ccc;
+  color: #333;
+}
+.pdfagogo-toolbar button.active {
+  background: #e0e0e0;
+  border-color: #bbb;
+}
+.pdfagogo-toolbar button.copied {
+  color: #4caf50;
+}
+.pdfagogo-toolbar button.disabled,
+.pdfagogo-toolbar button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.pdfagogo-toolbar button.disabled:hover,
+.pdfagogo-toolbar button:disabled:hover {
+  background: none;
+  border-color: transparent;
+}
+/* Page navigation group */
+.pdfagogo-page-nav {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 2px;
+  height: 32px;
+  box-sizing: border-box;
+}
+.pdfagogo-page-nav button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  color: #555;
+  border-radius: 4px;
+  line-height: 1;
+  transition: background 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  box-sizing: border-box;
+}
+.pdfagogo-page-nav button:hover:not(:disabled) {
+  background: #f0f0f0;
+}
+.pdfagogo-page-nav button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.pdfagogo-page-nav button:disabled:hover {
+  background: none;
+}
+/* Page input in toolbar */
+.pdfagogo-toolbar .pdfagogo-goto-page {
+  width: 36px;
+  padding: 2px 4px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 13px;
   text-align: center;
-}
-/* When search controls are placed inside the main controls, make them inline */
-.pdfagogo-controls .pdfagogo-search-controls {
-  display: contents;
-  max-width: none;
+  height: 26px;
+  box-sizing: border-box;
   margin: 0;
-  text-align: inherit;
+  background: #fff;
 }
-.pdfagogo-search-controls input {
-  padding: 6px 10px;
-  font-size: 16px;
-  width: 220px;
+.pdfagogo-toolbar .pdfagogo-goto-page:focus {
+  outline: 2px solid #1976d2;
+  outline-offset: 1px;
+  border-color: #1976d2;
 }
-.pdfagogo-search-result {
-  margin-left: 10px;
+/* Page total in toolbar */
+.pdfagogo-toolbar .pdfagogo-page-total {
+  font-size: 13px;
+  color: #555;
+  white-space: nowrap;
+  line-height: 26px;
+  padding: 0 4px;
+}
+.pdfagogo-toolbar .pdfagogo-page-total::before {
+  content: "/";
+  margin-right: 4px;
+  color: #999;
+}
+/* Zoom indicator in toolbar */
+.pdfagogo-toolbar .pdfagogo-zoom-indicator {
+  font-size: 12px;
   color: #1976d2;
-  font-size: 15px;
+  background: #e3f2fd;
+  padding: 0 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  height: 28px;
+  line-height: 28px;
+  box-sizing: border-box;
+}
+/* Search group in toolbar */
+.pdfagogo-search-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 2px 6px;
+  height: 28px;
+  box-sizing: border-box;
+}
+.pdfagogo-search-group .pdfagogo-search-input {
+  border: none;
+  outline: none;
+  padding: 4px 8px;
+  font-size: 13px;
+  width: 120px;
+  background: transparent;
+  height: 100%;
+  box-sizing: border-box;
+  margin: 0
+}
+.pdfagogo-search-group .pdfagogo-search-input::placeholder {
+  color: #999;
+}
+.pdfagogo-search-group .pdfagogo-search-result {
+  font-size: 12px;
+  color: #666;
+  padding: 0 4px;
+  white-space: nowrap;
+  line-height: 1;
+}
+.pdfagogo-search-group button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 12px;
+  color: #666;
+  border-radius: 3px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+}
+.pdfagogo-search-group button:hover:not(:disabled) {
+  background: #f0f0f0;
+  color: #333;
+}
+.pdfagogo-search-group button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+/* Responsive toolbar */
+@media (max-width: 480px) {
+  .pdfagogo-toolbar {
+    flex-wrap: wrap;
+    padding: 6px 8px;
+    gap: 6px;
+    min-height: auto;
+  }
+  .pdfagogo-toolbar-section {
+    height: 28px;
+  }
+  .pdfagogo-toolbar-center {
+    order: 3;
+    flex: 1 0 100%;
+    justify-content: stretch;
+  }
+  .pdfagogo-search-group {
+    width: 100%;
+  }
+  .pdfagogo-search-group .pdfagogo-search-input {
+    flex: 1;
+    width: auto;
+  }
 }
 .pdfagogo-loading {
   position: absolute;
@@ -206,7 +445,7 @@
 }
 .pdfagogo-page-wrapper {
   margin: 1.5rem auto;
-  background: #222;
+  background: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.18);
   transition: transform 0.2s, box-shadow 0.2s;
@@ -251,6 +490,7 @@
   z-index: 1;
   pointer-events: none;
 }
+/* Text layer for text selection */
 .pdfagogo-text-layer {
   position: absolute;
   top: 0;
@@ -258,12 +498,9 @@
   right: 0;
   bottom: 0;
   overflow: hidden;
-  opacity: 0.2;
   line-height: 1.0;
   pointer-events: auto;
-  mix-blend-mode: multiply;
   border-radius: 8px;
-  transition: opacity 0.2s ease-in-out;
   user-select: text;
   -webkit-user-select: text;
   -moz-user-select: text;
@@ -283,35 +520,16 @@
   -ms-user-select: text;
   -webkit-touch-callout: text;
   touch-action: auto;
+  line-height: 1.0;
 }
-/* Show text on selection */
+/* Show selection highlight */
 .pdfagogo-text-layer span::selection {
-  background: rgba(0, 0, 255, 0.3) !important;
-  color: transparent !important;
+  background: rgba(0, 100, 255, 0.35);
+  color: transparent;
 }
 .pdfagogo-text-layer span::-moz-selection {
-  background: rgba(0, 0, 255, 0.3) !important;
-  color: transparent !important;
-}
-/* Make text visible on hover for accessibility */
-.pdfagogo-text-layer:hover {
-  opacity: 0.7;
-  background: rgba(255, 255, 255, 0.95);
-  mix-blend-mode: normal;
-  pointer-events: auto;
-}
-/* For debugging */
-/* .pdfagogo-text-layer:hover span {
-  color: rgba(0, 0, 0, 0.8);
-} */
-/* Improve visibility on mobile */
-@media (max-width: 768px) {
-  .pdfagogo-text-layer {
-    opacity: 0.15;
-  }
-  .pdfagogo-text-layer:hover {
-    opacity: 0.8;
-  }
+  background: rgba(0, 100, 255, 0.35);
+  color: transparent;
 }
 .pdfagogo-scroll-container::-webkit-scrollbar {
   height: 8px;

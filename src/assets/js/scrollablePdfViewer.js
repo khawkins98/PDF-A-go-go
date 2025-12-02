@@ -263,6 +263,9 @@ export class ScrollablePdfViewer extends EventEmitter {
     /** @type {Object<number, HTMLCanvasElement>} Cache of rendered page canvases */
     this.pageCanvases = {};
 
+    /** @type {Object<number, HTMLDivElement>} Cache of text layer elements */
+    this.textLayers = {};
+
     /** @type {RenderQueue} Queue for managing rendering tasks */
     this.renderQueue = new RenderQueue();
 
@@ -471,8 +474,15 @@ export class ScrollablePdfViewer extends EventEmitter {
         canvas.setAttribute("data-page", i + 1);
         canvas.setAttribute("data-resolution", "placeholder");
 
+        // Create text layer for text selection
+        const textLayer = document.createElement("div");
+        textLayer.className = "pdfagogo-text-layer";
+        textLayer.setAttribute("data-page", i + 1);
+
         wrapper.appendChild(canvas);
+        wrapper.appendChild(textLayer);
         this.pageCanvases[i] = canvas;
+        this.textLayers[i] = textLayer;
         offscreenContainer.appendChild(wrapper);
       }
 
@@ -632,8 +642,70 @@ export class ScrollablePdfViewer extends EventEmitter {
         console.log(`%c   Canvas: ${canvas.width}×${canvas.height} (display scale: ${scale.toFixed(2)}x, DPR: ${devicePixelRatio})`, 'color: #2196F3;');
       }
 
+      // Render text layer for text selection
+      this._renderTextLayer(ndx, pg, targetWidth, height);
+
       if (callback) callback();
     }, highlights, scale);
+  }
+
+  /**
+   * Render text layer for a page to enable text selection and copy.
+   * @param {number} ndx - Page index (0-based)
+   * @param {Object} pg - Page object with getTextContent and getViewport methods
+   * @param {number} displayWidth - Display width in CSS pixels
+   * @param {number} displayHeight - Display height in CSS pixels
+   */
+  async _renderTextLayer(ndx, pg, displayWidth, displayHeight) {
+    const textLayer = this.textLayers[ndx];
+    if (!textLayer || !pg.getTextContent) return;
+
+    // Clear existing text content
+    textLayer.innerHTML = '';
+
+    try {
+      const textContent = await pg.getTextContent();
+      if (!textContent || !textContent.items || textContent.items.length === 0) return;
+
+      // Get viewport for coordinate transformation
+      const viewport = pg.getViewport({ scale: 1 });
+      const scaleX = displayWidth / viewport.width;
+      const scaleY = displayHeight / viewport.height;
+
+      // Create spans for each text item
+      for (const item of textContent.items) {
+        if (!item.str || item.str.trim() === '') continue;
+
+        const span = document.createElement('span');
+        span.textContent = item.str;
+
+        // Calculate position from transform matrix
+        // PDF.js transform: [scaleX, skewX, skewY, scaleY, translateX, translateY]
+        const tx = item.transform[4];
+        const ty = item.transform[5];
+        const fontSize = Math.sqrt(item.transform[0] * item.transform[0] + item.transform[1] * item.transform[1]);
+
+        // Convert PDF coordinates to display coordinates
+        // PDF origin is bottom-left, we need top-left
+        const left = tx * scaleX;
+        const top = (viewport.height - ty) * scaleY - (fontSize * scaleY);
+
+        span.style.left = `${left}px`;
+        span.style.top = `${top}px`;
+        span.style.fontSize = `${fontSize * scaleY}px`;
+
+        // Handle text direction and width
+        if (item.width) {
+          span.style.width = `${item.width * scaleX}px`;
+        }
+
+        textLayer.appendChild(span);
+      }
+    } catch (err) {
+      if (this.debug) {
+        console.warn(`[PDF-A-go-go] Failed to render text layer for page ${ndx + 1}:`, err);
+      }
+    }
   }
 
   _updateVisiblePages() {
@@ -748,6 +820,12 @@ export class ScrollablePdfViewer extends EventEmitter {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           canvas.width = canvas.height = 32;
           canvas.setAttribute('data-resolution', 'placeholder');
+
+          // Clear corresponding text layer
+          const textLayer = this.textLayers[pageNum];
+          if (textLayer) {
+            textLayer.innerHTML = '';
+          }
 
           if (this.debug) {
             this.metrics.memoryUsage[pageNum] = {
