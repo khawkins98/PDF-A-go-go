@@ -384,7 +384,10 @@ function init(book, id, opts, cb) {
         },
       };
 
-      // Initialize the viewer with the book object
+      // Pass the PDF document directly to the viewer for tile-based rendering
+      featureOptions.pdfDocument = pdf;
+
+      // Initialize the viewer with the book object and PDF document
       init(book, "pdfagogo-container", featureOptions, function (err, v) {
         removeLoadingBar();
         if (err) {
