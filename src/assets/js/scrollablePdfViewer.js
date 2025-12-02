@@ -2,22 +2,28 @@
  * @file Scrollable PDF Viewer: Core rendering and interaction engine for PDF-A-go-go.
  *
  * This module provides the main ScrollablePdfViewer class that handles:
- * - PDF page rendering with render queue management
+ * - PDF page rendering with tile-based render queue management
+ * - Zoom-aware rendering with multiple resolution tiers
  * - Memory management and performance optimization
  * - User interaction (scrolling, navigation, touch/mouse events)
  * - Accessibility features and keyboard navigation
  * - Performance monitoring and debug capabilities
  * - Mobile and desktop optimization
  *
- * The viewer uses a sophisticated render queue system to manage page rendering
- * efficiently, with automatic memory cleanup and performance tracking.
+ * The viewer uses a tile-based rendering system that:
+ * - Divides pages into fixed-size tiles for efficient memory usage
+ * - Renders tiles at resolution appropriate for current zoom level
+ * - Caches tiles with LRU eviction for smooth zooming
+ * - Supports progressive loading with fallback to lower-res tiles
  *
  * @author PDF-A-go-go Contributors
- * @version 1.0.0
+ * @version 2.0.0
  * @see {@link https://github.com/khawkins98/PDF-A-go-go|GitHub Repository}
  */
 
 import EventEmitter from "events";
+import { TileRenderer } from "./tileRenderer.js";
+import { getTierForZoom } from "./tileManager.js";
 
 /**
  * Render queue system for managing PDF page rendering tasks.
@@ -266,8 +272,18 @@ export class ScrollablePdfViewer extends EventEmitter {
     /** @type {Object<number, HTMLDivElement>} Cache of text layer elements */
     this.textLayers = {};
 
-    /** @type {RenderQueue} Queue for managing rendering tasks */
+    /** @type {RenderQueue} Queue for managing rendering tasks (legacy, used as fallback) */
     this.renderQueue = new RenderQueue();
+
+    /** @type {Object|null} Raw PDF.js document for tile rendering */
+    this.pdfDocument = options.pdfDocument || null;
+
+    /** @type {boolean} Whether to use tile-based rendering */
+    // Tile rendering is enabled by default when pdfDocument is provided
+    this.useTileRendering = options.useTileRendering !== false && this.pdfDocument !== null;
+
+    /** @type {TileRenderer|null} Tile-based renderer instance */
+    this.tileRenderer = null;
 
     // Device detection and optimization settings
     /** @type {boolean} Whether the device is detected as mobile */
@@ -368,6 +384,29 @@ export class ScrollablePdfViewer extends EventEmitter {
 
     /** @type {number} Zoom increment for keyboard shortcuts */
     this.zoomStep = 0.1;
+
+    // Initialize tile renderer if enabled (requires pdfDocument to be passed in options)
+    if (this.useTileRendering && this.pdfDocument) {
+      this.tileRenderer = new TileRenderer({
+        book: this.book,
+        pdfDocument: this.pdfDocument,
+        pageCount: this.pageCount,
+        debug: this.debug,
+        isMobile: this.isMobile,
+        tileSize: this.isMobile ? 256 : 512,
+      });
+
+      // Set up tile renderer callbacks
+      this.tileRenderer.onTileProgress = (pageIndex, tileX, tileY, tier) => {
+        if (this.debug) {
+          console.log(`[PDF-A-go-go] Tile ready: page ${pageIndex}, tile (${tileX},${tileY}), tier ${tier}`);
+        }
+      };
+
+      if (this.debug) {
+        console.log('[PDF-A-go-go] Tile-based rendering enabled');
+      }
+    }
 
     // Initialize event handlers and begin rendering
     this._setupEventHandlers();
@@ -523,7 +562,115 @@ export class ScrollablePdfViewer extends EventEmitter {
     }
   }
 
+  /**
+   * Render a page using either tile-based or legacy rendering.
+   *
+   * @param {number} ndx - Page index (0-based)
+   * @param {Function} [callback] - Optional callback when rendering completes
+   */
   _renderPage(ndx, callback = null) {
+    const canvas = this.pageCanvases[ndx];
+    if (!canvas) return;
+
+    // Use tile-based rendering if enabled
+    if (this.useTileRendering && this.tileRenderer) {
+      this._renderPageWithTiles(ndx, callback);
+      return;
+    }
+
+    // Legacy rendering path
+    this._renderPageLegacy(ndx, callback);
+  }
+
+  /**
+   * Render a page using the tile-based rendering system.
+   * This provides zoom-aware rendering with efficient memory usage.
+   *
+   * @param {number} ndx - Page index (0-based)
+   * @param {Function} [callback] - Optional callback when rendering completes
+   * @private
+   */
+  async _renderPageWithTiles(ndx, callback = null) {
+    const canvas = this.pageCanvases[ndx];
+    if (!canvas) {
+      if (callback) callback();
+      return;
+    }
+
+    const startTime = this.debug ? performance.now() : 0;
+
+    try {
+      // Get target dimensions
+      const targetWidth = this._getPageWidth();
+
+      // Initialize page in tile renderer if not already done
+      if (!this.tileRenderer.pageMetadata.has(ndx)) {
+        await new Promise((resolve, reject) => {
+          this.book.getPage(ndx, (err, pg) => {
+            if (err) {
+              reject(err);
+              return;
+            }
+
+            const aspect = pg.width / pg.height;
+            const height = targetWidth / aspect;
+
+            // Set wrapper and canvas CSS dimensions
+            const wrapper = canvas.parentElement;
+            wrapper.style.width = targetWidth + "px";
+            wrapper.style.height = height + "px";
+            canvas.style.width = targetWidth + "px";
+            canvas.style.height = height + "px";
+
+            // Initialize page in tile renderer
+            this.tileRenderer.initializePage(ndx, targetWidth, height).then(() => {
+              // Set the display canvas
+              this.tileRenderer.setDisplayCanvas(ndx, canvas);
+
+              // Render text layer
+              this._renderTextLayer(ndx, pg, targetWidth, height);
+
+              resolve();
+            }).catch(reject);
+          });
+        });
+      }
+
+      // Trigger tile rendering for this page (immediate for initial render)
+      this.tileRenderer.renderVisiblePages(new Set([ndx + 1]), {}, true);
+
+      if (this.debug) {
+        const endTime = performance.now();
+        const duration = endTime - startTime;
+        this.metrics.highResUpgradeTimes[ndx] = duration;
+        this.metrics.totalHighResUpgrades++;
+        this._updateDebugInfo();
+
+        const { tier, scale } = getTierForZoom(this.zoomLevel);
+        console.log(`%c🎨 Tile render initiated for page ${ndx + 1} (tier ${tier}, scale ${scale}x)`,
+          'color: #4CAF50; font-weight: bold;');
+      }
+
+      // Mark canvas as rendered
+      canvas.setAttribute('data-resolution', 'tiles');
+
+      if (callback) callback();
+    } catch (error) {
+      console.error(`[PDF-A-go-go] Failed to render page ${ndx + 1} with tiles:`, error);
+      // Fall back to legacy rendering
+      this._renderPageLegacy(ndx, callback);
+    }
+  }
+
+  /**
+   * Legacy page rendering (non-tile-based).
+   * Used as fallback or when tile rendering is disabled.
+   *
+   * @param {number} ndx - Page index (0-based)
+   * @param {Function} [callback] - Optional callback when rendering completes
+   * @private
+   */
+  _renderPageLegacy(ndx, callback = null) {
     const canvas = this.pageCanvases[ndx];
     if (!canvas) return;
 
@@ -565,7 +712,7 @@ export class ScrollablePdfViewer extends EventEmitter {
 
     // Add visual debug indicator for rendering start
     if (this.debug) {
-      console.log(`%c🎨 Rendering page ${ndx + 1}`, 'color: #4CAF50; font-weight: bold;');
+      console.log(`%c🎨 Rendering page ${ndx + 1} (legacy)`, 'color: #4CAF50; font-weight: bold;');
       const debugOverlay = document.createElement('div');
       debugOverlay.style.position = 'absolute';
       debugOverlay.style.top = '0';
@@ -775,9 +922,24 @@ export class ScrollablePdfViewer extends EventEmitter {
     if (this.debug) console.log('[PDF-A-go-go Debug] Running memory cleanup');
 
     const visiblePages = Array.from(this._visiblePages);
+    if (visiblePages.length === 0) return;
+
     const start = Math.min(...visiblePages);
     const end = Math.max(...visiblePages);
 
+    // Use tile renderer cleanup if enabled
+    if (this.useTileRendering && this.tileRenderer) {
+      const currentPage = Math.floor((start + end) / 2) - 1; // 0-based
+      this.tileRenderer.cleanup(currentPage, this.isMobile ? 2 : 3);
+
+      if (this.debug) {
+        const stats = this.tileRenderer.getStats();
+        console.log(`[PDF-A-go-go Debug] Tile cache: ${stats.cacheSize} tiles, ${stats.pendingCount} pending`);
+      }
+      return;
+    }
+
+    // Legacy cleanup path
     // Adaptive buffer size - scales naturally with document size and device
     const baseBuffer = this.isMobile ? 2 : 4;
     const scalingFactor = Math.ceil(this.pageCount / 100);
@@ -1100,6 +1262,11 @@ export class ScrollablePdfViewer extends EventEmitter {
 
   /**
    * Set the zoom level to a specific value.
+   *
+   * With tile-based rendering, this method:
+   * 1. Applies immediate CSS transform for visual feedback
+   * 2. Triggers re-rendering at appropriate resolution tier after debounce
+   *
    * @param {number} zoom - Target zoom level (1.0 = 100%)
    * @param {boolean} [animate=true] - Whether to animate the zoom change
    */
@@ -1109,9 +1276,10 @@ export class ScrollablePdfViewer extends EventEmitter {
 
     if (zoom === this.zoomLevel) return;
 
+    const oldZoom = this.zoomLevel;
     this.zoomLevel = zoom;
 
-    // Apply transform to pages container
+    // Apply transform to pages container for immediate visual feedback
     const transform = `scale(${zoom})`;
     this.pagesContainer.style.transform = transform;
     this.pagesContainer.style.transformOrigin = 'center top';
@@ -1130,7 +1298,14 @@ export class ScrollablePdfViewer extends EventEmitter {
     });
 
     if (this.debug) {
-      console.log(`[PDF-A-go-go Debug] Zoom level: ${(this.zoomLevel * 100).toFixed(0)}%`);
+      const { tier: oldTier } = getTierForZoom(oldZoom);
+      const { tier: newTier, scale } = getTierForZoom(zoom);
+      console.log(`[PDF-A-go-go Debug] Zoom: ${(oldZoom * 100).toFixed(0)}% -> ${(zoom * 100).toFixed(0)}% (tier ${oldTier} -> ${newTier}, render scale ${scale}x)`);
+    }
+
+    // Update tile renderer with new zoom level (debounced internally)
+    if (this.useTileRendering && this.tileRenderer) {
+      this.tileRenderer.setZoom(zoom, this._visiblePages);
     }
   }
 
@@ -1161,6 +1336,29 @@ export class ScrollablePdfViewer extends EventEmitter {
    */
   getZoom() {
     return this.zoomLevel;
+  }
+
+  /**
+   * Set the PDF.js document for tile-based rendering.
+   * Note: For best results, pass pdfDocument in the options during construction.
+   * This method is kept for backward compatibility.
+   *
+   * @param {Object} pdfDocument - The PDF.js document object
+   * @deprecated Pass pdfDocument in constructor options instead
+   */
+  setPdfDocument(pdfDocument) {
+    if (this.pdfDocument === pdfDocument) return;
+
+    this.pdfDocument = pdfDocument;
+
+    // Update tile renderer if it exists
+    if (this.tileRenderer) {
+      this.tileRenderer.pdfDocument = pdfDocument;
+
+      if (this.debug) {
+        console.log('[PDF-A-go-go] PDF document updated for tile rendering');
+      }
+    }
   }
 
 
