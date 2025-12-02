@@ -78,6 +78,12 @@ export class TileRenderer {
       compositeOperations: 0,
       tierChanges: 0,
     };
+
+    // Tile fade-in animation tracking
+    // Map of tileKey -> { startTime, duration }
+    this._tileAnimations = new Map();
+    this._fadeInDuration = 150; // ms
+    this._animationFrame = null;
   }
 
   /**
@@ -209,7 +215,8 @@ export class TileRenderer {
 
     if (immediate) {
       // Skip debounce for initial/critical renders
-      this._doRenderVisiblePages(visiblePages, viewport);
+      // Pass skipCancel=true to avoid cancelling tiles from other pages during initial load
+      this._doRenderVisiblePages(visiblePages, viewport, true);
       return;
     }
 
@@ -219,16 +226,19 @@ export class TileRenderer {
     }
 
     this._renderDebounceTimer = setTimeout(() => {
-      this._doRenderVisiblePages(visiblePages, viewport);
+      this._doRenderVisiblePages(visiblePages, viewport, false);
       this._renderDebounceTimer = null;
     }, 16); // ~60fps
   }
 
   /**
    * Actually perform the visible page rendering.
+   * @param {Set<number>} visiblePages - Set of visible page indices (1-based)
+   * @param {Object} viewport - Viewport information
+   * @param {boolean} skipCancel - If true, don't cancel unneeded tiles (used during initial load)
    * @private
    */
-  _doRenderVisiblePages(visiblePages, viewport) {
+  _doRenderVisiblePages(visiblePages, viewport, skipCancel = false) {
     const allNeededTiles = [];
 
     for (const pageNum of visiblePages) {
@@ -261,8 +271,11 @@ export class TileRenderer {
       }
     }
 
-    // Cancel tiles that are no longer needed
-    this.tileManager.cancelUnneeded(allNeededTiles);
+    // Cancel tiles that are no longer needed (skip during initial load to avoid
+    // cancelling tiles from other pages that are being initialized concurrently)
+    if (!skipCancel) {
+      this.tileManager.cancelUnneeded(allNeededTiles);
+    }
 
     // Composite available tiles for each visible page
     for (const pageNum of visiblePages) {
@@ -331,12 +344,28 @@ export class TileRenderer {
           const destWidth = tileWidth * canvasScale;
           const destHeight = tileHeight * canvasScale;
 
+          // Check if this tile is animating (fade-in)
+          const tileKey = getTileKey(pageIndex, tileX, tileY, actualTier);
+          const anim = this._tileAnimations.get(tileKey);
+          let alpha = 1;
+
+          if (anim && actualTier === this.currentTier) {
+            const elapsed = performance.now() - anim.startTime;
+            alpha = Math.min(1, elapsed / this._fadeInDuration);
+          }
+
+          // Apply alpha for fade-in effect
+          ctx.globalAlpha = alpha;
+
           // Draw tile, scaling if from different tier
           ctx.drawImage(
             tileCanvas,
             0, 0, tileCanvas.width, tileCanvas.height,
             destX, destY, destWidth, destHeight
           );
+
+          // Reset alpha
+          ctx.globalAlpha = 1;
 
           tilesDrawn++;
 
@@ -381,12 +410,64 @@ export class TileRenderer {
 
     // Re-composite the page to show the new tile
     if (tier === this.currentTier) {
+      // Track tile for fade-in animation
+      const tileKey = getTileKey(pageIndex, tileX, tileY, tier);
+      this._tileAnimations.set(tileKey, {
+        startTime: performance.now(),
+        pageIndex,
+      });
+
+      // Immediately composite to show the new tile
       this._compositePageTiles(pageIndex);
+
+      // Start animation loop for fade-in effect
+      this._startAnimationLoop();
     }
 
     if (this.onTileProgress) {
       this.onTileProgress(pageIndex, tileX, tileY, tier);
     }
+  }
+
+  /**
+   * Start the animation loop for fade-in effects.
+   * @private
+   */
+  _startAnimationLoop() {
+    if (this._animationFrame) return;
+
+    const animate = () => {
+      const now = performance.now();
+      const pagesToComposite = new Set();
+      let hasActiveAnimations = false;
+
+      // Check all animations
+      for (const [tileKey, anim] of this._tileAnimations) {
+        const elapsed = now - anim.startTime;
+        if (elapsed < this._fadeInDuration) {
+          hasActiveAnimations = true;
+          pagesToComposite.add(anim.pageIndex);
+        } else {
+          // Animation complete, remove from tracking
+          this._tileAnimations.delete(tileKey);
+          pagesToComposite.add(anim.pageIndex);
+        }
+      }
+
+      // Composite pages that have animating tiles
+      for (const pageIndex of pagesToComposite) {
+        this._compositePageTiles(pageIndex);
+      }
+
+      // Continue loop if animations are active
+      if (hasActiveAnimations) {
+        this._animationFrame = requestAnimationFrame(animate);
+      } else {
+        this._animationFrame = null;
+      }
+    };
+
+    this._animationFrame = requestAnimationFrame(animate);
   }
 
   /**

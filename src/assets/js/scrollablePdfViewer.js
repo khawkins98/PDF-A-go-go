@@ -278,10 +278,6 @@ export class ScrollablePdfViewer extends EventEmitter {
     /** @type {Object|null} Raw PDF.js document for tile rendering */
     this.pdfDocument = options.pdfDocument || null;
 
-    /** @type {boolean} Whether to use tile-based rendering */
-    // Tile rendering is enabled by default when pdfDocument is provided
-    this.useTileRendering = options.useTileRendering !== false && this.pdfDocument !== null;
-
     /** @type {TileRenderer|null} Tile-based renderer instance */
     this.tileRenderer = null;
 
@@ -385,8 +381,8 @@ export class ScrollablePdfViewer extends EventEmitter {
     /** @type {number} Zoom increment for keyboard shortcuts */
     this.zoomStep = 0.1;
 
-    // Initialize tile renderer if enabled (requires pdfDocument to be passed in options)
-    if (this.useTileRendering && this.pdfDocument) {
+    // Initialize tile renderer (requires pdfDocument to be passed in options)
+    if (this.pdfDocument) {
       this.tileRenderer = new TileRenderer({
         book: this.book,
         pdfDocument: this.pdfDocument,
@@ -572,14 +568,8 @@ export class ScrollablePdfViewer extends EventEmitter {
     const canvas = this.pageCanvases[ndx];
     if (!canvas) return;
 
-    // Use tile-based rendering if enabled
-    if (this.useTileRendering && this.tileRenderer) {
-      this._renderPageWithTiles(ndx, callback);
-      return;
-    }
-
-    // Legacy rendering path
-    this._renderPageLegacy(ndx, callback);
+    // Use tile-based rendering
+    this._renderPageWithTiles(ndx, callback);
   }
 
   /**
@@ -656,144 +646,9 @@ export class ScrollablePdfViewer extends EventEmitter {
 
       if (callback) callback();
     } catch (error) {
-      console.error(`[PDF-A-go-go] Failed to render page ${ndx + 1} with tiles:`, error);
-      // Fall back to legacy rendering
-      this._renderPageLegacy(ndx, callback);
-    }
-  }
-
-  /**
-   * Legacy page rendering (non-tile-based).
-   * Used as fallback or when tile rendering is disabled.
-   *
-   * @param {number} ndx - Page index (0-based)
-   * @param {Function} [callback] - Optional callback when rendering completes
-   * @private
-   */
-  _renderPageLegacy(ndx, callback = null) {
-    const canvas = this.pageCanvases[ndx];
-    if (!canvas) return;
-
-    const startTime = this.debug ? performance.now() : 0;
-
-    // Calculate optimal scale for high-quality rendering
-    const devicePixelRatio = window.devicePixelRatio || 1;
-    const targetWidth = this._getPageWidth();
-
-    // Much more aggressive scaling for desktop displays
-    let baseScale;
-    if (this.isMobile) {
-      // Mobile: conservative scaling to preserve performance
-      baseScale = Math.max(2.0, devicePixelRatio * 1.5);
-    } else {
-      // Desktop: aggressive scaling for crisp text and graphics
-      baseScale = Math.max(3.0, devicePixelRatio * 2.0);
-    }
-
-    // Scale up significantly for larger page widths
-    // Target 3-4+ pixels per CSS pixel for excellent desktop quality
-    const sizeMultiplier = Math.max(1.5, Math.min(3.5, targetWidth / 300));
-
-    let scale = this.options.scale || (baseScale * sizeMultiplier);
-
-    // Safety check: cap maximum canvas dimensions to prevent memory issues
-    // while still allowing very high quality
-    const maxCanvasWidth = 4096; // Maximum reasonable canvas width
-    if (targetWidth * scale > maxCanvasWidth) {
-      const oldScale = scale;
-      scale = maxCanvasWidth / targetWidth;
-      if (this.debug) {
-        console.log(
-          `%c⚠️ Scale capped from ${oldScale.toFixed(2)}x to ${scale.toFixed(2)}x to prevent excessive canvas size`,
-          'color: #FF9800;'
-        );
-      }
-    }
-
-    // Add visual debug indicator for rendering start
-    if (this.debug) {
-      console.log(`%c🎨 Rendering page ${ndx + 1} (legacy)`, 'color: #4CAF50; font-weight: bold;');
-      const debugOverlay = document.createElement('div');
-      debugOverlay.style.position = 'absolute';
-      debugOverlay.style.top = '0';
-      debugOverlay.style.right = '0';
-      debugOverlay.style.background = '#4CAF50';
-      debugOverlay.style.color = 'white';
-      debugOverlay.style.padding = '4px 8px';
-      debugOverlay.style.borderRadius = '0 8px 0 8px';
-      debugOverlay.style.fontSize = '12px';
-      debugOverlay.style.zIndex = '100';
-      debugOverlay.textContent = `Rendering ${ndx + 1}`;
-      canvas.parentElement.appendChild(debugOverlay);
-      setTimeout(() => debugOverlay.remove(), 1000);
-    }
-
-    // Get highlights for this page from global state
-    const highlights = window.__pdfagogo__highlights?.[ndx] || [];
-
-    this.book.getPage(ndx, (err, pg) => {
-      if (err) {
-        if (callback) callback();
-        return;
-      }
-
-      // Use width-based sizing for better legibility
-      const targetWidth = this._getPageWidth();
-      const aspect = pg.width / pg.height;
-      const height = targetWidth / aspect;
-
-      // Set canvas dimensions and styles in one go
-      const wrapper = canvas.parentElement;
-      wrapper.style.width = targetWidth + "px";
-      wrapper.style.height = height + "px";
-      canvas.style.width = targetWidth + "px";
-      canvas.style.height = height + "px";
-      canvas.width = targetWidth * scale;
-      canvas.height = height * scale;
-
-      // Render directly to the canvas with optimal quality settings
-      const ctx = canvas.getContext("2d", {
-        alpha: false,
-        willReadFrequently: true,
-        desynchronized: false // Ensure consistent rendering
-      });
-
-      // Configure context for high-quality rendering
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-
-      // Additional high-quality rendering settings
-      ctx.textRenderingOptimization = 'optimizeQuality';
-      ctx.font = 'inherit'; // Ensure proper font inheritance
-
-      // Enable font smoothing for better text clarity
-      if (ctx.fontKerning !== undefined) {
-        ctx.fontKerning = 'normal';
-      }
-      if (ctx.textRendering !== undefined) {
-        ctx.textRendering = 'optimizeLegibility';
-      }
-
-      if (pg.img) {
-        ctx.drawImage(pg.img, 0, 0, canvas.width, canvas.height);
-      }
-
-      if (this.debug) {
-        const endTime = performance.now();
-        const duration = endTime - startTime;
-        this.metrics.highResUpgradeTimes[ndx] = duration;
-        this.metrics.totalHighResUpgrades++;
-        this._updateDebugInfo();
-        console.log(`%c✨ Rendered page ${ndx + 1} in ${duration.toFixed(1)}ms`, 'color: #4CAF50; font-weight: bold;');
-        console.log(`%c   Source: ${pg.width}×${pg.height} (PDF scale: ${scale.toFixed(2)}x)`, 'color: #9C27B0;');
-        console.log(`%c   Canvas: ${canvas.width}×${canvas.height} (display scale: ${scale.toFixed(2)}x, DPR: ${devicePixelRatio})`, 'color: #2196F3;');
-      }
-
-      // Render text layer for text selection
-      this._renderTextLayer(ndx, pg, targetWidth, height);
-
+      console.error(`[PDF-A-go-go] Failed to render page ${ndx + 1}:`, error);
       if (callback) callback();
-    }, highlights, scale);
+    }
   }
 
   /**
@@ -927,8 +782,8 @@ export class ScrollablePdfViewer extends EventEmitter {
     const start = Math.min(...visiblePages);
     const end = Math.max(...visiblePages);
 
-    // Use tile renderer cleanup if enabled
-    if (this.useTileRendering && this.tileRenderer) {
+    // Use tile renderer cleanup
+    if (this.tileRenderer) {
       const currentPage = Math.floor((start + end) / 2) - 1; // 0-based
       this.tileRenderer.cleanup(currentPage, this.isMobile ? 2 : 3);
 
@@ -1304,7 +1159,7 @@ export class ScrollablePdfViewer extends EventEmitter {
     }
 
     // Update tile renderer with new zoom level (debounced internally)
-    if (this.useTileRendering && this.tileRenderer) {
+    if (this.tileRenderer) {
       this.tileRenderer.setZoom(zoom, this._visiblePages);
     }
   }
