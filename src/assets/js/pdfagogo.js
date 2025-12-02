@@ -215,6 +215,7 @@ function init(book, id, opts, cb) {
     if (map.marginLeft) opts.marginLeft = parseFloat(map.marginLeft);
 
     // UI feature toggles
+    if (map.showToolbar !== undefined) opts.showToolbar = parseBool(map.showToolbar, undefined);
     if (map.showPageSelector !== undefined) opts.showPageSelector = parseBool(map.showPageSelector, undefined);
     if (map.showCurrentPage !== undefined) opts.showCurrentPage = parseBool(map.showCurrentPage, undefined);
     if (map.showSearch !== undefined) opts.showSearch = parseBool(map.showSearch, undefined);
@@ -359,8 +360,7 @@ function init(book, id, opts, cb) {
                     hl.y + hl.height
                   ]);
                   const left = Math.min(rect[0], rect[2]);
-                  let top = Math.min(rect[1], rect[3]);
-                  top -= 8; // Slight vertical adjustment for better visibility
+                  const top = Math.min(rect[1], rect[3]);
                   const width = Math.abs(rect[2] - rect[0]);
                   const height = Math.abs(rect[3] - rect[1]);
                   context.fillRect(left, top, width, height);
