@@ -709,7 +709,6 @@ export class ScrollablePdfViewer extends EventEmitter {
   }
 
   _updateVisiblePages() {
-    console.log("Updating visible pages");
     const container = this.scrollContainer;
     const containerRect = container.getBoundingClientRect();
     const visiblePages = new Set();
@@ -1167,7 +1166,6 @@ export class ScrollablePdfViewer extends EventEmitter {
 
 
   rerenderPage(ndx) {
-    console.log("rerenderPage",ndx);
     const canvas = this.pageCanvases[ndx];
     if (!canvas) return;
 

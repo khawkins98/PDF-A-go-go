@@ -27,7 +27,7 @@
   border-left: none;
   border-right: none;
 }
-.pdfagogo-viewer-wrapper:fullscreen .pdfagogo-controls,
+.pdfagogo-viewer-wrapper:fullscreen .pdfagogo-toolbar,
 .pdfagogo-viewer-wrapper:fullscreen .pdfagogo-a11y-instructions {
   max-width: none;
   margin: 0 auto 8px auto;

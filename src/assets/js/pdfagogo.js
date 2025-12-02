@@ -241,8 +241,7 @@ function init(book, id, opts, cb) {
 
   // Clean up any existing UI controls to prevent duplicates
   [
-    "pdfagogo-search-controls",
-    "pdfagogo-controls",
+    "pdfagogo-toolbar",
     "pdfagogo-page-announcement",
     "pdfagogo-a11y-instructions",
   ].forEach((cls) => {

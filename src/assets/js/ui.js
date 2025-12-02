@@ -263,26 +263,6 @@ export function showError(message) {
  *   pdf
  * );
  *
- * @example
- * // The function creates this UI structure:
- * // <div class="pdfagogo-search-controls">
- * //   <input class="pdfagogo-search-box" type="text" placeholder="Search text..." />
- * //   <button class="pdfagogo-search-btn">Search</button>
- * //   <span class="pdfagogo-search-result"></span>
- * //   <button class="pdfagogo-prev-match-btn">Prev Match</button>
- * //   <button class="pdfagogo-next-match-btn">Next Match</button>
- * // </div>
- * // <div class="pdfagogo-controls">
- * //   <button class="pdfagogo-prev">Previous</button>
- * //   <button class="pdfagogo-next">Next</button>
- * //   <button class="pdfagogo-share">Share</button>
- * //   <button class="pdfagogo-download">Download PDF</button>
- * //   <input class="pdfagogo-goto-page" type="number" />
- * //   <button class="pdfagogo-goto-btn">Go</button>
- * //   <span class="pdfagogo-page-indicator"></span>
- * // </div>
- * // <div class="pdfagogo-page-announcement" aria-live="polite"></div>
- * // <div class="pdfagogo-a11y-instructions"></div>
  */
 import { setupSearchControls } from './search.js';
 
@@ -290,7 +270,6 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
   // Remove any existing controls to prevent duplicates
   [
     "pdfagogo-toolbar",
-    "pdfagogo-controls",
     "pdfagogo-page-announcement",
     "pdfagogo-a11y-instructions"
   ].forEach((cls) => {
