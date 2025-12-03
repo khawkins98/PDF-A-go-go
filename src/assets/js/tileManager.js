@@ -538,6 +538,32 @@ export class TileManager {
       viewport: viewport,
     }).promise;
 
+    // Draw search highlights if present for this page
+    const highlights = window.__pdfagogo__highlights && window.__pdfagogo__highlights[pageIndex];
+    if (Array.isArray(highlights) && highlights.length > 0) {
+      fullCtx.save();
+      fullCtx.globalCompositeOperation = 'multiply';
+      fullCtx.globalAlpha = 1.0;
+      fullCtx.fillStyle = 'rgba(255, 255, 0, 1)';
+
+      for (const hl of highlights) {
+        // Convert highlight coordinates from PDF space to viewport space
+        const rect = viewport.convertToViewportRectangle([
+          hl.x,
+          hl.y,
+          hl.x + hl.width,
+          hl.y + hl.height
+        ]);
+        const left = Math.min(rect[0], rect[2]);
+        const top = Math.min(rect[1], rect[3]);
+        const width = Math.abs(rect[2] - rect[0]);
+        const height = Math.abs(rect[3] - rect[1]);
+        fullCtx.fillRect(left, top, width, height);
+      }
+
+      fullCtx.restore();
+    }
+
     if (this.debug) {
       console.log(`[TileManager] Rendered full page ${pageIndex} at tier ${tier} (${fullCanvas.width}x${fullCanvas.height})`);
     }
@@ -662,6 +688,19 @@ export class TileManager {
 
     if (this.debug) {
       console.log(`[TileManager] Cache size after cleanup: ${this.cache.size}, Full page cache: ${this.fullPageCache.size}`);
+    }
+  }
+
+  /**
+   * Clear the full-page cache for a specific page (all tiers).
+   * Used when re-rendering a page (e.g., for search highlights).
+   * @param {number} pageIndex - Page index to clear
+   */
+  clearFullPageCache(pageIndex) {
+    for (const key of this.fullPageCache.keys()) {
+      if (key.startsWith(`${pageIndex}:`)) {
+        this.fullPageCache.delete(key);
+      }
     }
   }
 

@@ -533,6 +533,9 @@ export class TileRenderer {
       }
     }
 
+    // Also clear the full-page cache for this page (needed for search highlights)
+    this.tileManager.clearFullPageCache(pageIndex);
+
     // Re-request tiles
     this.renderVisiblePages(new Set([pageIndex + 1]));
   }

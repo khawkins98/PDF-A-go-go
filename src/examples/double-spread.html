@@ -2,17 +2,20 @@
 <html lang="en">
 <head>
   <!-- @@HEAD@@ -->
-  <title>PDF-A-go-go: Large Double Spread (12MB PDF)</title>
+  <title>Large PDF (12MB) - PDF-A-go-go</title>
 </head>
 <body>
   <header>
-    <h1><a href="./index.html">PDF-A-go-go</a>: Large Double Spread (12MB PDF)</h1>
     <!-- @@NAV@@ -->
   </header>
   <main>
-    <p>
-      This is an example of a large double spread PDF.
-    </p>
+    <h1>Large PDF (12MB)</h1>
+    <p>A 12MB PDF with wide double-page spreads. Tests high-resolution rendering and memory management with large file sizes.</p>
+    <div class="feature-list">
+      <span class="badge">12MB File</span>
+      <span class="badge">Double Spread</span>
+      <span class="badge">High Resolution</span>
+    </div>
     <script defer="defer" src="pdf-a-go-go.js"></script>
     <div class="pdfagogo-container" id="pdfagogo-container"
         tabindex="0"
@@ -25,11 +28,10 @@
         data-show-resize-grip="false"
         data-show-prev-next="false"
         data-show-search="true"
-        data-show-accessibility-controls-visibly="true"
-        disabled-data-momentum="2"
-        data-debug="true"
-        >
-      </div>
+        data-show-fullscreen="true"
+        data-show-download="true"
+        data-debug="true">
+    </div>
   </main>
 </body>
 </html>

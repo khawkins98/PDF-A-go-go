@@ -2,36 +2,73 @@
 <html lang="en">
 <head>
   <!-- @@HEAD@@ -->
-  <title>PDF-A-go-go: a simple, embeddable PDF viewer project</title>
+  <title>PDF-A-go-go: Lightweight Embeddable PDF Viewer</title>
 </head>
 <body>
   <header>
-    <h1><a href="./index.html">PDF-A-go-go</a></h1>
     <!-- @@NAV@@ -->
   </header>
   <main>
-    <p>A lightweight embeddable PDF viewer. <a href="https://github.com/khawkins98/PDF-A-go-go" target="_blank" rel="noopener noreferrer">See the docs on GitHub</a>.
-    </p>
-    <script defer="defer" src="pdf-a-go-go.js"></script>
+    <h1>PDF-A-go-go</h1>
+    <p>A lightweight, accessible PDF viewer built on PDF.js. No initialization code needed—just include one JS file and configure via <code>data-*</code> attributes.</p>
+    <div class="feature-list">
+      <span class="badge">Zero Config</span>
+      <span class="badge">Accessible</span>
+      <span class="badge">Mobile Ready</span>
+      <span class="badge">Search</span>
+      <span class="badge">Fullscreen</span>
+    </div>
+
+    <!-- Demo PDF viewer -->
     <div class="pdfagogo-container" id="pdfagogo-container"
-         tabindex="0"
-         role="region"
-         aria-label="PDF Viewer"
-         aria-live="polite"
-         aria-atomic="true"
-         data-pdf-url="./example.pdf"
-         data-show-search="true"
-         data-show-prev-next="true"
-         data-show-page-selector="true"
-         data-show-current-page="true"
-         data-default-page="3"
-         data-show-download="true"
-         data-show-share="true"
-         data-show-accessibility-controls-visibly="false"
-         disabled-data-momentum="2"
-         data-debug="false"
-        >
+      data-pdf-url="./example.pdf"
+      data-default-page="3"
+      data-show-toolbar="true"
+      data-show-search="true"
+      data-show-page-selector="true"
+      data-show-current-page="true"
+      data-show-download="true"
+      data-show-fullscreen="true"
+      data-show-share="true"
+      data-show-resize-grip="false"
+      data-show-accessibility-controls-visibly="false"
+      data-debug="false">
+    </div>
+
+    <!-- Code example -->
+    <div class="code-example">
+      <div class="code-header">
+        <span>HTML</span>
+        <button type="button" class="code-copy" onclick="copyCode()">Copy</button>
       </div>
+      <pre id="code-block"><code>&lt;div class="pdfagogo-container"
+  data-pdf-url="./example.pdf"
+  data-default-page="3"
+  data-show-toolbar="true"
+  data-show-search="true"
+  data-show-page-selector="true"
+  data-show-current-page="true"
+  data-show-download="true"
+  data-show-fullscreen="true"
+  data-show-share="true"&gt;
+&lt;/div&gt;
+
+&lt;script src="pdf-a-go-go.js"&gt;&lt;/script&gt;</code></pre>
+    </div>
+
+    <script>
+      function copyCode() {
+        var code = document.getElementById('code-block').textContent;
+        navigator.clipboard.writeText(code).then(function() {
+          var btn = document.querySelector('.code-copy');
+          btn.textContent = 'Copied!';
+          setTimeout(function() {
+            btn.textContent = 'Copy';
+          }, 2000);
+        });
+      }
+    </script>
+    <script src="./pdf-a-go-go.js"></script>
   </main>
 </body>
 </html>

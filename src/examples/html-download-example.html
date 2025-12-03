@@ -2,24 +2,21 @@
 <html lang="en">
 <head>
   <!-- @@HEAD@@ -->
-  <title>PDF-A-go-go: HTML Download Handler Example</title>
+  <title>HTML Proxy - PDF-A-go-go</title>
 </head>
 <body>
   <header>
-    <h1><a href="./index.html">PDF-A-go-go</a>: HTML Download Handler Example</h1>
     <!-- @@NAV@@ -->
   </header>
   <main>
-    <p>This example demonstrates how PDF-A-go-go handles cases where a PDF download URL initially returns an HTML page that triggers the actual PDF download. This is common with institutional repositories and document management systems.</p>
-    <p>The viewer below is configured to load a URL that returns an HTML page first. The viewer will:</p>
-    <ol>
-      <li>Show the HTML page in an iframe</li>
-      <li>Wait for the PDF download to start</li>
-      <li>Load the PDF once downloaded</li>
-    </ol>
-
-    <hr>
-
+    <h1>HTML Proxy</h1>
+    <p>Handles URLs that return an HTML page before delivering the PDF. Common with institutional repositories that show a download page first.</p>
+    <div class="feature-list">
+      <span class="badge">HTML Detection</span>
+      <span class="badge">Auto Redirect</span>
+      <span class="badge">Institutional Support</span>
+    </div>
+    <script defer="defer" src="pdf-a-go-go.js"></script>
     <div id="pdfagogo-container"
          class="pdfagogo-container"
          tabindex="0"
@@ -37,7 +34,5 @@
          data-download-timeout="60000">
     </div>
   </main>
-
-  <script defer="defer" src="pdf-a-go-go.js"></script>
 </body>
 </html>

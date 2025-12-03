@@ -1284,6 +1284,7 @@ export class ScrollablePdfViewer extends EventEmitter {
     const visiblePages = Array.from(this._visiblePages).join(', ');
 
     this.debugElement.innerHTML = `
+      <div class="debug-header">PDF-A-go-go debug</div>
       <div class="timing">Initial Render: ${timeSinceStart}ms</div>
       <div class="timing">Avg High-Res: ${avgHighResTime}ms</div>
       <div>Pages Rendered: ${this.metrics.totalPagesRendered}</div>

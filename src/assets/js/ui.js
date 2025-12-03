@@ -622,16 +622,20 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       pageNum < 1 ||
       pageNum > pdf.numPages
     ) {
-      alert("Invalid page number");
       return;
     }
 
     // Update the URL hash without triggering browser's default anchor scroll
-    const newUrl = `${window.location.pathname}${window.location.search}#pdf-page-${pageNum}`;
-    if (window.history && typeof window.history.replaceState === 'function') {
-      window.history.replaceState(null, '', newUrl);
-    } else {
-      window.location.hash = `pdf-page-${pageNum}`;
+    // Wrapped in try-catch for iframe contexts where history manipulation may fail
+    try {
+      const newUrl = `${window.location.pathname}${window.location.search}#pdf-page-${pageNum}`;
+      if (window.history && typeof window.history.replaceState === 'function') {
+        window.history.replaceState(null, '', newUrl);
+      } else {
+        window.location.hash = `pdf-page-${pageNum}`;
+      }
+    } catch (e) {
+      // Ignore history errors in restricted contexts (e.g., iframes)
     }
     originalSetPageByNumber(pageNum);
   };
