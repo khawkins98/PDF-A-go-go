@@ -213,6 +213,8 @@ export class TileManager {
    * @param {Object} options - Configuration options
    * @param {number} [options.tileSize=512] - Size of each tile in pixels (at 1x scale)
    * @param {number} [options.cacheSize=100] - Maximum tiles to cache
+   * @param {number} [options.maxFullPageCacheSize] - Maximum full-page canvases to cache (default: 10 desktop, 5 mobile)
+   * @param {boolean} [options.isMobile=false] - Whether running on a mobile device
    * @param {boolean} [options.debug=false] - Enable debug logging
    */
   constructor(options = {}) {
@@ -220,19 +222,65 @@ export class TileManager {
     this.cacheSize = options.cacheSize || 100;
     this.debug = options.debug || false;
 
+    // Detect mobile for memory limits
+    const isMobile = options.isMobile !== undefined
+      ? options.isMobile
+      : (typeof window !== 'undefined' && window.innerWidth <= 768);
+
+    // Full-page cache size limit (configurable, with sensible defaults)
+    this.maxFullPageCacheSize = options.maxFullPageCacheSize || (isMobile ? 5 : 10);
+
     this.cache = new TileCache(this.cacheSize);
     this.pending = new Set(); // Tile keys currently being rendered
     this.pageInfo = new Map(); // Map<pageIndex, { width, height, pdfPage }>
 
     // Full-page render cache to avoid re-rendering the same page for each tile
-    // Key: "pageIndex:tier", Value: { canvas, inProgress: Promise|null }
+    // Key: "pageIndex:tier", Value: { canvas, inProgress: Promise|null, lastAccess: number }
     this.fullPageCache = new Map();
+
+    // LRU tracking for full-page cache
+    this.fullPageCacheOrder = []; // Array of cache keys in access order (oldest first)
 
     this.renderQueue = [];
     this.isProcessingQueue = false;
 
+    // Instance-scoped highlights (replaces window.__pdfagogo__highlights)
+    this._highlights = {};
+
     // Callbacks
     this.onTileReady = null; // Called when a tile finishes rendering
+  }
+
+  /**
+   * Set search highlights for rendering.
+   * @param {Object} highlights - Map of pageIndex to array of highlight boxes
+   */
+  setHighlights(highlights) {
+    this._highlights = highlights || {};
+  }
+
+  /**
+   * Clear all highlights.
+   */
+  clearHighlights() {
+    this._highlights = {};
+  }
+
+  /**
+   * Get highlights for a specific page.
+   * @param {number} pageIndex - Page index (0-based)
+   * @returns {Array} Array of highlight boxes or empty array
+   */
+  getHighlights(pageIndex) {
+    // Check instance-scoped highlights first
+    if (this._highlights[pageIndex] && this._highlights[pageIndex].length > 0) {
+      return this._highlights[pageIndex];
+    }
+    // Fallback to window global for backward compatibility with search.js
+    if (typeof window !== 'undefined' && window.__pdfagogo__highlights) {
+      return window.__pdfagogo__highlights[pageIndex] || [];
+    }
+    return [];
   }
 
   /**
@@ -460,6 +508,7 @@ export class TileManager {
   /**
    * Get or render the full page canvas for a given page and tier.
    * Caches the result to avoid re-rendering for each tile.
+   * Enforces LRU eviction when cache exceeds maxFullPageCacheSize.
    * @private
    */
   async _getFullPageCanvas(pageIndex, tier) {
@@ -472,25 +521,87 @@ export class TileManager {
       if (cached.inProgress) {
         return cached.inProgress;
       }
+      // Update LRU order (move to end = most recently used)
+      this._updateFullPageCacheLRU(cacheKey);
       // Return cached canvas
       return cached.canvas;
     }
+
+    // Enforce cache limit before adding new entry
+    this._enforceFullPageCacheLimit();
 
     // Start rendering and cache the promise to prevent duplicate renders
     const renderPromise = this._renderFullPage(pageIndex, tier);
 
     // Store the in-progress promise
-    this.fullPageCache.set(cacheKey, { canvas: null, inProgress: renderPromise });
+    this.fullPageCache.set(cacheKey, { canvas: null, inProgress: renderPromise, lastAccess: Date.now() });
+    this.fullPageCacheOrder.push(cacheKey);
 
     try {
       const canvas = await renderPromise;
       // Update cache with completed canvas
-      this.fullPageCache.set(cacheKey, { canvas, inProgress: null });
+      this.fullPageCache.set(cacheKey, { canvas, inProgress: null, lastAccess: Date.now() });
       return canvas;
     } catch (error) {
       // Remove from cache on error
       this.fullPageCache.delete(cacheKey);
+      this.fullPageCacheOrder = this.fullPageCacheOrder.filter(k => k !== cacheKey);
       throw error;
+    }
+  }
+
+  /**
+   * Update LRU order for a cache key (move to end = most recently used).
+   * @param {string} cacheKey - The cache key to update
+   * @private
+   */
+  _updateFullPageCacheLRU(cacheKey) {
+    const idx = this.fullPageCacheOrder.indexOf(cacheKey);
+    if (idx !== -1) {
+      this.fullPageCacheOrder.splice(idx, 1);
+      this.fullPageCacheOrder.push(cacheKey);
+    }
+    // Update lastAccess timestamp
+    const entry = this.fullPageCache.get(cacheKey);
+    if (entry) {
+      entry.lastAccess = Date.now();
+    }
+  }
+
+  /**
+   * Enforce the full-page cache size limit using LRU eviction.
+   * Removes oldest entries until cache is within limit.
+   * @private
+   */
+  _enforceFullPageCacheLimit() {
+    let skipped = 0;
+    const maxSkips = this.fullPageCacheOrder.length;
+
+    while (this.fullPageCache.size >= this.maxFullPageCacheSize && this.fullPageCacheOrder.length > 0) {
+      // Guard: if we've skipped all entries (all in-progress), break to avoid infinite loop
+      if (skipped >= maxSkips) {
+        if (this.debug) {
+          console.log(`[TileManager] All ${maxSkips} cache entries are in-progress, cannot evict`);
+        }
+        break;
+      }
+
+      // Remove oldest entry (first in order array)
+      const oldestKey = this.fullPageCacheOrder.shift();
+      if (oldestKey) {
+        const entry = this.fullPageCache.get(oldestKey);
+        // Don't evict entries with in-progress renders
+        if (entry && entry.inProgress) {
+          // Put it back at the end and try the next one
+          this.fullPageCacheOrder.push(oldestKey);
+          skipped++;
+          continue;
+        }
+        this.fullPageCache.delete(oldestKey);
+        if (this.debug) {
+          console.log(`[TileManager] Evicted full-page cache: ${oldestKey} (size now: ${this.fullPageCache.size})`);
+        }
+      }
     }
   }
 
@@ -539,7 +650,7 @@ export class TileManager {
     }).promise;
 
     // Draw search highlights if present for this page
-    const highlights = window.__pdfagogo__highlights && window.__pdfagogo__highlights[pageIndex];
+    const highlights = this.getHighlights(pageIndex);
     if (Array.isArray(highlights) && highlights.length > 0) {
       fullCtx.save();
       fullCtx.globalCompositeOperation = 'multiply';
@@ -675,6 +786,7 @@ export class TileManager {
 
     // Also clean up full-page cache for distant pages
     const buffer = 3;
+    const keysToRemove = [];
     for (const [key, _] of this.fullPageCache) {
       const [pageStr, tierStr] = key.split(':');
       const pageIndex = parseInt(pageStr, 10);
@@ -682,7 +794,16 @@ export class TileManager {
 
       // Evict if page is far from current or different tier
       if (Math.abs(pageIndex - currentPage) > buffer || tier !== currentTier) {
-        this.fullPageCache.delete(key);
+        keysToRemove.push(key);
+      }
+    }
+
+    // Remove keys and sync fullPageCacheOrder
+    for (const key of keysToRemove) {
+      this.fullPageCache.delete(key);
+      const orderIdx = this.fullPageCacheOrder.indexOf(key);
+      if (orderIdx !== -1) {
+        this.fullPageCacheOrder.splice(orderIdx, 1);
       }
     }
 
@@ -711,6 +832,8 @@ export class TileManager {
   getStats() {
     return {
       cacheSize: this.cache.size,
+      fullPageCacheSize: this.fullPageCache.size,
+      maxFullPageCacheSize: this.maxFullPageCacheSize,
       pendingCount: this.pending.size,
       queueLength: this.renderQueue.length,
       registeredPages: this.pageInfo.size,

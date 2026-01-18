@@ -272,6 +272,12 @@ export class ScrollablePdfViewer extends EventEmitter {
     /** @type {Object<number, HTMLDivElement>} Cache of text layer elements */
     this.textLayers = {};
 
+    /** @type {Array<number>} LRU tracking for text layers (page indices, oldest first) */
+    this.textLayerOrder = [];
+
+    /** @type {number} Maximum number of text layers to keep (configurable) */
+    this.maxTextLayers = options.textLayerCacheSize || (this.isMobile ? 5 : 10);
+
     /** @type {RenderQueue} Queue for managing rendering tasks (legacy, used as fallback) */
     this.renderQueue = new RenderQueue();
 
@@ -390,6 +396,7 @@ export class ScrollablePdfViewer extends EventEmitter {
         debug: this.debug,
         isMobile: this.isMobile,
         tileSize: this.isMobile ? 256 : 512,
+        maxFullPageCacheSize: options.fullpageCacheSize,
       });
 
       // Set up tile renderer callbacks
@@ -653,6 +660,7 @@ export class ScrollablePdfViewer extends EventEmitter {
 
   /**
    * Render text layer for a page to enable text selection and copy.
+   * Implements LRU eviction when the text layer cache exceeds maxTextLayers.
    * @param {number} ndx - Page index (0-based)
    * @param {Object} pg - Page object with getTextContent and getViewport methods
    * @param {number} displayWidth - Display width in CSS pixels
@@ -661,6 +669,12 @@ export class ScrollablePdfViewer extends EventEmitter {
   async _renderTextLayer(ndx, pg, displayWidth, displayHeight) {
     const textLayer = this.textLayers[ndx];
     if (!textLayer || !pg.getTextContent) return;
+
+    // Evict old text layers before rendering a new one
+    this._enforceTextLayerLimit(ndx);
+
+    // Update LRU order
+    this._updateTextLayerLRU(ndx);
 
     // Clear existing text content
     textLayer.innerHTML = '';
@@ -706,6 +720,60 @@ export class ScrollablePdfViewer extends EventEmitter {
     } catch (err) {
       if (this.debug) {
         console.warn(`[PDF-A-go-go] Failed to render text layer for page ${ndx + 1}:`, err);
+      }
+    }
+  }
+
+  /**
+   * Update LRU order for a text layer (move to end = most recently used).
+   * @param {number} ndx - Page index (0-based)
+   * @private
+   */
+  _updateTextLayerLRU(ndx) {
+    const idx = this.textLayerOrder.indexOf(ndx);
+    if (idx !== -1) {
+      this.textLayerOrder.splice(idx, 1);
+    }
+    this.textLayerOrder.push(ndx);
+  }
+
+  /**
+   * Enforce the text layer cache size limit using LRU eviction.
+   * Clears content of oldest text layers until cache is within limit.
+   * @param {number} [currentPage] - Current page being rendered (exempt from eviction)
+   * @private
+   */
+  _enforceTextLayerLimit(currentPage) {
+    // Count populated text layers (those with content)
+    const populatedLayers = this.textLayerOrder.filter(ndx => {
+      const layer = this.textLayers[ndx];
+      return layer && layer.innerHTML.length > 0;
+    });
+
+    // Guard: need at least 2 items to avoid infinite loop when only currentPage remains
+    while (populatedLayers.length >= this.maxTextLayers && this.textLayerOrder.length > 1) {
+      // Get oldest layer
+      const oldestIdx = this.textLayerOrder.shift();
+
+      // Don't evict the current page being rendered
+      if (oldestIdx === currentPage) {
+        this.textLayerOrder.push(oldestIdx);
+        continue;
+      }
+
+      // Clear the text layer content (but keep the DOM element)
+      const oldLayer = this.textLayers[oldestIdx];
+      if (oldLayer && oldLayer.innerHTML.length > 0) {
+        oldLayer.innerHTML = '';
+        // Remove from populated count
+        const popIdx = populatedLayers.indexOf(oldestIdx);
+        if (popIdx !== -1) {
+          populatedLayers.splice(popIdx, 1);
+        }
+
+        if (this.debug) {
+          console.log(`[PDF-A-go-go] Evicted text layer for page ${oldestIdx + 1} (active: ${populatedLayers.length})`);
+        }
       }
     }
   }
@@ -1221,6 +1289,12 @@ export class ScrollablePdfViewer extends EventEmitter {
   rerenderPage(ndx) {
     const canvas = this.pageCanvases[ndx];
     if (!canvas) return;
+
+    // Clear both full page cache AND tile cache to force re-render with updated highlights
+    if (this.tileRenderer && this.tileRenderer.tileManager) {
+      this.tileRenderer.tileManager.clearFullPageCache(ndx);
+      this.tileRenderer.tileManager.cache.clearPage(ndx);
+    }
 
     this._renderPage(ndx);
   }

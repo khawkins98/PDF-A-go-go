@@ -30,6 +30,38 @@ import * as pdfjsLib from "pdfjs-dist/build/pdf.mjs";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs";
 import { HTMLDownloadHandler } from "./htmlDownloadHandler.js";
 
+/** @type {string|null} Custom worker URL (null = use bundled default) */
+let customWorkerUrl = null;
+
+/**
+ * Set a custom PDF.js worker URL.
+ * Call this before loading any PDFs to use a different worker script.
+ *
+ * @param {string} url - URL to the PDF.js worker script
+ * @example
+ * // Use a CDN-hosted worker
+ * setWorkerUrl('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs');
+ *
+ * @example
+ * // Use a locally hosted worker
+ * setWorkerUrl('/js/pdf.worker.min.mjs');
+ */
+export function setWorkerUrl(url) {
+  customWorkerUrl = url;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = url;
+}
+
+/**
+ * Get the current PDF.js worker URL.
+ * Returns the custom URL if set, otherwise the bundled default.
+ *
+ * @returns {string} The current worker URL
+ */
+export function getWorkerUrl() {
+  return customWorkerUrl || pdfWorkerUrl;
+}
+
+// Initialize with bundled worker URL (can be overridden via setWorkerUrl)
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 /**

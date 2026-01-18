@@ -29,6 +29,7 @@ export class TileRenderer {
    * @param {boolean} [options.debug=false] - Enable debug mode
    * @param {boolean} [options.isMobile=false] - Whether running on mobile
    * @param {number} [options.tileSize=512] - Size of tiles in pixels
+   * @param {number} [options.maxFullPageCacheSize] - Maximum full-page canvases to cache
    */
   constructor(options) {
     this.book = options.book;
@@ -46,6 +47,8 @@ export class TileRenderer {
       tileSize: this.tileSize,
       cacheSize,
       debug: this.debug,
+      isMobile: this.isMobile,
+      maxFullPageCacheSize: options.maxFullPageCacheSize,
     });
 
     // Page metadata
