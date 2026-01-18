@@ -542,4 +542,51 @@ export class TileRenderer {
     // Re-request tiles
     this.renderVisiblePages(new Set([pageIndex + 1]));
   }
+
+  /**
+   * Destroy the tile renderer and release all resources.
+   * Should be called when the viewer is being destroyed.
+   */
+  destroy() {
+    // Cancel animation frame
+    if (this._animationFrame) {
+      cancelAnimationFrame(this._animationFrame);
+      this._animationFrame = null;
+    }
+
+    // Clear debounce timers
+    if (this._zoomDebounceTimer) {
+      clearTimeout(this._zoomDebounceTimer);
+      this._zoomDebounceTimer = null;
+    }
+    if (this._renderDebounceTimer) {
+      clearTimeout(this._renderDebounceTimer);
+      this._renderDebounceTimer = null;
+    }
+
+    // Clear tile animations
+    this._tileAnimations.clear();
+
+    // Clear display canvases reference
+    this.displayCanvases.clear();
+
+    // Clear page metadata
+    this.pageMetadata.clear();
+
+    // Destroy tile manager (will also call page.cleanup() on all pages)
+    if (this.tileManager) {
+      this.tileManager.destroy(this.pdfDocument);
+      this.tileManager = null;
+    }
+
+    // Clear references
+    this.book = null;
+    this.pdfDocument = null;
+    this.onPageReady = null;
+    this.onTileProgress = null;
+
+    if (this.debug) {
+      console.log('[TileRenderer] Destroyed and released all resources');
+    }
+  }
 }

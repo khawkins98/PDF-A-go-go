@@ -235,11 +235,15 @@ export class TileManager {
     this.pageInfo = new Map(); // Map<pageIndex, { width, height, pdfPage }>
 
     // Full-page render cache to avoid re-rendering the same page for each tile
-    // Key: "pageIndex:tier", Value: { canvas, inProgress: Promise|null, lastAccess: number }
+    // Key: "pageIndex:tier", Value: { canvas, inProgress: Promise|null, lastAccess: number, renderTask: RenderTask|null }
     this.fullPageCache = new Map();
 
     // LRU tracking for full-page cache
     this.fullPageCacheOrder = []; // Array of cache keys in access order (oldest first)
+
+    // Track active render tasks for cancellation
+    // Key: "pageIndex:tier", Value: RenderTask from page.render()
+    this.activeRenderTasks = new Map();
 
     this.renderQueue = [];
     this.isProcessingQueue = false;
@@ -643,11 +647,22 @@ export class TileManager {
     fullCtx.fillStyle = '#ffffff';
     fullCtx.fillRect(0, 0, fullCanvas.width, fullCanvas.height);
 
-    // Render the full page
-    await info.pdfPage.render({
+    // Render the full page - track the render task for potential cancellation
+    const cacheKey = `${pageIndex}:${tier}`;
+    const renderTask = info.pdfPage.render({
       canvasContext: fullCtx,
       viewport: viewport,
-    }).promise;
+    });
+
+    // Store render task for cancellation support
+    this.activeRenderTasks.set(cacheKey, renderTask);
+
+    try {
+      await renderTask.promise;
+    } finally {
+      // Remove from active tasks when complete (success or failure)
+      this.activeRenderTasks.delete(cacheKey);
+    }
 
     // Draw search highlights if present for this page
     const highlights = this.getHighlights(pageIndex);
@@ -757,6 +772,20 @@ export class TileManager {
   cancelUnneeded(neededKeys) {
     const neededSet = new Set(neededKeys);
 
+    // Build set of needed page:tier combinations
+    const neededPageTiers = new Set();
+    for (const key of neededKeys) {
+      const { pageIndex, tier } = parseTileKey(key);
+      neededPageTiers.add(`${pageIndex}:${tier}`);
+    }
+
+    // Cancel active render tasks for pages/tiers that are no longer needed
+    for (const [cacheKey, renderTask] of this.activeRenderTasks) {
+      if (!neededPageTiers.has(cacheKey)) {
+        this._cancelRenderTask(cacheKey, renderTask);
+      }
+    }
+
     // Remove from pending
     for (const key of this.pending) {
       if (!neededSet.has(key)) {
@@ -769,15 +798,61 @@ export class TileManager {
   }
 
   /**
-   * Clear all pending renders.
+   * Cancel a specific render task.
+   * @param {string} cacheKey - The page:tier cache key
+   * @param {Object} renderTask - The PDF.js render task to cancel
+   * @private
+   */
+  _cancelRenderTask(cacheKey, renderTask) {
+    if (renderTask && typeof renderTask.cancel === 'function') {
+      try {
+        renderTask.cancel();
+        if (this.debug) {
+          console.log(`[TileManager] Cancelled render task for ${cacheKey}`);
+        }
+      } catch (err) {
+        // Ignore cancellation errors (task may have already completed)
+        if (this.debug) {
+          console.log(`[TileManager] Render task ${cacheKey} already completed or failed to cancel`);
+        }
+      }
+    }
+    this.activeRenderTasks.delete(cacheKey);
+  }
+
+  /**
+   * Cancel all active render tasks for a specific page.
+   * @param {number} pageIndex - Page index to cancel renders for
+   */
+  cancelPageRenders(pageIndex) {
+    for (const [cacheKey, renderTask] of this.activeRenderTasks) {
+      if (cacheKey.startsWith(`${pageIndex}:`)) {
+        this._cancelRenderTask(cacheKey, renderTask);
+      }
+    }
+  }
+
+  /**
+   * Cancel all active render tasks.
+   */
+  cancelAllRenders() {
+    for (const [cacheKey, renderTask] of this.activeRenderTasks) {
+      this._cancelRenderTask(cacheKey, renderTask);
+    }
+  }
+
+  /**
+   * Clear all pending renders and cancel active render tasks.
    */
   clearQueue() {
+    this.cancelAllRenders();
     this.pending.clear();
     this.renderQueue = [];
   }
 
   /**
    * Perform memory cleanup based on current viewport.
+   * Cleans up tile cache, full-page cache, and calls page.cleanup() on distant pages.
    * @param {number} currentPage - Current page index
    * @param {number} currentTier - Current resolution tier
    */
@@ -787,6 +862,8 @@ export class TileManager {
     // Also clean up full-page cache for distant pages
     const buffer = 3;
     const keysToRemove = [];
+    const pagesToCleanup = new Set();
+
     for (const [key, _] of this.fullPageCache) {
       const [pageStr, tierStr] = key.split(':');
       const pageIndex = parseInt(pageStr, 10);
@@ -795,6 +872,7 @@ export class TileManager {
       // Evict if page is far from current or different tier
       if (Math.abs(pageIndex - currentPage) > buffer || tier !== currentTier) {
         keysToRemove.push(key);
+        pagesToCleanup.add(pageIndex);
       }
     }
 
@@ -807,8 +885,117 @@ export class TileManager {
       }
     }
 
+    // Call page.cleanup() on distant pages to release PDF.js internal resources
+    for (const pageIndex of pagesToCleanup) {
+      this._cleanupPage(pageIndex, currentPage, buffer);
+    }
+
     if (this.debug) {
       console.log(`[TileManager] Cache size after cleanup: ${this.cache.size}, Full page cache: ${this.fullPageCache.size}`);
+    }
+  }
+
+  /**
+   * Call page.cleanup() on a PDF.js page to release internal resources.
+   * Only cleans up pages that are far from the current viewport.
+   * @param {number} pageIndex - Page index to potentially clean up
+   * @param {number} currentPage - Current page index
+   * @param {number} buffer - Buffer of pages to keep around current
+   * @private
+   */
+  _cleanupPage(pageIndex, currentPage, buffer) {
+    // Only cleanup pages far from current view
+    if (Math.abs(pageIndex - currentPage) <= buffer) {
+      return;
+    }
+
+    const info = this.pageInfo.get(pageIndex);
+    if (info && info.pdfPage && typeof info.pdfPage.cleanup === 'function') {
+      try {
+        info.pdfPage.cleanup();
+        if (this.debug) {
+          console.log(`[TileManager] Called page.cleanup() for page ${pageIndex}`);
+        }
+      } catch (err) {
+        if (this.debug) {
+          console.warn(`[TileManager] page.cleanup() failed for page ${pageIndex}:`, err);
+        }
+      }
+    }
+  }
+
+  /**
+   * Clean up all pages except those near the current page.
+   * Useful when visibility changes or memory pressure is detected.
+   * @param {number} currentPage - Current page index
+   * @param {number} [buffer=3] - Number of pages to keep around current
+   */
+  cleanupDistantPages(currentPage, buffer = 3) {
+    for (const [pageIndex, info] of this.pageInfo) {
+      if (Math.abs(pageIndex - currentPage) > buffer) {
+        if (info.pdfPage && typeof info.pdfPage.cleanup === 'function') {
+          try {
+            info.pdfPage.cleanup();
+            if (this.debug) {
+              console.log(`[TileManager] Cleaned up page ${pageIndex}`);
+            }
+          } catch (err) {
+            // Ignore cleanup errors
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Destroy the tile manager and release all resources.
+   * Should be called when the viewer is being destroyed.
+   * @param {Object} [pdfDocument] - Optional PDF.js document to destroy
+   */
+  destroy(pdfDocument = null) {
+    // Cancel all active render tasks
+    this.cancelAllRenders();
+
+    // Clear all caches
+    this.cache.clear();
+    this.fullPageCache.clear();
+    this.fullPageCacheOrder = [];
+
+    // Clear queues
+    this.pending.clear();
+    this.renderQueue = [];
+
+    // Clean up all pages
+    for (const [pageIndex, info] of this.pageInfo) {
+      if (info.pdfPage && typeof info.pdfPage.cleanup === 'function') {
+        try {
+          info.pdfPage.cleanup();
+        } catch (err) {
+          // Ignore cleanup errors during destroy
+        }
+      }
+    }
+    this.pageInfo.clear();
+
+    // Destroy the PDF document if provided
+    if (pdfDocument && typeof pdfDocument.destroy === 'function') {
+      try {
+        pdfDocument.destroy();
+        if (this.debug) {
+          console.log('[TileManager] PDF document destroyed');
+        }
+      } catch (err) {
+        if (this.debug) {
+          console.warn('[TileManager] pdfDocument.destroy() failed:', err);
+        }
+      }
+    }
+
+    // Clear highlights
+    this._highlights = {};
+
+    if (this.debug) {
+      console.log('[TileManager] Destroyed and released all resources');
     }
   }
 
