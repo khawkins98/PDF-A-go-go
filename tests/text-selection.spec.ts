@@ -55,7 +55,7 @@ async function getSelectedText(page: Page): Promise<string> {
 
 test.describe('PDF-A-go-go Text Selection', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('http://localhost:9000/');
+    await page.goto('http://localhost:9000/tests/test-small.html');
     await waitForPdfLoad(page);
   });
 
