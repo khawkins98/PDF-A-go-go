@@ -297,6 +297,8 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
   if (!wrapper) {
     wrapper = document.createElement('div');
     wrapper.className = 'pdfagogo-viewer-wrapper';
+    // Mark as dynamically created so destroy() knows it's safe to remove
+    wrapper.setAttribute('data-pdfagogo-created', 'true');
     const parent = container.parentNode;
     if (parent) {
       parent.insertBefore(wrapper, container);

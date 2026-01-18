@@ -82,6 +82,7 @@ export class SearchController {
 
   /**
    * Search the PDF for a query string.
+   * Uses parallel batch processing for better performance on large documents.
    *
    * @param {string} query - Search query (case-insensitive)
    * @returns {Promise<void>}
@@ -95,16 +96,17 @@ export class SearchController {
     if (!this.pdf || !query) return;
 
     const normalizedQuery = query.toLowerCase();
+    const numPages = this.pdf.numPages;
+    const batchSize = 10; // Process pages in batches for parallel loading
 
-    for (let i = 0; i < this.pdf.numPages; i++) {
-      const page = await this.pdf.getPage(i + 1);
+    // Process a single page and return results
+    const searchPage = async (pageIndex) => {
+      const page = await this.pdf.getPage(pageIndex + 1);
       const textContent = await page.getTextContent();
       const items = textContent.items;
       const text = items.map((item) => item.str).join(' ').toLowerCase();
 
       if (text.includes(normalizedQuery)) {
-        this.matchPages.push(i);
-
         // Compute bounding boxes for matches on this page
         const boxes = [];
         for (let j = 0; j < items.length; j++) {
@@ -118,9 +120,33 @@ export class SearchController {
             boxes.push({ x, y, width: item.width, height: h });
           }
         }
-        this.matchHighlights[i] = boxes;
+        return { pageIndex, boxes };
+      }
+      return null;
+    };
+
+    // Process pages in parallel batches
+    for (let batchStart = 0; batchStart < numPages; batchStart += batchSize) {
+      const batchEnd = Math.min(batchStart + batchSize, numPages);
+      const batchPromises = [];
+
+      for (let i = batchStart; i < batchEnd; i++) {
+        batchPromises.push(searchPage(i));
+      }
+
+      const batchResults = await Promise.all(batchPromises);
+
+      // Collect results from this batch
+      for (const result of batchResults) {
+        if (result) {
+          this.matchPages.push(result.pageIndex);
+          this.matchHighlights[result.pageIndex] = result.boxes;
+        }
       }
     }
+
+    // Sort matchPages to ensure they're in page order
+    this.matchPages.sort((a, b) => a - b);
   }
 
   /**

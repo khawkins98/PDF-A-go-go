@@ -396,6 +396,7 @@ export class ScrollablePdfViewer extends EventEmitter {
         debug: this.debug,
         isMobile: this.isMobile,
         tileSize: this.isMobile ? 256 : 512,
+        maxFullPageCacheSize: options.fullpageCacheSize,
       });
 
       // Set up tile renderer callbacks
@@ -749,7 +750,8 @@ export class ScrollablePdfViewer extends EventEmitter {
       return layer && layer.innerHTML.length > 0;
     });
 
-    while (populatedLayers.length >= this.maxTextLayers && this.textLayerOrder.length > 0) {
+    // Guard: need at least 2 items to avoid infinite loop when only currentPage remains
+    while (populatedLayers.length >= this.maxTextLayers && this.textLayerOrder.length > 1) {
       // Get oldest layer
       const oldestIdx = this.textLayerOrder.shift();
 

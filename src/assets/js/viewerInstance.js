@@ -153,14 +153,20 @@ export class ViewerInstance {
     // Clean up viewer resources
     if (this.viewer) {
       // Clear render queue
-      if (this.viewer.renderQueue) {
+      if (this.viewer.renderQueue && typeof this.viewer.renderQueue.clear === 'function') {
         this.viewer.renderQueue.clear();
       }
       // Clear tile renderer if present
       if (this.viewer.tileRenderer) {
-        this.viewer.tileRenderer.clearQueue();
-        this.viewer.tileRenderer.cache.clear();
-        this.viewer.tileRenderer.fullPageCache.clear();
+        if (typeof this.viewer.tileRenderer.clearQueue === 'function') {
+          this.viewer.tileRenderer.clearQueue();
+        }
+        if (this.viewer.tileRenderer.cache && typeof this.viewer.tileRenderer.cache.clear === 'function') {
+          this.viewer.tileRenderer.cache.clear();
+        }
+        if (this.viewer.tileRenderer.fullPageCache && typeof this.viewer.tileRenderer.fullPageCache.clear === 'function') {
+          this.viewer.tileRenderer.fullPageCache.clear();
+        }
       }
       this.viewer = null;
     }
@@ -185,9 +191,10 @@ export class ViewerInstance {
 
     // Clear container content
     if (this.container && this.container.innerHTML) {
-      // Remove the wrapper if it was created
+      // Only remove the wrapper if it was dynamically created by the library
+      // (preserves user's manually added wrappers)
       const wrapper = this.container.closest('.pdfagogo-viewer-wrapper');
-      if (wrapper && wrapper.parentNode) {
+      if (wrapper && wrapper.parentNode && wrapper.getAttribute('data-pdfagogo-created') === 'true') {
         // Move container out of wrapper
         wrapper.parentNode.insertBefore(this.container, wrapper);
         wrapper.parentNode.removeChild(wrapper);

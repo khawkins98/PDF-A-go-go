@@ -574,7 +574,18 @@ export class TileManager {
    * @private
    */
   _enforceFullPageCacheLimit() {
+    let skipped = 0;
+    const maxSkips = this.fullPageCacheOrder.length;
+
     while (this.fullPageCache.size >= this.maxFullPageCacheSize && this.fullPageCacheOrder.length > 0) {
+      // Guard: if we've skipped all entries (all in-progress), break to avoid infinite loop
+      if (skipped >= maxSkips) {
+        if (this.debug) {
+          console.log(`[TileManager] All ${maxSkips} cache entries are in-progress, cannot evict`);
+        }
+        break;
+      }
+
       // Remove oldest entry (first in order array)
       const oldestKey = this.fullPageCacheOrder.shift();
       if (oldestKey) {
@@ -583,6 +594,7 @@ export class TileManager {
         if (entry && entry.inProgress) {
           // Put it back at the end and try the next one
           this.fullPageCacheOrder.push(oldestKey);
+          skipped++;
           continue;
         }
         this.fullPageCache.delete(oldestKey);
@@ -774,6 +786,7 @@ export class TileManager {
 
     // Also clean up full-page cache for distant pages
     const buffer = 3;
+    const keysToRemove = [];
     for (const [key, _] of this.fullPageCache) {
       const [pageStr, tierStr] = key.split(':');
       const pageIndex = parseInt(pageStr, 10);
@@ -781,7 +794,16 @@ export class TileManager {
 
       // Evict if page is far from current or different tier
       if (Math.abs(pageIndex - currentPage) > buffer || tier !== currentTier) {
-        this.fullPageCache.delete(key);
+        keysToRemove.push(key);
+      }
+    }
+
+    // Remove keys and sync fullPageCacheOrder
+    for (const key of keysToRemove) {
+      this.fullPageCache.delete(key);
+      const orderIdx = this.fullPageCacheOrder.indexOf(key);
+      if (orderIdx !== -1) {
+        this.fullPageCacheOrder.splice(orderIdx, 1);
       }
     }
 
