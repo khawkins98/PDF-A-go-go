@@ -1442,4 +1442,96 @@ export class ScrollablePdfViewer extends EventEmitter {
       // no-op: best-effort adjustment
     }
   }
+
+  /**
+   * Destroy the viewer and release all resources.
+   * Should be called when the viewer is being removed from the DOM or the page is unloading.
+   * This properly releases PDF.js resources including calling pdfDocument.destroy().
+   */
+  destroy() {
+    if (this.debug) {
+      console.log('[PDF-A-go-go] Destroying viewer...');
+    }
+
+    // Clear debug interval
+    if (this._debugInterval) {
+      clearInterval(this._debugInterval);
+      this._debugInterval = null;
+    }
+
+    // Remove debug element
+    if (this.debugElement && this.debugElement.parentNode) {
+      this.debugElement.parentNode.removeChild(this.debugElement);
+      this.debugElement = null;
+    }
+
+    // Clear render queue
+    this.renderQueue.clear();
+
+    // Destroy tile renderer (this will also destroy the PDF document)
+    if (this.tileRenderer) {
+      this.tileRenderer.destroy();
+      this.tileRenderer = null;
+    } else if (this.pdfDocument && typeof this.pdfDocument.destroy === 'function') {
+      // If no tile renderer, still destroy the PDF document
+      try {
+        this.pdfDocument.destroy();
+        if (this.debug) {
+          console.log('[PDF-A-go-go] PDF document destroyed');
+        }
+      } catch (err) {
+        if (this.debug) {
+          console.warn('[PDF-A-go-go] pdfDocument.destroy() failed:', err);
+        }
+      }
+    }
+    this.pdfDocument = null;
+
+    // Clean up DOM elements
+    if (this.leftEdgeOverlay && this.leftEdgeOverlay.parentNode) {
+      this.leftEdgeOverlay.parentNode.removeChild(this.leftEdgeOverlay);
+    }
+    if (this.rightEdgeOverlay && this.rightEdgeOverlay.parentNode) {
+      this.rightEdgeOverlay.parentNode.removeChild(this.rightEdgeOverlay);
+    }
+    if (this.pagesContainer && this.pagesContainer.parentNode) {
+      this.pagesContainer.parentNode.removeChild(this.pagesContainer);
+    }
+    if (this.scrollContainer && this.scrollContainer.parentNode) {
+      this.scrollContainer.parentNode.removeChild(this.scrollContainer);
+    }
+
+    // Clear canvas and text layer references
+    this.pageCanvases = {};
+    this.textLayers = {};
+    this.textLayerOrder = [];
+    this._visiblePages.clear();
+
+    // Clear metrics
+    this.metrics = {
+      initialRenderStart: 0,
+      initialRenderEnd: 0,
+      pageRenderTimes: {},
+      highResUpgradeTimes: {},
+      totalPagesRendered: 0,
+      totalHighResUpgrades: 0,
+      memoryUsage: {},
+      lastUpdate: Date.now()
+    };
+
+    // Remove all event listeners by removing references
+    this.removeAllListeners();
+
+    // Clear remaining references
+    this.book = null;
+    this.app = null;
+    this.scrollContainer = null;
+    this.pagesContainer = null;
+    this.leftEdgeOverlay = null;
+    this.rightEdgeOverlay = null;
+
+    if (this.debug) {
+      console.log('[PDF-A-go-go] Viewer destroyed and all resources released');
+    }
+  }
 }
