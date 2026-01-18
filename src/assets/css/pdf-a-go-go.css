@@ -3,6 +3,103 @@
  * Icons: Lucide (https://lucide.dev) - MIT License
  */
 
+/* CSS Custom Properties for Theming */
+:root {
+  /* Primary colors */
+  --pdfagogo-primary: #1976d2;
+  --pdfagogo-primary-light: #e3f2fd;
+  --pdfagogo-primary-rgb: 25, 118, 210;
+
+  /* Text colors */
+  --pdfagogo-text-primary: #333;
+  --pdfagogo-text-secondary: #555;
+  --pdfagogo-text-muted: #666;
+  --pdfagogo-text-hint: #999;
+  --pdfagogo-text-light: #fff;
+
+  /* Background colors */
+  --pdfagogo-bg-page: #fff;
+  --pdfagogo-bg-container: #e4e4e4;
+  --pdfagogo-bg-toolbar: #fff;
+  --pdfagogo-bg-hover: #e8e8e8;
+  --pdfagogo-bg-active: #e0e0e0;
+  --pdfagogo-bg-subtle: #f5f5f5;
+  --pdfagogo-bg-input: #fff;
+  --pdfagogo-bg-overlay: rgba(0, 0, 0, 0.7);
+  --pdfagogo-bg-overlay-light: rgba(255, 255, 255, 0.9);
+
+  /* Border colors */
+  --pdfagogo-border: #ccc;
+  --pdfagogo-border-light: #ddd;
+  --pdfagogo-border-active: #bbb;
+  --pdfagogo-border-input: #aaa;
+
+  /* State colors */
+  --pdfagogo-success: #4caf50;
+  --pdfagogo-error: #d32f2f;
+  --pdfagogo-error-light: #ffebee;
+  --pdfagogo-error-bg: rgba(255, 0, 0, 0.15);
+  --pdfagogo-error-border: rgba(255, 0, 0, 0.35);
+  --pdfagogo-warning: #ff9800;
+
+  /* Selection colors */
+  --pdfagogo-selection: rgba(0, 100, 255, 0.35);
+
+  /* Shadow colors */
+  --pdfagogo-shadow: rgba(0, 0, 0, 0.18);
+  --pdfagogo-shadow-strong: rgba(0, 0, 0, 0.2);
+
+  /* Progress bar */
+  --pdfagogo-progress-bg: rgba(255, 255, 255, 0.2);
+  --pdfagogo-progress-fill: #4CAF50;
+
+  /* Resize grip */
+  --pdfagogo-grip-bg-start: #e0e0e0;
+  --pdfagogo-grip-bg-end: #bdbdbd;
+  --pdfagogo-grip-handle: #888;
+
+  /* Debug panel */
+  --pdfagogo-debug-bg: rgba(0, 0, 0, 0.8);
+  --pdfagogo-debug-text: #00ff00;
+  --pdfagogo-debug-timing: #00ffff;
+  --pdfagogo-debug-memory: #ff9900;
+}
+
+/* Dark theme example (can be applied via data-theme="dark" on container) */
+[data-theme="dark"] {
+  --pdfagogo-primary: #64b5f6;
+  --pdfagogo-primary-light: #1e3a5f;
+  --pdfagogo-primary-rgb: 100, 181, 246;
+
+  --pdfagogo-text-primary: #e0e0e0;
+  --pdfagogo-text-secondary: #bdbdbd;
+  --pdfagogo-text-muted: #9e9e9e;
+  --pdfagogo-text-hint: #757575;
+  --pdfagogo-text-light: #fff;
+
+  --pdfagogo-bg-page: #2d2d2d;
+  --pdfagogo-bg-container: #1a1a1a;
+  --pdfagogo-bg-toolbar: #2d2d2d;
+  --pdfagogo-bg-hover: #3d3d3d;
+  --pdfagogo-bg-active: #4d4d4d;
+  --pdfagogo-bg-subtle: #252525;
+  --pdfagogo-bg-input: #3d3d3d;
+  --pdfagogo-bg-overlay: rgba(0, 0, 0, 0.85);
+  --pdfagogo-bg-overlay-light: rgba(45, 45, 45, 0.95);
+
+  --pdfagogo-border: #4d4d4d;
+  --pdfagogo-border-light: #3d3d3d;
+  --pdfagogo-border-active: #5d5d5d;
+  --pdfagogo-border-input: #5d5d5d;
+
+  --pdfagogo-shadow: rgba(0, 0, 0, 0.4);
+  --pdfagogo-shadow-strong: rgba(0, 0, 0, 0.5);
+
+  --pdfagogo-grip-bg-start: #3d3d3d;
+  --pdfagogo-grip-bg-end: #2d2d2d;
+  --pdfagogo-grip-handle: #666;
+}
+
 .pdfagogo-viewer-wrapper {
   display: grid;
   gap: 1rem;
@@ -10,9 +107,9 @@
 .pdfagogo-container {
   width: 100%;
   height: 80vh;
-  border: 1px solid #ccc;
+  border: 1px solid var(--pdfagogo-border);
   padding: 0;
-  background: #e4e4e4;
+  background: var(--pdfagogo-bg-container);
   text-align: center;
   position: relative;
   overflow: hidden;
@@ -36,14 +133,14 @@
   margin: 0 auto 8px auto;
 }
 .pdfagogo-container:focus {
-  outline: 3px solid #1976d2;
+  outline: 3px solid var(--pdfagogo-primary);
   outline-offset: 2px;
 }
 /* Page input invalid state */
 .pdfagogo-goto-page.invalid {
   animation: pdfagogo-shake 0.3s ease;
-  border-color: #d32f2f;
-  background: #ffebee;
+  border-color: var(--pdfagogo-error);
+  background: var(--pdfagogo-error-light);
 }
 @keyframes pdfagogo-shake {
   0%, 100% { transform: translateX(0); }
@@ -55,15 +152,15 @@
   max-width: 1200px;
   margin: 0 auto 20px auto;
   font-size: 0.9rem;
-  color: #555;
-  background: #f5f5f5;
+  color: var(--pdfagogo-text-secondary);
+  background: var(--pdfagogo-bg-subtle);
   padding: 8px 12px;
   border-radius: 6px;
 }
 .pdfagogo-a11y-instructions summary {
   cursor: pointer;
   font-weight: 500;
-  color: #333;
+  color: var(--pdfagogo-text-primary);
 }
 .pdfagogo-a11y-instructions ul {
   margin: 8px 0 0 0;
@@ -73,8 +170,8 @@
   margin: 4px 0;
 }
 .pdfagogo-a11y-instructions kbd {
-  background: #e0e0e0;
-  border: 1px solid #ccc;
+  background: var(--pdfagogo-bg-active);
+  border: 1px solid var(--pdfagogo-border);
   border-radius: 3px;
   padding: 1px 5px;
   font-family: inherit;
@@ -87,8 +184,8 @@
   justify-content: space-between;
   gap: 12px;
   padding: 8px 12px;
-  background: #fff;
-  border-bottom: 1px solid #ddd;
+  background: var(--pdfagogo-bg-toolbar);
+  border-bottom: 1px solid var(--pdfagogo-border-light);
   font-size: 14px;
   position: relative;
   z-index: 10;
@@ -119,7 +216,7 @@
   border: 1px solid transparent;
   cursor: pointer;
   padding: 6px 8px;
-  color: #555;
+  color: var(--pdfagogo-text-secondary);
   border-radius: 4px;
   line-height: 1;
   transition: background 0.15s, border-color 0.15s;
@@ -135,16 +232,16 @@
   flex-shrink: 0;
 }
 .pdfagogo-toolbar button:hover {
-  background: #e8e8e8;
-  border-color: #ccc;
-  color: #333;
+  background: var(--pdfagogo-bg-hover);
+  border-color: var(--pdfagogo-border);
+  color: var(--pdfagogo-text-primary);
 }
 .pdfagogo-toolbar button.active {
-  background: #e0e0e0;
-  border-color: #bbb;
+  background: var(--pdfagogo-bg-active);
+  border-color: var(--pdfagogo-border-active);
 }
 .pdfagogo-toolbar button.copied {
-  color: #4caf50;
+  color: var(--pdfagogo-success);
 }
 .pdfagogo-toolbar button.disabled,
 .pdfagogo-toolbar button:disabled {
@@ -161,8 +258,8 @@
   display: flex;
   align-items: center;
   gap: 0;
-  background: #fff;
-  border: 1px solid #ccc;
+  background: var(--pdfagogo-bg-page);
+  border: 1px solid var(--pdfagogo-border);
   border-radius: 6px;
   padding: 2px;
   height: 32px;
@@ -173,7 +270,7 @@
   border: none;
   cursor: pointer;
   padding: 4px 6px;
-  color: #555;
+  color: var(--pdfagogo-text-secondary);
   border-radius: 4px;
   line-height: 1;
   transition: background 0.15s;
@@ -184,7 +281,7 @@
   box-sizing: border-box;
 }
 .pdfagogo-page-nav button:hover:not(:disabled) {
-  background: #f0f0f0;
+  background: var(--pdfagogo-bg-subtle);
 }
 .pdfagogo-page-nav button:disabled {
   opacity: 0.4;
@@ -197,24 +294,24 @@
 .pdfagogo-toolbar .pdfagogo-goto-page {
   width: 36px;
   padding: 2px 4px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--pdfagogo-border);
   border-radius: 4px;
   font-size: 13px;
   text-align: center;
   height: 26px;
   box-sizing: border-box;
   margin: 0;
-  background: #fff;
+  background: var(--pdfagogo-bg-input);
 }
 .pdfagogo-toolbar .pdfagogo-goto-page:focus {
-  outline: 2px solid #1976d2;
+  outline: 2px solid var(--pdfagogo-primary);
   outline-offset: 1px;
-  border-color: #1976d2;
+  border-color: var(--pdfagogo-primary);
 }
 /* Page total in toolbar */
 .pdfagogo-toolbar .pdfagogo-page-total {
   font-size: 13px;
-  color: #555;
+  color: var(--pdfagogo-text-secondary);
   white-space: nowrap;
   line-height: 26px;
   padding: 0 4px;
@@ -222,13 +319,13 @@
 .pdfagogo-toolbar .pdfagogo-page-total::before {
   content: "/";
   margin-right: 4px;
-  color: #999;
+  color: var(--pdfagogo-text-hint);
 }
 /* Zoom indicator in toolbar */
 .pdfagogo-toolbar .pdfagogo-zoom-indicator {
   font-size: 12px;
-  color: #1976d2;
-  background: #e3f2fd;
+  color: var(--pdfagogo-primary);
+  background: var(--pdfagogo-primary-light);
   padding: 0 6px;
   border-radius: 4px;
   white-space: nowrap;
@@ -241,8 +338,8 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  background: #fff;
-  border: 1px solid #ccc;
+  background: var(--pdfagogo-bg-page);
+  border: 1px solid var(--pdfagogo-border);
   border-radius: 4px;
   padding: 2px 6px;
   height: 28px;
@@ -260,11 +357,11 @@
   margin: 0
 }
 .pdfagogo-search-group .pdfagogo-search-input::placeholder {
-  color: #999;
+  color: var(--pdfagogo-text-hint);
 }
 .pdfagogo-search-group .pdfagogo-search-result {
   font-size: 12px;
-  color: #666;
+  color: var(--pdfagogo-text-muted);
   padding: 0 4px;
   white-space: nowrap;
   line-height: 1;
@@ -275,7 +372,7 @@
   cursor: pointer;
   padding: 2px 6px;
   font-size: 12px;
-  color: #666;
+  color: var(--pdfagogo-text-muted);
   border-radius: 3px;
   height: 22px;
   display: inline-flex;
@@ -284,8 +381,8 @@
   margin: 0;
 }
 .pdfagogo-search-group button:hover:not(:disabled) {
-  background: #f0f0f0;
-  color: #333;
+  background: var(--pdfagogo-bg-subtle);
+  color: var(--pdfagogo-text-primary);
 }
 .pdfagogo-search-group button:disabled {
   opacity: 0.3;
@@ -321,15 +418,15 @@
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 1000;
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--pdfagogo-bg-overlay);
   padding: 2rem;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px var(--pdfagogo-shadow-strong);
   text-align: center;
   min-width: 200px;
 }
 .pdfagogo-loading-text {
-  color: #fff;
+  color: var(--pdfagogo-text-light);
   font-size: 18px;
   margin-bottom: 1rem;
   text-shadow: 0 0 8px #222;
@@ -339,28 +436,28 @@
   width: 100%;
   height: 8px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--pdfagogo-progress-bg);
   border: none;
 }
 .pdfagogo-progress-bar::-webkit-progress-bar {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--pdfagogo-progress-bg);
   border-radius: 4px;
 }
 .pdfagogo-progress-bar::-webkit-progress-value {
-  background: #4CAF50;
+  background: var(--pdfagogo-progress-fill);
   border-radius: 4px;
   transition: width 0.3s ease;
 }
 .pdfagogo-progress-bar::-moz-progress-bar {
-  background: #4CAF50;
+  background: var(--pdfagogo-progress-fill);
   border-radius: 4px;
   transition: width 0.3s ease;
 }
 /* Error state styling reusing loading overlay */
 .pdfagogo-loading-error {
   color: #ffd2d2;
-  background: rgba(255, 0, 0, 0.15);
-  border: 1px solid rgba(255, 0, 0, 0.35);
+  background: var(--pdfagogo-error-bg);
+  border: 1px solid var(--pdfagogo-error-border);
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
   margin: 0.5rem auto 0.75rem auto;
@@ -377,11 +474,11 @@
   padding: 0.4rem 0.75rem;
   border-radius: 4px;
   font-weight: 600;
-  background: #fff;
-  color: #333;
+  background: var(--pdfagogo-bg-page);
+  color: var(--pdfagogo-text-primary);
 }
-.pdfagogo-error-actions a.primary { background: #1976d2; color: #fff; }
-.pdfagogo-error-actions a.secondary { background: #e0e0e0; color: #333; }
+.pdfagogo-error-actions a.primary { background: var(--pdfagogo-primary); color: var(--pdfagogo-text-light); }
+.pdfagogo-error-actions a.secondary { background: var(--pdfagogo-bg-active); color: var(--pdfagogo-text-primary); }
 .pdfagogo-error-details {
   margin-top: 0.75rem;
   text-align: left;
@@ -452,9 +549,9 @@
 }
 .pdfagogo-page-wrapper {
   margin: 1.5rem auto;
-  background: #fff;
+  background: var(--pdfagogo-bg-page);
   border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+  box-shadow: 0 2px 12px var(--pdfagogo-shadow);
   transition: transform 0.2s, box-shadow 0.2s;
   flex-shrink: 0;
   position: relative;
@@ -531,11 +628,11 @@
 }
 /* Show selection highlight */
 .pdfagogo-text-layer span::selection {
-  background: rgba(0, 100, 255, 0.35);
+  background: var(--pdfagogo-selection);
   color: transparent;
 }
 .pdfagogo-text-layer span::-moz-selection {
-  background: rgba(0, 100, 255, 0.35);
+  background: var(--pdfagogo-selection);
   color: transparent;
 }
 .pdfagogo-scroll-container::-webkit-scrollbar {
@@ -576,8 +673,8 @@
 .pdfagogo-resize-grip {
   width: 100%;
   height: 12px;
-  background: linear-gradient(to bottom, #e0e0e0 60%, #bdbdbd 100%);
-  border-top: 1px solid #aaa;
+  background: linear-gradient(to bottom, var(--pdfagogo-grip-bg-start) 60%, var(--pdfagogo-grip-bg-end) 100%);
+  border-top: 1px solid var(--pdfagogo-border-input);
   cursor: ns-resize;
   position: absolute;
   left: 0;
@@ -589,7 +686,7 @@
   transition: background 0.2s;
 }
 .pdfagogo-resize-grip:focus {
-  outline: 2px solid #1976d2;
+  outline: 2px solid var(--pdfagogo-primary);
 }
 .pdfagogo-resize-grip::before {
   content: '';
@@ -597,24 +694,24 @@
   width: 40px;
   height: 4px;
   border-radius: 2px;
-  background: #888;
+  background: var(--pdfagogo-grip-handle);
   opacity: 0.7;
 }
 .pdfagogo-resize-grip.resizing::before {
   animation: pdfagogo-resize-bar-move 0.8s linear infinite alternate;
 }
 @keyframes pdfagogo-resize-bar-move {
-  0% { transform: translateX(0); background: #888; }
-  50% { transform: translateX(10px); background: #1976d2; }
-  100% { transform: translateX(-10px); background: #888; }
+  0% { transform: translateX(0); background: var(--pdfagogo-grip-handle); }
+  50% { transform: translateX(10px); background: var(--pdfagogo-primary); }
+  100% { transform: translateX(-10px); background: var(--pdfagogo-grip-handle); }
 }
 /* Debug information display */
 .pdfagogo-debug-info {
   position: fixed;
   top: 0;
   right: 0;
-  background: rgba(0, 0, 0, 0.8);
-  color: #00ff00;
+  background: var(--pdfagogo-debug-bg);
+  color: var(--pdfagogo-debug-text);
   font-family: monospace;
   padding: 10px;
   font-size: 12px;
@@ -632,13 +729,13 @@
   text-overflow: ellipsis;
 }
 .pdfagogo-debug-info .timing {
-  color: #00ffff;
+  color: var(--pdfagogo-debug-timing);
 }
 .pdfagogo-debug-info .memory {
-  color: #ff9900;
+  color: var(--pdfagogo-debug-memory);
 }
 .pdfagogo-debug-info .debug-header {
-  color: #ffffff;
+  color: var(--pdfagogo-text-light);
   font-weight: bold;
   border-bottom: 1px solid #444;
   padding-bottom: 4px;
@@ -661,10 +758,10 @@
   top: 0;
   left: 0;
   right: 0;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--pdfagogo-bg-overlay-light);
   padding: 20px;
   z-index: 2;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--pdfagogo-border-light);
 }
 
 .pdfagogo-html-loading-content {
@@ -678,8 +775,8 @@
 .pdfagogo-html-loading-spinner {
   width: 24px;
   height: 24px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #3498db;
+  border: 3px solid var(--pdfagogo-bg-subtle);
+  border-top: 3px solid var(--pdfagogo-primary);
   border-radius: 50%;
   animation: pdfagogo-spin 1s linear infinite;
 }
@@ -687,12 +784,12 @@
 .pdfagogo-html-loading-text {
   flex: 1;
   font-size: 16px;
-  color: #333;
+  color: var(--pdfagogo-text-primary);
 }
 
 .pdfagogo-html-loading-subtext {
   font-size: 14px;
-  color: #666;
+  color: var(--pdfagogo-text-muted);
   margin-top: 5px;
 }
 

@@ -142,8 +142,15 @@ export function updateLoadingBar(progressBar, value) {
  *     showError('Failed to load PDF: ' + error.message);
  *   });
  */
-export function removeLoadingBar() {
-  const loadingDiv = document.querySelector(".pdfagogo-loading");
+export function removeLoadingBar(container) {
+  // Search within container first if provided, then fall back to global
+  let loadingDiv;
+  if (container) {
+    loadingDiv = container.querySelector(".pdfagogo-loading");
+  }
+  if (!loadingDiv) {
+    loadingDiv = document.querySelector(".pdfagogo-loading");
+  }
   if (loadingDiv && loadingDiv.parentNode) {
     loadingDiv.parentNode.removeChild(loadingDiv);
   }
@@ -170,10 +177,16 @@ export function removeLoadingBar() {
  * // Handle timeout error
  * showError('Loading timeout. Please check your connection and try again.');
  */
-export function showError(message) {
+export function showError(message, targetContainer) {
   // Try to reuse the existing loading overlay; create one if missing
-  let loadingDiv = document.querySelector(".pdfagogo-loading");
-  const container = document.querySelector('.pdfagogo-container');
+  let loadingDiv;
+  const container = targetContainer || document.querySelector('.pdfagogo-container');
+  if (container) {
+    loadingDiv = container.querySelector(".pdfagogo-loading");
+  }
+  if (!loadingDiv) {
+    loadingDiv = document.querySelector(".pdfagogo-loading");
+  }
   if (!loadingDiv && container) {
     loadingDiv = document.createElement('div');
     loadingDiv.className = 'pdfagogo-loading';
@@ -266,19 +279,21 @@ export function showError(message) {
  */
 import { setupSearchControls } from './search.js';
 
-export function setupControls(container, featureOptions, viewer, book, pdf) {
+export function setupControls(container, featureOptions, viewer, book, pdf, instance) {
   // Remove any existing controls to prevent duplicates
+  // Scope to wrapper if available, otherwise fallback to global
+  const existingWrapper = container.closest('.pdfagogo-viewer-wrapper');
   [
     "pdfagogo-toolbar",
     "pdfagogo-page-announcement",
     "pdfagogo-a11y-instructions"
   ].forEach((cls) => {
-    const el = document.querySelector("." + cls);
+    const el = existingWrapper ? existingWrapper.querySelector("." + cls) : document.querySelector("." + cls);
     if (el && el.parentNode) el.parentNode.removeChild(el);
   });
 
   // Ensure a wrapper exists so we can fullscreen the viewer and its controls together
-  let wrapper = container.closest('.pdfagogo-viewer-wrapper');
+  let wrapper = existingWrapper;
   if (!wrapper) {
     wrapper = document.createElement('div');
     wrapper.className = 'pdfagogo-viewer-wrapper';
@@ -287,6 +302,24 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       parent.insertBefore(wrapper, container);
       wrapper.appendChild(container);
     }
+  }
+
+  // Helper function to track page navigation source (instance-scoped)
+  function setPageSource(source) {
+    if (instance) {
+      instance.setPageSource(source);
+    }
+    // Maintain backward compatibility with window global
+    if (typeof window !== 'undefined') {
+      window.__pdfagogo__pageSetBy = source;
+    }
+  }
+
+  function getPageSource() {
+    if (instance) {
+      return instance.getPageSource();
+    }
+    return typeof window !== 'undefined' ? window.__pdfagogo__pageSetBy : null;
   }
 
   // Search controls are handled by the dedicated module
@@ -587,7 +620,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       setTimeout(() => {
         // console.log('goToHashPage', pageNum);
         setPageByNumber(pageNum);
-        window.__pdfagogo__pageSetBy = 'hash';
+        setPageSource('hash');
       }, 200);
     }
   }
@@ -604,7 +637,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
       const defPage = parseInt(featureOptions.defaultPage, 10);
       if (!isNaN(defPage) && defPage >= 1 && defPage <= pdf.numPages) {
         setPageByNumber(defPage);
-        window.__pdfagogo__pageSetBy = 'defaultPage';
+        setPageSource('defaultPage');
       }
     }
   });
@@ -646,9 +679,9 @@ export function setupControls(container, featureOptions, viewer, book, pdf) {
     const defPage = parseInt(featureOptions.defaultPage, 10);
     if (!isNaN(defPage) && defPage >= 1 && defPage <= pdf.numPages) {
       setTimeout(() => {
-        if (!window.__pdfagogo__pageSetBy) {
+        if (!getPageSource()) {
           setPageByNumber(defPage);
-          window.__pdfagogo__pageSetBy = 'defaultPage-fallback';
+          setPageSource('defaultPage-fallback');
         }
       }, 400);
     }

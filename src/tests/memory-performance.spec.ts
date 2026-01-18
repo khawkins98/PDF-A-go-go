@@ -49,7 +49,7 @@ async function getMemoryMetrics(page: Page): Promise<MemoryMetrics> {
 
 test.describe('Memory and Performance', () => {
   test('Memory usage at different zoom levels', async ({ page }) => {
-    await page.goto('http://localhost:9000/#pdf-page-1');
+    await page.goto('http://localhost:9000/tests/test-small.html#pdf-page-1');
     await page.waitForSelector('.pdfagogo-page-canvas', { timeout: 30000 });
     await page.click('.pdfagogo-container');
     await page.waitForTimeout(2000);
@@ -159,7 +159,7 @@ test.describe('Memory and Performance', () => {
   });
 
   test('Scroll and zoom responsiveness', async ({ page }) => {
-    await page.goto('http://localhost:9000/#pdf-page-1');
+    await page.goto('http://localhost:9000/tests/test-small.html#pdf-page-1');
     await page.waitForSelector('.pdfagogo-page-canvas', { timeout: 30000 });
     await page.click('.pdfagogo-container');
     await page.waitForTimeout(2000);

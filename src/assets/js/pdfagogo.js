@@ -3,78 +3,391 @@
  *
  * This module provides the core initialization and configuration parsing for the PDF-A-go-go viewer.
  * It handles PDF loading with progress tracking, HTML download detection, and viewer setup with
- * comprehensive accessibility support.
+ * comprehensive accessibility support. Supports multiple independent viewer instances on the same page.
  *
  * @author PDF-A-go-go Contributors
- * @version 1.0.0
+ * @version 2.0.0
  * @see {@link https://github.com/khawkins98/PDF-A-go-go|GitHub Repository}
  */
 
-import { loadPdfWithProgress } from "./pdfLoader.js";
+import { loadPdfWithProgress, setWorkerUrl } from "./pdfLoader.js";
 import { createLoadingBar, updateLoadingBar, removeLoadingBar, showError, setupControls } from "./ui.js";
-import { getH } from "@tpp/htm-x";
 import { ScrollablePdfViewer } from "./scrollablePdfViewer.js";
+import { ViewerInstance } from "./viewerInstance.js";
+import { SearchController } from "./searchController.js";
 
-/** @type {Object|null} The loaded PDF.js document instance */
-let pdf = null;
+/**
+ * Registry for managing multiple PDF viewer instances.
+ * Enables multiple independent viewers on the same page.
+ *
+ * @class ViewerRegistry
+ */
+class ViewerRegistry {
+  constructor() {
+    /** @type {Map<string, ViewerInstance>} Map of container ID to ViewerInstance */
+    this.instances = new Map();
+  }
 
-/** @type {ScrollablePdfViewer|null} The active PDF viewer instance */
-let viewer = null;
+  /**
+   * Create and register a new viewer instance.
+   * @param {HTMLElement} container - Container element
+   * @param {Object} options - Configuration options
+   * @returns {ViewerInstance}
+   */
+  createInstance(container, options = {}) {
+    const instance = new ViewerInstance(container, options);
+    this.instances.set(instance.id, instance);
+    return instance;
+  }
+
+  /**
+   * Get an instance by container ID or element.
+   * @param {string|HTMLElement} containerOrId - Container ID or element
+   * @returns {ViewerInstance|undefined}
+   */
+  getInstance(containerOrId) {
+    if (typeof containerOrId === 'string') {
+      return this.instances.get(containerOrId);
+    }
+    // Search by container element
+    for (const instance of this.instances.values()) {
+      if (instance.container === containerOrId) {
+        return instance;
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * Destroy and unregister a viewer instance.
+   * @param {string|HTMLElement|ViewerInstance} instanceOrId - Instance, container ID, or element
+   */
+  destroyInstance(instanceOrId) {
+    let instance;
+    if (instanceOrId instanceof ViewerInstance) {
+      instance = instanceOrId;
+    } else {
+      instance = this.getInstance(instanceOrId);
+    }
+
+    if (instance) {
+      this.instances.delete(instance.id);
+      instance.destroy();
+    }
+  }
+
+  /**
+   * Get all registered instances.
+   * @returns {ViewerInstance[]}
+   */
+  getAllInstances() {
+    return Array.from(this.instances.values());
+  }
+
+  /**
+   * Destroy all instances.
+   */
+  destroyAll() {
+    for (const instance of this.instances.values()) {
+      instance.destroy();
+    }
+    this.instances.clear();
+  }
+
+  /**
+   * Get the number of registered instances.
+   * @returns {number}
+   */
+  get size() {
+    return this.instances.size;
+  }
+}
+
+/** @type {ViewerRegistry} Global registry for all viewer instances */
+const registry = new ViewerRegistry();
+
+/**
+ * Default configuration options for the PDF viewer.
+ * These can be overridden via data attributes on the container element.
+ */
+const defaultOptions = {
+  showPageSelector: true,
+  showCurrentPage: true,
+  showSearch: true,
+  showResizeGrip: true,
+  pdfUrl: "./example.pdf",
+  showDownload: true,
+  showShare: true,
+  showFullscreen: true,
+  showAccessibilityControlsVisibly: true,
+};
+
+/**
+ * Robust boolean parser that handles various input formats.
+ *
+ * @param {string|boolean|undefined} val - Value to parse as boolean
+ * @param {boolean} fallback - Fallback value if parsing fails
+ * @returns {boolean} Parsed boolean value or fallback
+ */
+function parseBool(val, fallback) {
+  if (val === undefined) return fallback;
+  if (typeof val === 'boolean') return val;
+  if (typeof val === 'string') return val === 'true' || val === '';
+  return fallback;
+}
+
+/**
+ * Extracts and parses configuration options from data attributes on the container element.
+ *
+ * @param {HTMLElement} container - The container element with data attributes
+ * @returns {Object} Parsed options object with typed values
+ */
+function getOptionsFromDataAttrs(container) {
+  const opts = {};
+  if (!container) return opts;
+
+  const map = container.dataset;
+
+  // URL and content options
+  if (map.pdfUrl) opts.pdfUrl = map.pdfUrl;
+  if (map.defaultPage) opts.defaultPage = parseInt(map.defaultPage, 10);
+
+  // Appearance options
+  if (map.backgroundColor) opts.backgroundColor = map.backgroundColor;
+  if (map.boxBorder) opts.boxBorder = parseInt(map.boxBorder, 10);
+  if (map.margin) opts.margin = parseFloat(map.margin);
+  if (map.marginTop) opts.marginTop = parseFloat(map.marginTop);
+  if (map.marginLeft) opts.marginLeft = parseFloat(map.marginLeft);
+
+  // UI feature toggles
+  if (map.showToolbar !== undefined) opts.showToolbar = parseBool(map.showToolbar, undefined);
+  if (map.showPageSelector !== undefined) opts.showPageSelector = parseBool(map.showPageSelector, undefined);
+  if (map.showCurrentPage !== undefined) opts.showCurrentPage = parseBool(map.showCurrentPage, undefined);
+  if (map.showSearch !== undefined) opts.showSearch = parseBool(map.showSearch, undefined);
+  if (map.showResizeGrip !== undefined) opts.showResizeGrip = parseBool(map.showResizeGrip, undefined);
+  if (map.showFullscreen !== undefined) opts.showFullscreen = parseBool(map.showFullscreen, undefined);
+  if (map.showDownload !== undefined) opts.showDownload = parseBool(map.showDownload, undefined);
+  if (map.showShare !== undefined) opts.showShare = parseBool(map.showShare, undefined);
+  if (map.showAccessibilityControlsVisibly !== undefined) {
+    opts.showAccessibilityControlsVisibly = parseBool(map.showAccessibilityControlsVisibly, undefined);
+  }
+
+  // Behavioral options
+  if (map.momentum !== undefined) opts.momentum = parseFloat(map.momentum) || 1.5;
+  if (map.debug !== undefined) opts.debug = parseBool(map.debug, false);
+
+  // Worker URL configuration
+  if (map.workerUrl) opts.workerUrl = map.workerUrl;
+
+  // Memory/performance configuration
+  if (map.fullpageCacheSize !== undefined) opts.fullpageCacheSize = parseInt(map.fullpageCacheSize, 10);
+  if (map.textLayerCacheSize !== undefined) opts.textLayerCacheSize = parseInt(map.textLayerCacheSize, 10);
+
+  // Theme configuration
+  if (map.theme) opts.theme = map.theme;
+
+  return opts;
+}
+
+/**
+ * Determines WebGL configuration from data attributes.
+ *
+ * @param {HTMLElement} container - Container element to check for WebGL settings
+ * @returns {boolean} True if WebGL should be disabled, false otherwise
+ */
+function getDisableWebGLFromDataAttrs(container) {
+  if (!container) return true;
+  const val = container.getAttribute('data-disable-webgl');
+  if (val === null) return true;
+  if (val === 'false') return false;
+  return true;
+}
+
+/**
+ * Create a book object that provides a standardized interface to the PDF document.
+ *
+ * @param {Object} pdf - PDF.js document
+ * @returns {Object} Book object with numPages() and getPage() methods
+ */
+function createBookObject(pdf) {
+  return {
+    numPages: () => pdf.numPages,
+
+    getPage: (num, cb, highlights, targetScale) => {
+      const pageNum = num + 1;
+
+      if (pageNum < 1 || pageNum > pdf.numPages) {
+        cb(new Error("Page out of range"));
+        return;
+      }
+
+      pdf
+        .getPage(pageNum)
+        .then(async function (page) {
+          const scale = targetScale || window.devicePixelRatio || 1.8;
+
+          if (targetScale && window.console) {
+            console.log(`%c📄 PDF page ${pageNum} rendered at scale: ${scale.toFixed(2)}x (requested: ${targetScale.toFixed(2)}x)`, 'color: #FF5722;');
+          }
+
+          const viewport = page.getViewport({ scale });
+
+          const canvas = document.createElement("canvas");
+          const context = canvas.getContext("2d");
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+
+          await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+          if (Array.isArray(highlights) && highlights.length > 0) {
+            context.save();
+            const prevComp = context.globalCompositeOperation;
+            context.globalCompositeOperation = 'multiply';
+            context.globalAlpha = 1.0;
+            context.fillStyle = "rgba(255,255,0,1)";
+
+            for (const hl of highlights) {
+              const rect = viewport.convertToViewportRectangle([
+                hl.x,
+                hl.y,
+                hl.x + hl.width,
+                hl.y + hl.height
+              ]);
+              const left = Math.min(rect[0], rect[2]);
+              const top = Math.min(rect[1], rect[3]);
+              const width = Math.abs(rect[2] - rect[0]);
+              const height = Math.abs(rect[3] - rect[1]);
+              context.fillRect(left, top, width, height);
+            }
+
+            context.globalCompositeOperation = prevComp;
+            context.restore();
+          }
+
+          cb(null, {
+            img: canvas,
+            width: viewport.width,
+            height: viewport.height,
+            getTextContent: () => page.getTextContent(),
+            getViewport: (opts) => page.getViewport(opts)
+          });
+        })
+        .catch(function (err) {
+          cb(err);
+        });
+    },
+  };
+}
+
+/**
+ * Initialize a single PDF viewer container.
+ *
+ * @param {HTMLElement} container - The container element
+ * @param {Object} [options] - Override options (merged with data attributes)
+ * @returns {Promise<ViewerInstance>}
+ */
+async function initializeContainer(container, options = {}) {
+  // Parse options from data attributes and merge with provided options
+  const dataOptions = getOptionsFromDataAttrs(container);
+  const featureOptions = Object.assign({}, defaultOptions, dataOptions, options);
+
+  // Create viewer instance
+  const instance = registry.createInstance(container, featureOptions);
+
+  // Clean up any existing UI controls for this container's wrapper
+  const wrapper = container.closest('.pdfagogo-viewer-wrapper');
+  if (wrapper) {
+    [
+      "pdfagogo-toolbar",
+      "pdfagogo-page-announcement",
+      "pdfagogo-a11y-instructions",
+    ].forEach((cls) => {
+      const el = wrapper.querySelector("." + cls);
+      if (el && el.parentNode) el.parentNode.removeChild(el);
+    });
+  }
+
+  // Configure custom worker URL if specified (only once globally)
+  if (featureOptions.workerUrl) {
+    setWorkerUrl(featureOptions.workerUrl);
+  }
+
+  // Apply theme if specified
+  if (featureOptions.theme) {
+    container.setAttribute('data-theme', featureOptions.theme);
+  }
+
+  // Create loading bar
+  const progressBar = createLoadingBar(container);
+
+  try {
+    // Load PDF
+    const loadedPdf = await loadPdfWithProgress(
+      featureOptions.pdfUrl,
+      (progress) => {
+        updateLoadingBar(progressBar, progress);
+      },
+      {
+        container: container,
+        downloadTimeout: parseInt(container.dataset.downloadTimeout, 10) || 30000
+      }
+    );
+
+    instance.setPdf(loadedPdf);
+
+    // Create book object
+    const book = createBookObject(loadedPdf);
+    instance.setBook(book);
+
+    // Pass the PDF document directly to the viewer for tile-based rendering
+    featureOptions.pdfDocument = loadedPdf;
+
+    // Remove any existing children to ensure clean initialization
+    while (container.firstChild) container.removeChild(container.firstChild);
+
+    // Create the scrollable PDF viewer
+    const viewer = new ScrollablePdfViewer({
+      app: container,
+      book,
+      options: featureOptions,
+    });
+    instance.setViewer(viewer);
+
+    // Create search controller
+    const searchController = new SearchController({
+      pdf: loadedPdf,
+      viewer: viewer,
+      tileManager: viewer.tileRenderer ? viewer.tileRenderer.tileManager : null,
+    });
+    instance.setSearchController(searchController);
+
+    // Store instance reference on container for external access
+    container.pdfViewer = viewer;
+    container._pdfagogoInstance = instance;
+
+    // Remove loading bar
+    removeLoadingBar(container);
+
+    // Setup controls
+    setupControls(container, featureOptions, viewer, book, loadedPdf, instance);
+
+    return instance;
+  } catch (err) {
+    showError("Failed to load PDF: " + err, container);
+    throw err;
+  }
+}
 
 /**
  * Initialize the PDF-A-go-go viewer with comprehensive error handling and accessibility support.
  *
- * This function creates a new ScrollablePdfViewer instance within the specified container,
- * configures it with the provided options, and sets up all necessary event handlers.
- *
  * @param {Object} book - PDF book object with numPages() and getPage() methods
- * @param {Function} book.numPages - Returns the total number of pages in the PDF
- * @param {Function} book.getPage - Retrieves a specific page with rendering capabilities
  * @param {string} id - DOM element ID for the viewer container
  * @param {Object} [opts={}] - Viewer configuration options
- * @param {boolean} [opts.showPageSelector=true] - Show page number input field
- * @param {boolean} [opts.showCurrentPage=true] - Show current page indicator
- * @param {boolean} [opts.showSearch=true] - Show search functionality
- * @param {boolean} [opts.showDownload=true] - Show download button
- * @param {boolean} [opts.showResizeGrip=true] - Show resize handle
- * @param {number} [opts.defaultPage=1] - Default page to display on load
- * @param {number} [opts.momentum=1.5] - Scroll momentum factor for smooth scrolling
- * @param {boolean} [opts.debug=false] - Enable debug mode with performance metrics
- * @param {string} [opts.backgroundColor] - Background color for the viewer
- * @param {number} [opts.boxBorder] - Border size in pixels
- * @param {number} [opts.margin] - General margin setting
- * @param {number} [opts.marginTop] - Top margin setting
- * @param {number} [opts.marginLeft] - Left margin setting
  * @param {Function} [cb] - Callback function called with (error, viewer) upon completion
  * @returns {void}
- *
- * @example
- * // Basic initialization
- * init(pdfBook, 'viewer-container', {
- *   showSearch: true,
- *   debug: false
- * }, (err, viewer) => {
- *   if (err) {
- *     console.error('Failed to initialize viewer:', err);
- *     return;
- *   }
- *   console.log('Viewer ready:', viewer);
- * });
- *
- * @example
- * // Advanced configuration
- * init(pdfBook, 'viewer-container', {
-
- *   showPageSelector: true,
- *   showSearch: true,
- *   defaultPage: 5,
- *   momentum: 2.0,
- *   debug: true,
- *   backgroundColor: '#f5f5f5'
- * });
  */
 function init(book, id, opts, cb) {
-  // Handle function overloading - if opts is a function, it's actually the callback
   if (typeof opts === "function") {
     cb = opts;
     opts = {};
@@ -82,7 +395,7 @@ function init(book, id, opts, cb) {
   if (!opts) opts = {};
   if (!cb) cb = () => 1;
 
-  const app = getH(id);
+  const app = document.getElementById(id);
   if (!app) {
     const emsg = "scrollable-pdf-viewer: Failed to find container for viewer: " + id;
     console.error(emsg);
@@ -90,11 +403,9 @@ function init(book, id, opts, cb) {
     return;
   }
 
-  // Remove any existing children to ensure clean initialization
   while (app.firstChild) app.removeChild(app.firstChild);
 
-  // Create the scrollable PDF viewer with provided configuration
-  viewer = new ScrollablePdfViewer({
+  const viewer = new ScrollablePdfViewer({
     app,
     book,
     options: opts,
@@ -104,340 +415,42 @@ function init(book, id, opts, cb) {
 
 /**
  * Main entry point for PDF-A-go-go application.
- *
- * This IIFE (Immediately Invoked Function Expression) handles the complete application lifecycle:
- * - Parses configuration from data attributes
- * - Sets up loading progress indicators
- * - Loads the PDF with HTML download handling
- * - Initializes the viewer with accessibility features
- * - Sets up all UI controls and event handlers
- *
- * The function automatically detects and handles:
- * - Direct PDF URLs
- * - HTML pages that redirect to PDFs (institutional repositories)
- * - WebGL configuration for optimal rendering
- * - Mobile vs desktop optimization
- *
- * @function
- * @name MainApplication
- * @memberof module:pdfagogo
+ * Automatically initializes all .pdfagogo-container elements on the page.
  */
 (function () {
-  const pdfagogoContainer = document.querySelector(".pdfagogo-container");
+  // Find all PDF viewer containers
+  const containers = document.querySelectorAll(".pdfagogo-container");
 
-  // Create loading bar with progress tracking
-  const progressBar = createLoadingBar(pdfagogoContainer);
-
-  // --- BEGIN: Option defaults ---
-  /**
-   * Default configuration options for the PDF viewer.
-   * These can be overridden via data attributes on the container element.
-   *
-   * @type {Object}
-   * @property {boolean} showPrevNext - Show previous/next navigation buttons
-   * @property {boolean} showPageSelector - Show page number input field
-   * @property {boolean} showCurrentPage - Show current page indicator
-   * @property {boolean} showSearch - Show search functionality
-   * @property {boolean} showResizeGrip - Show resize handle
-   * @property {string} pdfUrl - Default PDF URL to load
-   * @property {boolean} showDownload - Show download button
-   * @property {boolean} showShare - Show share button
-   */
-  const defaultOptions = {
-
-    showPageSelector: true,
-    showCurrentPage: true,
-    showSearch: true,
-    showResizeGrip: true,
-    pdfUrl: "./example.pdf",
-    showDownload: true,
-    showShare: true,
-    showFullscreen: true,
-    // Show the accessibility instructions block visibly beneath the container
-    showAccessibilityControlsVisibly: true,
-  };
-  // --- END: Option defaults ---
-
-  /**
-   * Robust boolean parser that handles various input formats.
-   *
-   * This helper function safely converts string and boolean values to boolean,
-   * with proper fallback handling for undefined or invalid values.
-   *
-   * @param {string|boolean|undefined} val - Value to parse as boolean
-   * @param {boolean} fallback - Fallback value if parsing fails
-   * @returns {boolean} Parsed boolean value or fallback
-   *
-   * @example
-   * parseBool('true', false);     // returns true
-   * parseBool('false', true);     // returns false
-   * parseBool('', false);         // returns true (empty string is truthy)
-   * parseBool(undefined, true);   // returns true (fallback)
-   * parseBool(null, false);       // returns false (fallback)
-   */
-  function parseBool(val, fallback) {
-    if (val === undefined) return fallback;
-    if (typeof val === 'boolean') return val;
-    if (typeof val === 'string') return val === 'true' || val === '';
-    return fallback;
+  if (containers.length === 0) {
+    return;
   }
 
-  /**
-   * Extracts and parses configuration options from data attributes on the container element.
-   *
-   * This function reads all supported data attributes and converts them to the appropriate
-   * types (string, number, boolean) for use in viewer configuration. It handles both
-   * display options and behavioral settings.
-   *
-   * @param {HTMLElement} container - The container element with data attributes
-   * @returns {Object} Parsed options object with typed values
-   *
-   * @example
-   * // HTML: <div data-pdf-url="./doc.pdf" data-show-search="true" data-default-page="5">
-   * const options = getOptionsFromDataAttrs(container);
-   * // Returns: { pdfUrl: './doc.pdf', showSearch: true, defaultPage: 5 }
-   */
-  function getOptionsFromDataAttrs(container) {
-    const opts = {};
-    if (!container) return opts;
-
-    const map = container.dataset;
-
-    // URL and content options
-    if (map.pdfUrl) opts.pdfUrl = map.pdfUrl;
-    if (map.defaultPage) opts.defaultPage = parseInt(map.defaultPage, 10);
-
-    // Appearance options
-    if (map.backgroundColor) opts.backgroundColor = map.backgroundColor;
-    if (map.boxBorder) opts.boxBorder = parseInt(map.boxBorder, 10);
-    if (map.margin) opts.margin = parseFloat(map.margin);
-    if (map.marginTop) opts.marginTop = parseFloat(map.marginTop);
-    if (map.marginLeft) opts.marginLeft = parseFloat(map.marginLeft);
-
-    // UI feature toggles
-    if (map.showToolbar !== undefined) opts.showToolbar = parseBool(map.showToolbar, undefined);
-    if (map.showPageSelector !== undefined) opts.showPageSelector = parseBool(map.showPageSelector, undefined);
-    if (map.showCurrentPage !== undefined) opts.showCurrentPage = parseBool(map.showCurrentPage, undefined);
-    if (map.showSearch !== undefined) opts.showSearch = parseBool(map.showSearch, undefined);
-    if (map.showResizeGrip !== undefined) opts.showResizeGrip = parseBool(map.showResizeGrip, undefined);
-    if (map.showFullscreen !== undefined) opts.showFullscreen = parseBool(map.showFullscreen, undefined);
-    if (map.showDownload !== undefined) opts.showDownload = parseBool(map.showDownload, undefined);
-    if (map.showShare !== undefined) opts.showShare = parseBool(map.showShare, undefined);
-    // Accessibility visibility toggle
-    if (map.showAccessibilityControlsVisibly !== undefined) {
-      opts.showAccessibilityControlsVisibly = parseBool(map.showAccessibilityControlsVisibly, undefined);
-    }
-
-    // Behavioral options
-    if (map.momentum !== undefined) opts.momentum = parseFloat(map.momentum) || 1.5;
-    if (map.debug !== undefined) opts.debug = parseBool(map.debug, false);
-
-    return opts;
-  }
-
-  // Merge default options with data attribute options
-  const dataOptions = getOptionsFromDataAttrs(pdfagogoContainer);
-  const featureOptions = Object.assign({}, defaultOptions, dataOptions);
-
-  // Clean up any existing UI controls to prevent duplicates
-  [
-    "pdfagogo-toolbar",
-    "pdfagogo-page-announcement",
-    "pdfagogo-a11y-instructions",
-  ].forEach((cls) => {
-    const el = document.querySelector("." + cls);
-    if (el && el.parentNode) el.parentNode.removeChild(el);
-  });
-
-  /**
-   * Determines WebGL configuration from data attributes.
-   *
-   * WebGL is disabled by default for better compatibility and stability.
-   * This can be overridden by setting data-disable-webgl="false".
-   *
-   * @param {HTMLElement} container - Container element to check for WebGL settings
-   * @returns {boolean} True if WebGL should be disabled, false otherwise
-   */
-  function getDisableWebGLFromDataAttrs(container) {
-    if (!container) return true; // default: disable WebGL
-    const val = container.getAttribute('data-disable-webgl');
-    if (val === null) return true; // default: disable WebGL
-    if (val === 'false') return false;
-    return true;
-  }
-
-  // Configure PDF.js WebGL settings
+  // Configure PDF.js WebGL settings (once globally, using first container)
   if (typeof window !== "undefined") {
-    window.pdfjsDisableWebGL = getDisableWebGLFromDataAttrs(pdfagogoContainer);
+    window.pdfjsDisableWebGL = getDisableWebGLFromDataAttrs(containers[0]);
   }
 
-  // Load PDF with comprehensive progress tracking and error handling
-  loadPdfWithProgress(
-    featureOptions.pdfUrl,
-    (progress) => {
-      updateLoadingBar(progressBar, progress);
-    },
-    {
-      container: pdfagogoContainer,
-      downloadTimeout: parseInt(pdfagogoContainer.dataset.downloadTimeout, 10) || 30000
+  // Initialize each container
+  containers.forEach((container, index) => {
+    // Ensure container has an ID for registry
+    if (!container.id) {
+      container.id = `pdfagogo-container-${index}`;
     }
-  )
-    .then(async function (loadedPdf) {
-      pdf = loadedPdf;
 
-      /**
-       * Book object that provides a standardized interface to the PDF document.
-       *
-       * This object abstracts PDF.js functionality and provides methods for
-       * page counting, page retrieval, and rendering with highlight support.
-       *
-       * @type {Object}
-       * @property {Function} numPages - Returns total number of pages
-       * @property {Function} getPage - Retrieves and renders a specific page
-       */
-      const book = {
-        /**
-         * Get the total number of pages in the PDF.
-         * @returns {number} Total page count
-         */
-        numPages: () => pdf.numPages,
-
-        /**
-         * Retrieve and render a specific page with optional highlights.
-         *
-         * @param {number} num - Zero-based page index
-         * @param {Function} cb - Callback function(error, pageData)
-         * @param {Array<Object>} [highlights] - Array of highlight objects to render
-         * @param {number} highlights[].x - X coordinate of highlight
-         * @param {number} highlights[].y - Y coordinate of highlight
-         * @param {number} highlights[].width - Width of highlight
-         * @param {number} highlights[].height - Height of highlight
-         */
-        getPage: (num, cb, highlights, targetScale) => {
-          const pageNum = num + 1; // Convert to 1-based indexing
-
-          if (pageNum < 1 || pageNum > pdf.numPages) {
-            cb(new Error("Page out of range"));
-            return;
-          }
-
-          pdf
-            .getPage(pageNum)
-            .then(async function (page) {
-              // Use the target scale provided by the viewer, or fall back to device pixel ratio
-              const scale = targetScale || window.devicePixelRatio || 1.8;
-
-              // Debug: Log the scale being used for PDF rendering
-              if (targetScale && window.console) {
-                console.log(`%c📄 PDF page ${pageNum} rendered at scale: ${scale.toFixed(2)}x (requested: ${targetScale.toFixed(2)}x)`, 'color: #FF5722;');
-              }
-
-              const viewport = page.getViewport({ scale });
-
-              // Create canvas for rendering
-              const canvas = document.createElement("canvas");
-              const context = canvas.getContext("2d");
-              canvas.width = viewport.width;
-              canvas.height = viewport.height;
-
-              // Render the page
-              await page.render({ canvasContext: context, viewport: viewport }).promise;
-
-              // Draw highlights if provided (for search results)
-              if (Array.isArray(highlights) && highlights.length > 0) {
-                context.save();
-                const prevComp = context.globalCompositeOperation;
-                context.globalCompositeOperation = 'multiply';
-                context.globalAlpha = 1.0;
-                context.fillStyle = "rgba(255,255,0,1)";
-
-                for (const hl of highlights) {
-                  const rect = viewport.convertToViewportRectangle([
-                    hl.x,
-                    hl.y,
-                    hl.x + hl.width,
-                    hl.y + hl.height
-                  ]);
-                  const left = Math.min(rect[0], rect[2]);
-                  const top = Math.min(rect[1], rect[3]);
-                  const width = Math.abs(rect[2] - rect[0]);
-                  const height = Math.abs(rect[3] - rect[1]);
-                  context.fillRect(left, top, width, height);
-                }
-
-                context.globalCompositeOperation = prevComp;
-                context.restore();
-              }
-
-              // Return page data with rendering capabilities
-              cb(null, {
-                img: canvas,
-                width: viewport.width,
-                height: viewport.height,
-                getTextContent: () => page.getTextContent(),
-                getViewport: (opts) => page.getViewport(opts)
-              });
-            })
-            .catch(function (err) {
-              cb(err);
-            });
-        },
-      };
-
-      // Pass the PDF document directly to the viewer for tile-based rendering
-      featureOptions.pdfDocument = pdf;
-
-      // Initialize the viewer with the book object and PDF document
-      init(book, "pdfagogo-container", featureOptions, function (err, v) {
-        removeLoadingBar();
-        if (err) {
-          showError("Failed to load PDF: " + err);
-          return;
-        }
-        viewer = v;
-
-        // Expose viewer instance for testing and external access
-        pdfagogoContainer.pdfViewer = viewer;
-
-        setupControls(pdfagogoContainer, featureOptions, viewer, book, pdf);
-      });
-    })
-    .catch(function (err) {
-      /**
-       * Handle PDF loading errors with user-friendly error messages.
-       *
-       * This catch block handles various types of loading failures:
-       * - Network errors (PDF not found, server issues)
-       * - PDF parsing errors (corrupted or invalid PDF files)
-       * - HTML download handler failures (timeout, redirect issues)
-       * - PDF.js rendering errors
-       *
-       * @param {Error} err - The error that occurred during PDF loading
-       */
-      showError("Failed to load PDF: " + err);
+    // Initialize asynchronously to not block the page
+    initializeContainer(container).catch((err) => {
+      console.error(`[PDF-A-go-go] Failed to initialize container ${container.id}:`, err);
     });
+  });
 })();
 
 /**
- * Default export object providing the init function for external use.
- *
- * This allows the module to be used programmatically by other applications
- * that want to embed the PDF viewer with custom configuration.
- *
- * @type {Object}
- * @property {Function} init - The main initialization function
- *
- * @example
- * import pdfagogo from './pdfagogo.js';
- *
- * // Use programmatically
- * pdfagogo.init(bookObject, 'container-id', {
- *   showSearch: true,
- *   debug: true
- * }, (err, viewer) => {
- *   if (!err) {
- *     console.log('PDF viewer initialized successfully');
- *   }
- * });
+ * Default export object providing the init function and registry for external use.
  */
-export default { init };
+export default {
+  init,
+  registry,
+  initializeContainer,
+  ViewerInstance,
+  SearchController,
+};
