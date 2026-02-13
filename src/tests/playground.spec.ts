@@ -12,13 +12,13 @@ test.describe('Playground Functionality', () => {
   });
 
   test('should load PDF and show correct default page', async ({ page }) => {
-    // The default page is set to 3 in the playground HTML
+    // The default page is set to 1 in the playground HTML
     const pageInput = page.locator('#pdfagogo-container .pdfagogo-goto-page');
-    await expect(pageInput).toHaveValue('3');
+    await expect(pageInput).toHaveValue('1');
 
     // Verify page total is shown
     const pageTotal = page.locator('#pdfagogo-container .pdfagogo-page-total');
-    await expect(pageTotal).toContainText('15');
+    await expect(pageTotal).toContainText('3');
   });
 
   test('should navigate to next page when clicking next button', async ({ page }) => {
@@ -28,7 +28,7 @@ test.describe('Playground Functionality', () => {
 
     // Get initial page and scroll position
     const initialPage = await pageInput.inputValue();
-    expect(initialPage).toBe('3');
+    expect(initialPage).toBe('1');
 
     const initialScrollTop = await scrollContainer.evaluate((el) => el.scrollTop);
 
@@ -37,7 +37,7 @@ test.describe('Playground Functionality', () => {
     await page.waitForTimeout(800); // Wait for smooth scroll
 
     // Verify page changed
-    await expect(pageInput).toHaveValue('4');
+    await expect(pageInput).toHaveValue('2');
 
     // Verify scroll position changed (PDF should have scrolled)
     const newScrollTop = await scrollContainer.evaluate((el) => el.scrollTop);
@@ -46,17 +46,20 @@ test.describe('Playground Functionality', () => {
 
   test('should navigate to previous page when clicking prev button', async ({ page }) => {
     const pageInput = page.locator('#pdfagogo-container .pdfagogo-goto-page');
+    const nextButton = page.locator('#pdfagogo-container .pdfagogo-next-page');
     const prevButton = page.locator('#pdfagogo-container .pdfagogo-prev-page');
 
-    // Get initial page (should be 3)
-    await expect(pageInput).toHaveValue('3');
+    // Navigate to page 2 first (starts at page 1)
+    await nextButton.click();
+    await page.waitForTimeout(800);
+    await expect(pageInput).toHaveValue('2');
 
     // Click previous page button
     await prevButton.click();
     await page.waitForTimeout(500); // Wait for smooth scroll
 
-    // Verify page changed to 2
-    await expect(pageInput).toHaveValue('2');
+    // Verify page changed back to 1
+    await expect(pageInput).toHaveValue('1');
   });
 
   test('should navigate to specific page when entering page number', async ({ page }) => {
@@ -64,12 +67,12 @@ test.describe('Playground Functionality', () => {
 
     // Clear and enter a new page number
     await pageInput.click();
-    await pageInput.fill('10');
+    await pageInput.fill('3');
     await pageInput.press('Enter');
     await page.waitForTimeout(500); // Wait for smooth scroll
 
     // Verify page changed
-    await expect(pageInput).toHaveValue('10');
+    await expect(pageInput).toHaveValue('3');
   });
 
   test('should perform search and show results', async ({ page }) => {
