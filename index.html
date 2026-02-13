@@ -221,7 +221,27 @@
     font-size: 0.85rem;
     line-height: 1.5;
   }
+
+  .theme-toggle.active {
+    background: var(--accent-light);
+    color: var(--accent);
+  }
 </style>
+<script>
+  function toggleTheme() {
+    var container = document.querySelector('.pdfagogo-container');
+    if (!container) return;
+    var btn = document.querySelector('.theme-toggle');
+    var isDark = container.getAttribute('data-theme') === 'dark';
+    if (isDark) {
+      container.removeAttribute('data-theme');
+      if (btn) { btn.classList.remove('active'); btn.textContent = '\u263D Dark mode'; }
+    } else {
+      container.setAttribute('data-theme', 'dark');
+      if (btn) { btn.classList.add('active'); btn.textContent = '\u263C Light mode'; }
+    }
+  }
+</script>
 
   <title>PDF-A-go-go: Lightweight Embeddable PDF Viewer</title>
 </head>
@@ -250,6 +270,8 @@
   <a href="./remote-pdf-cors-fail.html">CORS Error</a>
   <h2 class="nav-section">Resources</h2>
   <a href="https://github.com/khawkins98/PDF-A-go-go" target="_blank" rel="noopener">GitHub</a>
+  <h2 class="nav-section">Theme</h2>
+  <a href="#" class="theme-toggle" onclick="toggleTheme(); return false;">&#9789; Dark mode</a>
 </nav>
 
   </header>
