@@ -62,9 +62,11 @@ export function parseTileKey(key) {
 export class TileCache {
   /**
    * @param {number} maxSize - Maximum number of tiles to cache
+   * @param {Function} [onEvict] - Callback invoked with the canvas before eviction
    */
-  constructor(maxSize = 100) {
+  constructor(maxSize = 100, onEvict = null) {
     this.maxSize = maxSize;
+    this.onEvict = onEvict;
     this.cache = new Map(); // Map<string, { canvas: HTMLCanvasElement, lastAccess: number }>
   }
 
@@ -113,6 +115,10 @@ export class TileCache {
    * @param {string} key - Tile key
    */
   delete(key) {
+    const entry = this.cache.get(key);
+    if (entry && this.onEvict) {
+      this.onEvict(entry.canvas);
+    }
     this.cache.delete(key);
   }
 
@@ -121,8 +127,9 @@ export class TileCache {
    * @param {number} pageIndex - Page index to clear
    */
   clearPage(pageIndex) {
-    for (const key of this.cache.keys()) {
+    for (const [key, entry] of this.cache) {
       if (key.startsWith(`${pageIndex}:`)) {
+        if (this.onEvict) this.onEvict(entry.canvas);
         this.cache.delete(key);
       }
     }
@@ -133,8 +140,9 @@ export class TileCache {
    * @param {number} tier - Tier to clear
    */
   clearTier(tier) {
-    for (const key of this.cache.keys()) {
+    for (const [key, entry] of this.cache) {
       if (key.endsWith(`:${tier}`)) {
+        if (this.onEvict) this.onEvict(entry.canvas);
         this.cache.delete(key);
       }
     }
@@ -144,6 +152,11 @@ export class TileCache {
    * Clear entire cache.
    */
   clear() {
+    if (this.onEvict) {
+      for (const entry of this.cache.values()) {
+        this.onEvict(entry.canvas);
+      }
+    }
     this.cache.clear();
   }
 
@@ -171,6 +184,8 @@ export class TileCache {
     }
 
     if (oldestKey) {
+      const entry = this.cache.get(oldestKey);
+      if (entry && this.onEvict) this.onEvict(entry.canvas);
       this.cache.delete(oldestKey);
     }
   }
@@ -200,6 +215,8 @@ export class TileCache {
     }
 
     for (const key of keysToDelete) {
+      const entry = this.cache.get(key);
+      if (entry && this.onEvict) this.onEvict(entry.canvas);
       this.cache.delete(key);
     }
   }
@@ -230,7 +247,7 @@ export class TileManager {
     // Full-page cache size limit (configurable, with sensible defaults)
     this.maxFullPageCacheSize = options.maxFullPageCacheSize || (isMobile ? 5 : 10);
 
-    this.cache = new TileCache(this.cacheSize);
+    this.cache = new TileCache(this.cacheSize, (canvas) => this._cleanupCanvas(canvas));
     this.pending = new Set(); // Tile keys currently being rendered
     this.pageInfo = new Map(); // Map<pageIndex, { width, height, pdfPage }>
 
@@ -285,6 +302,25 @@ export class TileManager {
       return window.__pdfagogo__highlights[pageIndex] || [];
     }
     return [];
+  }
+
+  /**
+   * Release canvas memory by clearing and shrinking to 1x1.
+   * Safari/iOS has a hard 384MB canvas memory limit and doesn't
+   * aggressively GC detached canvases, so explicit cleanup is needed.
+   * @param {HTMLCanvasElement} canvas
+   * @private
+   */
+  _cleanupCanvas(canvas) {
+    if (!canvas) return;
+    try {
+      const ctx = canvas.getContext('2d');
+      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+      canvas.width = 1;
+      canvas.height = 1;
+    } catch (e) {
+      // Canvas may already be detached
+    }
   }
 
   /**
@@ -601,6 +637,7 @@ export class TileManager {
           skipped++;
           continue;
         }
+        if (entry) this._cleanupCanvas(entry.canvas);
         this.fullPageCache.delete(oldestKey);
         if (this.debug) {
           console.log(`[TileManager] Evicted full-page cache: ${oldestKey} (size now: ${this.fullPageCache.size})`);
@@ -876,8 +913,10 @@ export class TileManager {
       }
     }
 
-    // Remove keys and sync fullPageCacheOrder
+    // Remove keys, clean up canvases, and sync fullPageCacheOrder
     for (const key of keysToRemove) {
+      const entry = this.fullPageCache.get(key);
+      if (entry) this._cleanupCanvas(entry.canvas);
       this.fullPageCache.delete(key);
       const orderIdx = this.fullPageCacheOrder.indexOf(key);
       if (orderIdx !== -1) {
@@ -956,8 +995,11 @@ export class TileManager {
     // Cancel all active render tasks
     this.cancelAllRenders();
 
-    // Clear all caches
+    // Clear all caches (cache.clear() calls _cleanupCanvas via onEvict)
     this.cache.clear();
+    for (const entry of this.fullPageCache.values()) {
+      this._cleanupCanvas(entry.canvas);
+    }
     this.fullPageCache.clear();
     this.fullPageCacheOrder = [];
 
@@ -1005,8 +1047,9 @@ export class TileManager {
    * @param {number} pageIndex - Page index to clear
    */
   clearFullPageCache(pageIndex) {
-    for (const key of this.fullPageCache.keys()) {
+    for (const [key, entry] of this.fullPageCache) {
       if (key.startsWith(`${pageIndex}:`)) {
+        this._cleanupCanvas(entry.canvas);
         this.fullPageCache.delete(key);
       }
     }
