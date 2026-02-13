@@ -24,8 +24,11 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Build project
-        run: yarn build
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build and test
+        run: yarn test
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4

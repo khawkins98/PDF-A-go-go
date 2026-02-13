@@ -63,6 +63,16 @@
   --pdfagogo-debug-text: #00ff00;
   --pdfagogo-debug-timing: #00ffff;
   --pdfagogo-debug-memory: #ff9900;
+  --pdfagogo-debug-border: #444;
+
+  /* Scrollbar */
+  --pdfagogo-scrollbar-thumb: rgba(0, 0, 0, 0.2);
+
+  /* Fullscreen */
+  --pdfagogo-bg-fullscreen: #111;
+
+  /* Error text */
+  --pdfagogo-error-text: #ffd2d2;
 }
 
 /* Dark theme example (can be applied via data-theme="dark" on container) */
@@ -98,6 +108,11 @@
   --pdfagogo-grip-bg-start: #3d3d3d;
   --pdfagogo-grip-bg-end: #2d2d2d;
   --pdfagogo-grip-handle: #666;
+
+  --pdfagogo-debug-border: #666;
+  --pdfagogo-scrollbar-thumb: rgba(255, 255, 255, 0.25);
+  --pdfagogo-bg-fullscreen: #000;
+  --pdfagogo-error-text: #ffa8a8;
 }
 
 .pdfagogo-viewer-wrapper {
@@ -119,7 +134,7 @@
 }
 /* Wrapper to group controls + viewer for fullscreen */
 .pdfagogo-viewer-wrapper:fullscreen {
-  background: #111;
+  background: var(--pdfagogo-bg-fullscreen);
 }
 .pdfagogo-viewer-wrapper:fullscreen .pdfagogo-container {
   height: 100vh;
@@ -455,7 +470,7 @@
 }
 /* Error state styling reusing loading overlay */
 .pdfagogo-loading-error {
-  color: #ffd2d2;
+  color: var(--pdfagogo-error-text);
   background: var(--pdfagogo-error-bg);
   border: 1px solid var(--pdfagogo-error-border);
   padding: 0.5rem 0.75rem;
@@ -486,7 +501,7 @@
 .pdfagogo-error-details pre {
   white-space: pre-wrap;
   word-break: break-word;
-  color: #eee;
+  color: var(--pdfagogo-text-light);
   background: rgba(0,0,0,0.4);
   padding: 0.5rem;
   border-radius: 4px;
@@ -640,7 +655,7 @@
   background: transparent;
 }
 .pdfagogo-scroll-container::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--pdfagogo-scrollbar-thumb);
   border-radius: 4px;
 }
 @media (max-width: 768px) {
@@ -737,7 +752,7 @@
 .pdfagogo-debug-info .debug-header {
   color: var(--pdfagogo-text-light);
   font-weight: bold;
-  border-bottom: 1px solid #444;
+  border-bottom: 1px solid var(--pdfagogo-debug-border);
   padding-bottom: 4px;
   margin-bottom: 4px;
 }

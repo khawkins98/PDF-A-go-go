@@ -7,816 +7,828 @@
 3. [Core Modules](#core-modules)
 4. [API Reference](#api-reference)
 5. [Configuration Options](#configuration-options)
-6. [Performance & Optimization](#performance--optimization)
-7. [Accessibility Features](#accessibility-features)
-8. [Testing Strategy](#testing-strategy)
-9. [Build & Development](#build--development)
-10. [Advanced Features](#advanced-features)
+6. [CSS Theming](#css-theming)
+7. [Multi-Instance Support](#multi-instance-support)
+8. [Memory Management](#memory-management)
+9. [Performance](#performance)
+10. [Accessibility](#accessibility)
+11. [Testing](#testing)
+12. [Build & Deployment](#build--deployment)
 
 ## Project Overview
 
-**PDF-A-go-go** is a lightweight, accessible, embeddable PDF viewer built on top of PDF.js. It provides a vertical scroll viewing experience with comprehensive accessibility support, performance optimizations, and advanced features like search, HTML download handling, and performance monitoring.
+**PDF-A-go-go** is a lightweight, accessible, embeddable PDF viewer built on PDF.js. It requires no initialization code -- just include one JS file and one CSS file, then configure via `data-*` attributes on a container element.
 
 ### Key Features
 
-- 📖 **Vertical scroll PDF viewing** with smooth native momentum scrolling
-- 🔍 **Advanced zoom functionality** (pinch-to-zoom, keyboard shortcuts, mouse wheel)
-- 📏 **Accurate scroll positioning** with proper placeholder dimensions for all document sizes
-- 🧠 **Unified scaling algorithms** that adapt automatically from small to massive documents (5-827+ pages)
-- 🦾 **Full accessibility support** (ARIA labels, keyboard navigation, screen reader support)
-- ⚡ **Performance optimized** with adaptive render queuing and intelligent memory management
-- 🎨 **Highly customizable** UI with show/hide controls
-- 📱 **Mobile responsive** with touch-optimized interactions
-- 🔍 **Full-text search** with highlighting and match navigation
-- 🌐 **Smart HTML download handling** for institutional repositories
-- 📊 **Comprehensive performance monitoring** with detailed metrics and debug mode
-- 🔗 **Shareable page links** with URL fragment support
+- Vertical scroll PDF viewing with smooth native momentum scrolling
+- Tile-based rendering with multiple resolution tiers for efficient memory usage
+- Pinch-to-zoom, keyboard shortcuts, mouse wheel zoom (25%-500%)
+- Full-text search with highlighting and match navigation
+- Multiple independent viewer instances on the same page
+- Text layer with copy/paste support
+- Full accessibility support (ARIA labels, keyboard navigation, screen reader)
+- CSS custom property theming with built-in dark theme
+- Smart HTML download handling for institutional repositories
+- Performance monitoring with debug overlay
+- Shareable page links with URL fragment support
+- Mobile-responsive with touch-optimized interactions
 
 ### Technology Stack
 
-- **Core**: Vanilla JavaScript (ES6+)
-- **PDF Engine**: PDF.js (Mozilla)
-- **UI Framework**: @tpp/htm-x for DOM manipulation
+- **Core**: Vanilla JavaScript (ES6+), no framework dependencies
+- **PDF Engine**: `pdfjs-dist` v5.4.530 (Mozilla PDF.js)
 - **Build Tool**: Webpack 5
 - **Testing**: Playwright for E2E testing
-- **Styling**: Pure CSS with CSS Grid/Flexbox
+- **Styling**: Pure CSS with CSS Grid/Flexbox and CSS custom properties
 
 ## Architecture Overview
 
 ```
 PDF-A-go-go Application Architecture
 
-┌─────────────────────────────────────────────────────────────┐
-│                    Entry Point (assets/js/pdfagogo.js)                │
-│  • Application initialization                               │
-│  • Configuration parsing                                    │
-│  • PDF loading orchestration                               │
-└─────────────────┬───────────────────────────────────────────┘
-                  │
-┌─────────────────▼───────────────────────────────────────────┐
-│                  Core Modules                               │
-├─────────────────┬───────────────────┬───────────────────────┤
-│  PDF Loader     │  Scrollable       │  UI Controls          │
-│  • PDF.js       │  PDF Viewer       │  • Navigation         │
-│  • Progress     │  • Render Queue   │  • Search             │
-│  • HTML Handler │  • Memory Mgmt    │  • Accessibility      │
-└─────────────────┴───────────────────┴───────────────────────┘
-                  │
-┌─────────────────▼───────────────────────────────────────────┐
-│                Support Systems                              │
-├─────────────────┬───────────────────┬───────────────────────┤
-│  Performance    │  Accessibility    │  Advanced Features    │
-│  • Metrics      │  • ARIA Support   │  • HTML Downloads     │
-│  • Debug Mode   │  • Keyboard Nav   │  • URL Fragments      │
-│  • Memory Mgmt  │  • Screen Reader  │  • Mobile Support     │
-└─────────────────┴───────────────────┴───────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    Entry Point (pdfagogo.js)                    │
+│  • Auto-init on DOM load                                       │
+│  • Config parsing from data-* attributes                       │
+│  • ViewerRegistry for multi-instance management                │
+└──────────────┬─────────────────────────────────────┬────────────┘
+               │                                     │
+┌──────────────▼──────────────┐    ┌─────────────────▼────────────┐
+│   ViewerInstance             │    │   pdfLoader.js               │
+│   • Per-viewer state         │    │   • PDF loading + progress   │
+│   • PDF, viewer, book refs   │    │   • Content-type detection   │
+│   • SearchController         │    │   • Configurable worker URL  │
+│   • Theme management         │    │   • HTMLDownloadHandler       │
+└──────────────┬──────────────┘    └──────────────────────────────┘
+               │
+┌──────────────▼──────────────────────────────────────────────────┐
+│              ScrollablePdfViewer                                 │
+│  • Core rendering + interaction engine                          │
+│  • RenderQueue (priority-based, RAF)                            │
+│  • Zoom, navigation, scroll, touch/mouse events                 │
+│  • Text layer management with LRU cache                         │
+│  • Performance monitoring + debug overlay                       │
+└──────────────┬──────────────────────────────────────────────────┘
+               │
+┌──────────────▼──────────────┐    ┌──────────────────────────────┐
+│   TileRenderer               │    │   UI Controls (ui.js)        │
+│   • Page → tile grid          │    │   • Toolbar (search, share,  │
+│   • Resolution tier rendering │    │     download, fullscreen,    │
+│   • Tile compositing          │    │     page selector)           │
+└──────────────┬──────────────┘    │   • Loading progress          │
+               │                    │   • Resize grip               │
+┌──────────────▼──────────────┐    │   • Accessibility controls    │
+│   TileManager                │    └──────────────────────────────┘
+│   • LRU tile cache           │
+│   • Resolution tier defs     │    ┌──────────────────────────────┐
+│   • Full-page cache           │    │   SearchController           │
+│   • Highlight management     │    │   • Instance-scoped search   │
+└──────────────────────────────┘    │   • Batch page processing    │
+                                    │   • Highlight coordinates     │
+                                    └──────────────────────────────┘
 ```
+
+**Data Flow**: `pdfagogo.js` → `pdfLoader.js` loads PDF → creates book object → `ScrollablePdfViewer` → `TileRenderer` → `TileManager` for rendering. UI controls in `ui.js` interact with the viewer instance. Search is managed per-instance by `SearchController`.
 
 ## Core Modules
 
-### 1. Main Entry Point (`assets/js/pdfagogo.js`)
+All modules are located in `src/assets/js/`.
 
-**Purpose**: Application initialization and orchestration
+### 1. `pdfagogo.js` -- Entry Point
 
-**Key Responsibilities**:
+Application initialization and orchestration. Contains the `ViewerRegistry` class for managing multiple viewer instances. Auto-initializes all `.pdfagogo-container` elements on DOM load. Parses `data-*` attributes into typed configuration via `getOptionsFromDataAttrs()`.
 
-- Parse configuration from data attributes
-- Initialize PDF loading with progress tracking
-- Set up the viewer and UI controls
-- Handle WebGL configuration
+**Exports**: `init()`, `registry`, `initializeContainer()`, `ViewerInstance`, `SearchController`
 
-**Key Functions**:
+### 2. `scrollablePdfViewer.js` -- Core Viewer
 
-```javascript
-/**
- * Initialize the PDF-A-go-go viewer
- * @param {Object} book - PDF book object with numPages() and getPage().
- * @param {string} id - DOM element id for the viewer container.
- * @param {Object} opts - Viewer options.
- * @param {Function} cb - Callback function(err, viewer)
- */
-function init(book, id, opts, cb)
-```
+The main rendering and interaction engine. Extends `EventEmitter` for event-driven communication.
 
-**Configuration Parsing**:
+**Key responsibilities**:
+- PDF page rendering via tile-based `TileRenderer`
+- Priority-based `RenderQueue` using `requestAnimationFrame`
+- Zoom management (pinch, keyboard, mouse wheel) with resolution tier switching
+- Scroll handling, page navigation, visible page tracking
+- Text layer rendering and LRU caching
+- Performance metrics collection and debug overlay
+- Mobile and desktop optimization
 
-```javascript
-// Reads data attributes from container element
-function getOptionsFromDataAttrs(container)
-function parseBool(val, fallback) // Robust boolean parsing
-```
+### 3. `tileRenderer.js` -- Tile-Based Page Renderer
 
-### 2. Scrollable PDF Viewer (`scrollablePdfViewer.js`)
+Renders PDF pages by dividing them into a grid of tiles. Renders only visible tiles at the resolution tier appropriate for the current zoom level and composites them onto display canvases.
 
-**Purpose**: Core PDF rendering and interaction engine
+**Key features**:
+- Page-to-tile grid calculation
+- Resolution tier rendering (0.5x, 1.0x, 2.0x, 4.0x scale)
+- Smooth transitions between resolution tiers
+- Direct PDF.js page access for high-quality rendering
 
-**Key Features**:
+### 4. `tileManager.js` -- Tile Cache Management
 
-- **Render Queue System**: Manages rendering tasks with priority
-- **Memory Management**: Automatic cleanup of off-screen pages
-- **Performance Monitoring**: Detailed metrics collection
-- **Mobile Optimization**: Adaptive rendering for mobile devices
+Implements LRU caching for rendered tiles with support for multiple resolution tiers.
 
-**Class Structure**:
+**Exports**: `TileManager`, `getTierForZoom()`, `getTileKey()`, `parseTileKey()`, `RESOLUTION_TIERS`
 
-```javascript
-export class ScrollablePdfViewer extends EventEmitter {
-  constructor({ app, book, options })
+**Resolution tiers**:
+| Tier | Min Zoom | Max Zoom | Render Scale |
+|------|----------|----------|-------------|
+| 0    | 0.25     | 0.5      | 0.5x        |
+| 1    | 0.5      | 1.0      | 1.0x        |
+| 2    | 1.0      | 2.0      | 2.0x        |
+| 3    | 2.0      | 5.0      | 4.0x        |
 
-  // Core rendering
-  _renderPage(ndx, callback)
-  _updateVisiblePages()
-  _cleanupOffscreenPages(force)
+### 5. `ui.js` -- UI Controls
 
-  // Navigation
-  flip_forward()
-  flip_back()
-  go_to_page(pageNum)
-  scrollBy(pages)
+Comprehensive UI module providing:
+- Loading progress bar with percentage display
+- Toolbar with search, share, download, fullscreen, and page selector controls
+- Resize grip for container height adjustment
+- Accessibility instructions (collapsible `<details>` element)
+- Error display with actionable links
+- Screen reader announcements via ARIA live regions
 
-  // Performance
-  getPerformanceMetrics()
-  _setupDebugDisplay()
-}
-```
+**Key exports**: `createLoadingBar()`, `updateLoadingBar()`, `removeLoadingBar()`, `showError()`, `setupControls()`
 
-**Render Queue System**:
+### 6. `pdfLoader.js` -- PDF Loading
 
-```javascript
-class RenderQueue {
-  add(task, priority = false)    // Add rendering task
-  clear()                       // Clear all pending tasks
-  process()                     // Process queue with RAF
-}
-```
+Handles PDF loading with progress tracking and automatic HTML content detection.
 
-### 3. UI Controls (`ui.js`)
+**Key features**:
+- Direct PDF loading via PDF.js with progress callbacks
+- Content-type detection (automatically routes HTML responses to `HTMLDownloadHandler`)
+- Configurable PDF.js worker URL via `setWorkerUrl()` / `getWorkerUrl()`
+- Integration with the bundled worker (`pdf-a-go-go.dependencies.js`)
 
-**Purpose**: User interface components and interaction handling
+### 7. `search.js` -- Search UI Setup
 
-**Key Components**:
+Sets up the search UI controls in the toolbar (input field, navigation buttons, result count). Pairs with `SearchController` for actual search logic.
 
-- **Loading Progress**: Visual feedback during PDF loading
-- **Controls**: Share, Download, Fullscreen, Page selector, Current page
-- **Search Interface**: Text search with match navigation
-- **Accessibility**: Screen reader announcements, keyboard support
+### 8. `searchController.js` -- Instance-Scoped Search
 
-**Main Functions**:
+Manages search functionality per viewer instance. Uses parallel batch processing for performance on large documents.
 
-```javascript
-// Loading UI
-export function createLoadingBar(container)
-export function updateLoadingBar(progressBar, value)
-export function removeLoadingBar()
+**Key features**:
+- Case-insensitive full-text search across all pages
+- Parallel batch processing (10 pages per batch)
+- Per-page highlight bounding box calculation
+- Match navigation with wrap-around
+- Integration with `TileManager` for highlight rendering
 
-// Main UI setup
-export function setupControls(container, featureOptions, viewer, book, pdf)
-```
+### 9. `viewerInstance.js` -- Per-Viewer State
 
-**Search Functionality**:
+Encapsulates all state for a single PDF viewer instance. Enables multiple independent viewers on the same page without global state pollution.
 
-```javascript
-async function searchPdf(query)     // Full-text search across pages
-function showMatch(idx)             // Navigate to search match
-```
+**Manages**: PDF document, `ScrollablePdfViewer`, book object, `SearchController`, theme, page navigation source tracking.
 
-### 4. PDF Loader (`pdfLoader.js`)
+### 10. `htmlDownloadHandler.js` -- HTML Redirect Handling
 
-**Purpose**: PDF loading with progress tracking and HTML handling
+Handles PDFs served through HTML redirect pages, common in institutional repositories, academic websites, and document management systems.
 
-**Key Features**:
-
-- **Content Type Detection**: Automatically detects HTML vs PDF content
-- **Progress Tracking**: Real-time loading progress updates
-- **HTML Download Integration**: Seamless handling of HTML-wrapped PDFs
-
-```javascript
-/**
- * Loads a PDF with progress updates and HTML handling
- * @param {string} url - PDF URL
- * @param {Function} onProgress - Progress callback (0-1 or null)
- * @param {Object} options - Loading options
- * @returns {Promise<Object>} PDF.js document
- */
-export async function loadPdfWithProgress(url, onProgress, options = {})
-```
-
-### 5. HTML Download Handler (`htmlDownloadHandler.js`)
-
-**Purpose**: Handle PDFs served through HTML redirect pages
-
-**Use Cases**:
-
-- Institutional repositories
-- Document management systems
-- Academic websites with download gates
-
-**Key Features**:
-
-- **Meta Refresh Detection**: Parses meta refresh tags
-- **Iframe Proxy**: Safe handling of redirects
-- **Timeout Management**: Configurable download timeouts
-
-```javascript
-export class HTMLDownloadHandler extends EventTarget {
-  constructor(options = {})
-  initialize(container)
-  async handleHTMLDownload(url)
-
-  // Internal methods
-  parseMetaRefresh(content)
-  checkUrlAndDownload(urlToCheck)
-  async downloadPDF(url)
-}
-```
+**Key features**:
+- Meta refresh tag detection and parsing
+- Iframe-based proxy system for safe redirect interception
+- Content type checking before download
+- Cookie preservation for authenticated downloads
+- Configurable timeout management
 
 ## API Reference
 
-### Container Configuration
+### ViewerRegistry
 
-The PDF viewer is configured through data attributes on the container element:
+The global registry manages all viewer instances. Accessed via `pdfagogo.registry`.
 
-```html
-<div
-  class="pdfagogo-container"
-  id="pdfagogo-container"
-  data-pdf-url="./document.pdf"
-  data-show-search="true"
-  data-show-share="true"
-  data-show-page-selector="true"
-  data-show-current-page="true"
-  data-show-download="true"
-  data-show-fullscreen="true"
-  data-show-resize-grip="true"
-  data-default-page="1"
-  data-disable-webgl="true"
-  data-download-timeout="30000"
-  data-show-accessibility-controls-visibly="true"
-  data-debug="false"
-></div>
+```javascript
+class ViewerRegistry {
+  instances: Map<string, ViewerInstance>  // Map of ID → instance
+  size: number                           // Number of registered instances
+
+  createInstance(container, options): ViewerInstance
+  getInstance(containerOrId): ViewerInstance | undefined
+  destroyInstance(instanceOrId): void
+  getAllInstances(): ViewerInstance[]
+  destroyAll(): void
+}
 ```
 
-### Viewer Instance Methods
+### ViewerInstance
+
+Each PDF viewer is wrapped in a `ViewerInstance` that encapsulates all state.
+
+```javascript
+class ViewerInstance {
+  // Properties
+  id: string                    // Unique instance identifier
+  container: HTMLElement         // Container element
+  pdf: Object                    // PDF.js document
+  viewer: ScrollablePdfViewer    // Viewer instance
+  book: Object                   // Book abstraction for page access
+  searchController: SearchController
+  theme: string | null           // Current theme name
+  options: Object                // Configuration options
+
+  // Methods
+  setPdf(pdf): void
+  setViewer(viewer): void
+  setBook(book): void
+  setSearchController(controller): void
+  setTheme(themeName): void      // 'dark', 'default', or custom
+  getTheme(): string | null
+  setPageSource(source): void    // Track navigation source ('hash', 'user', etc.)
+  getPageSource(): string | null
+  destroy(): void                // Clean up all resources
+  isValid(): boolean             // Check if not destroyed
+  getPageCount(): number
+  getCurrentPage(): number       // 1-based
+  goToPage(pageNum): void        // 1-based
+}
+```
+
+### SearchController
+
+Each instance has its own `SearchController` for isolated search.
+
+```javascript
+class SearchController {
+  // Properties
+  pdf: Object                    // PDF.js document
+  viewer: Object                 // Viewer instance
+  tileManager: Object            // For highlight rendering
+  matchPages: number[]           // Pages with matches (0-based)
+  currentMatchIdx: number        // Current match index
+  matchHighlights: Object        // { pageIndex: [{ x, y, width, height }] }
+  lastQuery: string
+
+  // Methods
+  setPdf(pdf): void
+  setViewer(viewer): void
+  setTileManager(tileManager): void
+  search(query): Promise<void>              // Full-text search
+  getMatchCount(): number
+  getCurrentMatchNumber(): number           // 1-based for display
+  goToMatch(idx): { pageNum, highlights } | null
+  nextMatch(): { pageNum, highlights } | null
+  prevMatch(): { pageNum, highlights } | null
+  clearSearch(): void
+  getHighlights(pageIndex): Array
+  setHighlights(pageIndex, highlights): void
+  clearHighlights(): void
+  hasMatches(): boolean
+  getLastQuery(): string
+}
+```
+
+### ScrollablePdfViewer
+
+The core viewer class. Extends `EventEmitter`.
 
 ```javascript
 // Navigation
-viewer.flip_forward(); // Go to next page
-viewer.flip_back(); // Go to previous page
-viewer.go_to_page(pageNum); // Go to specific page (0-based)
-viewer.scrollBy(pages); // Scroll by number of pages
+viewer.flip_forward()           // Go to next page
+viewer.flip_back()              // Go to previous page
+viewer.go_to_page(pageNum)      // Go to specific page (0-based)
+viewer.scrollBy(pages)          // Scroll by number of pages
 
-// Zoom functionality
-viewer.setZoom(level); // Set zoom level (0.25-5.0)
-viewer.zoomIn(); // Zoom in by 10%
-viewer.zoomOut(); // Zoom out by 10%
-viewer.resetZoom(); // Reset to 100% zoom
-viewer.getZoom(); // Get current zoom level
+// Zoom
+viewer.setZoom(level, animate)  // Set zoom level (0.25-5.0)
+viewer.zoomIn()                 // Zoom in by 10%
+viewer.zoomOut()                // Zoom out by 10%
+viewer.resetZoom()              // Reset to 100%
+viewer.getZoom()                // Get current zoom level
 
 // Rendering
-viewer.rerenderPage(ndx); // Force re-render of specific page
+viewer.rerenderPage(ndx)        // Force re-render of specific page
 
 // Performance (returns null unless debug mode is enabled)
-viewer.getPerformanceMetrics();
+viewer.getPerformanceMetrics()
 ```
 
-### Accessing the viewer instance
+**Events**:
 
 ```javascript
-// After initialization, the viewer instance is attached to the container element
-const container = document.querySelector(".pdfagogo-container");
-const viewer = container?.pdfViewer; // ScrollablePdfViewer instance
+// First set of visible pages finished rendering
+viewer.on('initialRenderComplete', () => {})
 
-// Example: programmatically zoom
-viewer?.setZoom(1.25);
+// Most visible page changed (1-based page number)
+viewer.on('seen', (pageNumber) => {})
+
+// Set of visible pages changed (array of 1-based page numbers)
+viewer.on('visiblePages', (pages) => {})
+
+// Zoom level changed
+viewer.on('zoom', ({ level, percentage }) => {})
 ```
 
-### Events
-
-The viewer emits these events:
+### Accessing Viewer Instances
 
 ```javascript
-// Fired once after the first set of visible pages render
-viewer.on("initialRenderComplete", () => {
-  console.log("Initial render complete");
-});
+// Via container element
+const container = document.getElementById('viewer1');
+const instance = container._pdfagogoInstance;
+const viewer = container.pdfViewer;  // backward-compatible shortcut
 
-// Fired when a page becomes the most visible (1-based page number)
-viewer.on("seen", (pageNumber) => {
-  console.log(`Current page: ${pageNumber}`);
-});
+// Via registry
+import pdfagogo from 'pdf-a-go-go';
+const instance = pdfagogo.registry.getInstance('viewer1');
+const allInstances = pdfagogo.registry.getAllInstances();
 
-// Fired when the set of visible pages changes (array of 1-based page numbers)
-viewer.on("visiblePages", (pages) => {
-  console.log("Visible pages:", pages);
-});
-
-// Fired on zoom changes; payload includes level and percentage
-viewer.on("zoom", ({ level, percentage }) => {
-  console.log(`Zoom changed to ${percentage}% (level: ${level})`);
-});
-```
-
-## Zoom Functionality
-
-PDF-A-go-go provides comprehensive zoom capabilities across all input methods:
-
-### Zoom Methods
-
-**Touch Devices**:
-
-- **Pinch-to-zoom**: Use two fingers to pinch in/out for intuitive zooming
-- Smooth, responsive scaling with momentum
-
-**Desktop/Keyboard**:
-
-- **Ctrl + Plus** (or **Ctrl + =**): Zoom in by 10%
-- **Ctrl + Minus**: Zoom out by 10%
-- **Ctrl + 0**: Reset zoom to 100%
-- **Mouse wheel + Ctrl**: Hold Ctrl while scrolling to zoom
-
-### Zoom Configuration
-
-```javascript
-// Zoom levels and behavior
-const zoomConfig = {
-  minZoom: 0.25, // 25% minimum zoom
-  maxZoom: 5.0, // 500% maximum zoom
-  zoomStep: 0.1, // 10% increments
-  defaultZoom: 1.0, // 100% default
-};
-```
-
-### CSS Implementation
-
-Zoom uses CSS transforms for optimal performance:
-
-```css
-.pdfagogo-pages-container {
-  transform-origin: center top;
-  transition: transform 0.2s ease-out;
-  /* transform: scale(1.5) applied dynamically */
-}
-
-.pdfagogo-scroll-container {
-  overflow-x: auto; /* Enables horizontal scroll when zoomed */
-  touch-action: pan-x pan-y pinch-zoom; /* Native touch support */
-}
-```
-
-### Focus Requirements
-
-**Important**: For keyboard zoom shortcuts to work, the PDF viewer must be focused:
-
-```javascript
-// Programmatically focus the viewer
-document.querySelector(".pdfagogo-container").focus();
-
-// Container must have tabindex for focus
-container.setAttribute("tabindex", "0");
-```
-
-### Zoom Event Handling
-
-```javascript
-// Listen for zoom changes
-viewer.on("zoomChange", (newZoomLevel) => {
-  console.log(`Zoom: ${(newZoomLevel * 100).toFixed(0)}%`);
-
-  // Update UI or perform actions based on zoom level
-  if (newZoomLevel > 2.0) {
-    console.log("High zoom level - consider showing detail controls");
-  }
-});
-
-// Programmatic zoom control
-viewer.setZoom(1.5); // Set to 150%
-const currentZoom = viewer.getZoom(); // Get current level
+// Destroy
+pdfagogo.registry.destroyInstance('viewer1');
+pdfagogo.registry.destroyAll();
 ```
 
 ## Configuration Options
 
-### Display Options
+All viewer options are read from `data-*` attributes on the container element. No JavaScript initialization required.
 
-| Option                                     | Type    | Default           | Description                                          |
-| ------------------------------------------ | ------- | ----------------- | ---------------------------------------------------- |
-| `data-pdf-url`                             | string  | `"./example.pdf"` | PDF URL to load                                      |
-| `data-show-page-selector`                  | boolean | `true`            | Show page input field                                |
-| `data-show-current-page`                   | boolean | `true`            | Show current page indicator                          |
-| `data-show-search`                         | boolean | `true`            | Show search controls                                 |
-| `data-show-share`                          | boolean | `true`            | Show share button                                    |
-| `data-show-download`                       | boolean | `true`            | Show download button                                 |
-| `data-show-resize-grip`                    | boolean | `true`            | Show resize handle                                   |
-| `data-show-accessibility-controls-visibly` | boolean | `true`            | Show visible accessibility instructions under viewer |
+### URL & Content
 
-### Appearance Options
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `data-pdf-url` | string | `"./example.pdf"` | URL of the PDF to load |
+| `data-default-page` | number | `1` | Initial page to display |
 
-| Option                  | Type   | Default | Description           |
-| ----------------------- | ------ | ------- | --------------------- |
-| `data-background-color` | string | -       | Background color      |
-| `data-box-border`       | number | -       | Border size in pixels |
-| `data-margin`           | number | -       | General margin        |
-| `data-margin-top`       | number | -       | Top margin            |
-| `data-margin-left`      | number | -       | Left margin           |
+### UI Feature Toggles
 
-### Behavior Options
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `data-show-toolbar` | boolean | `true` | Toggle entire toolbar visibility |
+| `data-show-page-selector` | boolean | `true` | Show page number input field |
+| `data-show-current-page` | boolean | `true` | Show current page indicator |
+| `data-show-search` | boolean | `true` | Show search controls |
+| `data-show-share` | boolean | `true` | Show share button |
+| `data-show-download` | boolean | `true` | Show download button |
+| `data-show-fullscreen` | boolean | `true` | Show fullscreen button |
+| `data-show-resize-grip` | boolean | `true` | Show resize handle at bottom of viewer |
+| `data-show-accessibility-controls-visibly` | boolean | `true` | Show visible accessibility instructions below viewer |
 
-| Option               | Type    | Default | Description             |
-| -------------------- | ------- | ------- | ----------------------- |
-| `data-default-page`  | number  | `1`     | Default page to open    |
-| `data-momentum`      | number  | `1.5`   | Scroll momentum factor  |
-| `data-disable-webgl` | boolean | `true`  | Disable WebGL rendering |
-| `data-debug`         | boolean | `false` | Enable debug mode       |
+### Appearance
 
-### HTML Download Options
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `data-theme` | string | (none) | Theme name (e.g., `"dark"`) |
+| `data-background-color` | string | -- | Page background color |
+| `data-box-border` | integer | -- | Border width around pages (px) |
+| `data-margin` | float | -- | General page margin |
+| `data-margin-top` | float | -- | Top margin override |
+| `data-margin-left` | float | -- | Left margin override |
 
-| Option                  | Type   | Default | Description           |
-| ----------------------- | ------ | ------- | --------------------- |
-| `data-download-timeout` | number | `30000` | Download timeout (ms) |
+### Behavior
 
-## Performance & Optimization
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `data-momentum` | float | `1.5` | Scroll momentum factor |
+| `data-disable-webgl` | boolean | `true` | Disable WebGL rendering in PDF.js |
+| `data-debug` | boolean | `false` | Enable debug mode with performance overlay |
 
-### Unified Scaling Architecture
+### Memory & Performance
 
-PDF-A-go-go uses a unified approach that automatically adapts to document size, eliminating special-case code:
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `data-fullpage-cache-size` | number | 10 (desktop) / 5 (mobile) | Max full-page canvases to cache |
+| `data-text-layer-cache-size` | number | 10 (desktop) / 5 (mobile) | Max text layers to keep in DOM |
 
-**Adaptive Batching**:
+### Worker & Downloads
 
-```javascript
-// Single formula for all document sizes
-const batchSize = Math.max(10, Math.min(50, Math.ceil(pageCount / 10)));
-// Results: 5 pages = 10 batch, 827 pages = 50 batch
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `data-worker-url` | string | (bundled) | Custom PDF.js worker URL |
+| `data-download-timeout` | number | `30000` | HTML download handler timeout in ms |
+
+### Example
+
+```html
+<div class="pdfagogo-container"
+     data-pdf-url="./document.pdf"
+     data-show-search="true"
+     data-show-share="true"
+     data-show-page-selector="true"
+     data-show-download="true"
+     data-show-fullscreen="true"
+     data-show-resize-grip="true"
+     data-show-accessibility-controls-visibly="false"
+     data-default-page="1"
+     data-theme="dark"
+     data-debug="false"
+     data-worker-url="./custom-pdf.worker.js"
+     data-fullpage-cache-size="10"
+     data-text-layer-cache-size="10"></div>
 ```
 
-**Natural Buffer Scaling**:
+## CSS Theming
 
-```javascript
-// Memory buffer scales with document size
-const baseBuffer = isMobile ? 2 : 4;
-const scalingFactor = Math.ceil(pageCount / 100);
-const buffer = Math.max(
-  baseBuffer,
-  Math.min(baseBuffer * scalingFactor, isMobile ? 10 : 20)
-);
-// Results: 5 pages = 4 buffer, 827 pages = 20 buffer
-```
+All visual properties use CSS custom properties, enabling full theme customization.
 
-**Progressive Cleanup Timing**:
+### Available CSS Variables
 
-```javascript
-// Cleanup intervals adapt to document complexity
-const cleanupDelay = Math.min(1000, 150 + Math.ceil(pageCount / 10));
-// Results: 5 pages = 151ms, 827 pages = 233ms
-```
+```css
+:root {
+  /* Primary colors */
+  --pdfagogo-primary: #1976d2;
+  --pdfagogo-primary-light: #e3f2fd;
+  --pdfagogo-primary-rgb: 25, 118, 210;
 
-### Render Queue System
+  /* Text colors */
+  --pdfagogo-text-primary: #333;
+  --pdfagogo-text-secondary: #555;
+  --pdfagogo-text-muted: #666;
+  --pdfagogo-text-hint: #999;
+  --pdfagogo-text-light: #fff;
 
-Enhanced render queue with race condition protection:
+  /* Background colors */
+  --pdfagogo-bg-page: #fff;
+  --pdfagogo-bg-container: #e4e4e4;
+  --pdfagogo-bg-toolbar: #fff;
+  --pdfagogo-bg-hover: #e8e8e8;
+  --pdfagogo-bg-active: #e0e0e0;
+  --pdfagogo-bg-subtle: #f5f5f5;
+  --pdfagogo-bg-input: #fff;
+  --pdfagogo-bg-overlay: rgba(0, 0, 0, 0.7);
+  --pdfagogo-bg-overlay-light: rgba(255, 255, 255, 0.9);
 
-```javascript
-class RenderQueue {
-  constructor() {
-    this.queue = [];
-    this.isProcessing = false;
-    this.currentTask = null;
-  }
+  /* Border colors */
+  --pdfagogo-border: #ccc;
+  --pdfagogo-border-light: #ddd;
+  --pdfagogo-border-active: #bbb;
+  --pdfagogo-border-input: #aaa;
 
-  add(task, priority = false) {
-    // Validate task is a function
-    if (typeof task !== "function") {
-      console.error("Invalid task added to render queue");
-      return;
-    }
+  /* State colors */
+  --pdfagogo-success: #4caf50;
+  --pdfagogo-error: #d32f2f;
+  --pdfagogo-error-light: #ffebee;
+  --pdfagogo-error-bg: rgba(255, 0, 0, 0.15);
+  --pdfagogo-error-border: rgba(255, 0, 0, 0.35);
+  --pdfagogo-warning: #ff9800;
 
-    // Priority tasks go to front of queue
-    if (priority) {
-      this.queue.unshift(task);
-    } else {
-      this.queue.push(task);
-    }
-  }
+  /* Selection colors */
+  --pdfagogo-selection: rgba(0, 100, 255, 0.35);
 
-  process() {
-    // Race condition protection
-    if (typeof this.currentTask !== "function") {
-      this.currentTask = null;
-      this.process();
-      return;
-    }
+  /* Shadow colors */
+  --pdfagogo-shadow: rgba(0, 0, 0, 0.18);
+  --pdfagogo-shadow-strong: rgba(0, 0, 0, 0.2);
 
-    // Execute with local reference to prevent race conditions
-    const taskToExecute = this.currentTask;
-    Promise.resolve(taskToExecute())
-      .then(() => this.process())
-      .catch(() => this.process());
-  }
+  /* Progress bar */
+  --pdfagogo-progress-bg: rgba(255, 255, 255, 0.2);
+  --pdfagogo-progress-fill: #4CAF50;
+
+  /* Resize grip */
+  --pdfagogo-grip-bg-start: #e0e0e0;
+  --pdfagogo-grip-bg-end: #bdbdbd;
+  --pdfagogo-grip-handle: #888;
+
+  /* Debug panel */
+  --pdfagogo-debug-bg: rgba(0, 0, 0, 0.8);
+  --pdfagogo-debug-text: #00ff00;
+  --pdfagogo-debug-timing: #00ffff;
+  --pdfagogo-debug-memory: #ff9900;
+  --pdfagogo-debug-border: #444;
+
+  /* Scrollbar */
+  --pdfagogo-scrollbar-thumb: rgba(0, 0, 0, 0.2);
+
+  /* Fullscreen */
+  --pdfagogo-bg-fullscreen: #111;
+
+  /* Error text */
+  --pdfagogo-error-text: #ffd2d2;
 }
 ```
 
-### Intelligent Memory Management
+### Built-in Dark Theme
 
-**Adaptive Buffer Sizes**:
+Activate via `data-theme="dark"` on the container element:
 
-- Small documents (≤100 pages): 4 page buffer
-- Medium documents (101-500 pages): 4-20 page buffer
-- Large documents (500+ pages): 20 page buffer
-- Mobile devices: 50% of desktop buffer sizes
+```css
+[data-theme="dark"] {
+  --pdfagogo-primary: #64b5f6;
+  --pdfagogo-primary-light: #1e3a5f;
+  --pdfagogo-primary-rgb: 100, 181, 246;
 
-**Smart Cleanup Strategy**:
+  --pdfagogo-text-primary: #e0e0e0;
+  --pdfagogo-text-secondary: #bdbdbd;
+  --pdfagogo-text-muted: #9e9e9e;
+  --pdfagogo-text-hint: #757575;
+  --pdfagogo-text-light: #fff;
 
-- `visibilitychange`: Normal cleanup (preserves buffer)
-- `memorypressure`: Aggressive cleanup (forces cleanup)
-- Scroll-based: Delayed cleanup with adaptive timing
+  --pdfagogo-bg-page: #2d2d2d;
+  --pdfagogo-bg-container: #1a1a1a;
+  --pdfagogo-bg-toolbar: #2d2d2d;
+  --pdfagogo-bg-hover: #3d3d3d;
+  --pdfagogo-bg-active: #4d4d4d;
+  --pdfagogo-bg-subtle: #252525;
+  --pdfagogo-bg-input: #3d3d3d;
+  --pdfagogo-bg-overlay: rgba(0, 0, 0, 0.85);
+  --pdfagogo-bg-overlay-light: rgba(45, 45, 45, 0.95);
 
-**Placeholder Dimension Calculation**:
+  --pdfagogo-border: #4d4d4d;
+  --pdfagogo-border-light: #3d3d3d;
+  --pdfagogo-border-active: #5d5d5d;
+  --pdfagogo-border-input: #5d5d5d;
 
-```javascript
-// Ensures accurate scroll bar positioning for all document sizes
-async _calculatePlaceholderDimensions() {
-  const firstPage = await this.book.getPage(0);
-  const targetWidth = this._getPageWidth();
-  const aspectRatio = firstPage.width / firstPage.height;
-  const expectedHeight = targetWidth / aspectRatio;
+  --pdfagogo-shadow: rgba(0, 0, 0, 0.4);
+  --pdfagogo-shadow-strong: rgba(0, 0, 0, 0.5);
 
-  // Apply to all 827 placeholder pages for accurate total height
-  this.pageCanvases.forEach(canvas => {
-    if (canvas.getAttribute('data-resolution') === 'placeholder') {
-      canvas.parentElement.style.height = expectedHeight + 'px';
-    }
-  });
+  --pdfagogo-grip-bg-start: #3d3d3d;
+  --pdfagogo-grip-bg-end: #2d2d2d;
+  --pdfagogo-grip-handle: #666;
+
+  --pdfagogo-debug-border: #666;
+  --pdfagogo-scrollbar-thumb: rgba(255, 255, 255, 0.25);
+  --pdfagogo-bg-fullscreen: #000;
+  --pdfagogo-error-text: #ffa8a8;
 }
 ```
+
+### Creating Custom Themes
+
+Override CSS custom properties in your own stylesheet:
+
+```css
+/* Custom "sepia" theme */
+[data-theme="sepia"] {
+  --pdfagogo-bg-page: #f4ecd8;
+  --pdfagogo-bg-container: #e8dcc8;
+  --pdfagogo-bg-toolbar: #f4ecd8;
+  --pdfagogo-text-primary: #5b4636;
+  --pdfagogo-text-secondary: #7a6652;
+}
+```
+
+### Applying Themes
+
+Via HTML:
+```html
+<div class="pdfagogo-container" data-theme="dark" data-pdf-url="./doc.pdf"></div>
+```
+
+Via JavaScript:
+```javascript
+const instance = container._pdfagogoInstance;
+instance.setTheme('dark');
+instance.setTheme('default'); // remove theme
+```
+
+## Multi-Instance Support
+
+Multiple independent PDF viewers can coexist on the same page. Each viewer has fully isolated state.
+
+### Usage
+
+```html
+<div class="pdfagogo-container" id="viewer1" data-pdf-url="./doc1.pdf"></div>
+<div class="pdfagogo-container" id="viewer2" data-pdf-url="./doc2.pdf" data-theme="dark"></div>
+```
+
+Each viewer has its own:
+- PDF document
+- Search state and highlights
+- Page navigation state
+- Memory caches (tiles, full-page canvases, text layers)
+- Theme settings
+
+### Registry API
+
+```javascript
+import pdfagogo from 'pdf-a-go-go';
+
+// Get a specific instance
+const instance = pdfagogo.registry.getInstance('viewer1');
+
+// Get all instances
+const all = pdfagogo.registry.getAllInstances();
+
+// Destroy a specific instance (cleans up all resources)
+pdfagogo.registry.destroyInstance('viewer1');
+
+// Destroy all instances
+pdfagogo.registry.destroyAll();
+```
+
+### Container Access
+
+```javascript
+// Direct access via container element
+const container = document.getElementById('viewer1');
+const instance = container._pdfagogoInstance;  // ViewerInstance
+const viewer = container.pdfViewer;            // ScrollablePdfViewer (backward compat)
+```
+
+## Memory Management
+
+### Tile Cache
+
+The `TileManager` maintains an LRU cache of rendered tiles:
+
+- **Desktop**: 100 tiles, 512px tile size
+- **Mobile**: 50 tiles, 256px tile size
+
+Tiles are cached per resolution tier, enabling smooth zoom transitions. When the cache reaches capacity, the least recently used tiles are evicted.
+
+### Full-Page Cache
+
+Cached full-page canvases for rapid display during scrolling:
+
+- **Desktop default**: 10 pages
+- **Mobile default**: 5 pages
+- **Configurable via**: `data-fullpage-cache-size`
+
+### Text Layer Cache
+
+The `ScrollablePdfViewer` limits text layers in the DOM using LRU eviction:
+
+- **Desktop default**: 10 text layers
+- **Mobile default**: 5 text layers
+- **Configurable via**: `data-text-layer-cache-size`
+
+When the limit is reached, the least recently used text layer is removed from the DOM. It can be re-rendered when the page becomes visible again.
+
+## Performance
+
+### Tile-Based Rendering
+
+Instead of rendering entire pages at full resolution, PDF-A-go-go divides pages into fixed-size tiles. Only visible tiles are rendered at the resolution appropriate for the current zoom level. This approach:
+
+- Reduces memory usage by not rendering off-screen content
+- Enables smooth zooming by pre-caching tiles at adjacent resolution tiers
+- Allows progressive loading with fallback to lower-res tiles while high-res tiles render
+
+### Render Queue
+
+A priority-based `RenderQueue` uses `requestAnimationFrame` for optimal scheduling:
+
+- **High priority**: Visible page tiles are rendered first
+- **Normal priority**: Off-screen pages queued for pre-rendering
+- Race condition protection ensures tasks execute safely even during rapid navigation
+
+### Zoom Performance
+
+Zoom uses CSS transforms for instant visual feedback, then re-renders tiles at the appropriate resolution tier asynchronously:
+
+1. User initiates zoom (pinch/keyboard/wheel)
+2. CSS `transform: scale()` applied immediately for visual feedback
+3. Resolution tier is determined from new zoom level
+4. Tiles rendered at new tier in background
+5. Display canvases composited with high-res tiles
+
+Zoom changes are debounced to avoid excessive re-rendering during rapid zoom.
 
 ### Performance Metrics
 
-When debug mode is enabled (`data-debug="true"`), a floating metrics overlay appears and the API returns metrics:
+Enable `data-debug="true"` for a floating metrics overlay:
 
 ```javascript
 const metrics = viewer.getPerformanceMetrics();
 // Returns:
 {
-  initialRenderTime: 1234,           // Initial render duration (ms)
-  averageHighResRenderTime: 120,     // Average render (ms) for page upgrades
+  initialRenderTime: 1234,           // ms
+  averageHighResRenderTime: 120,     // ms
   totalPagesRendered: 10,
   totalHighResUpgrades: 8,
   pageRenderTimes: { ... },
   highResUpgradeTimes: { ... }
 }
-// Note: returns null when debug mode is disabled
+// Returns null when debug mode is disabled
 ```
 
-## Accessibility Features
+Performance thresholds for tests: Desktop < 5s initial render, Mobile < 10s (with CPU throttling).
+
+## Accessibility
 
 ### Keyboard Navigation
 
-| Key           | Action                   |
-| ------------- | ------------------------ |
-| `Tab`         | Focus the viewer         |
-| `Left Arrow`  | Previous page            |
-| `Right Arrow` | Next page                |
-| `Ctrl/Cmd +`  | Zoom in                  |
-| `Ctrl/Cmd -`  | Zoom out                 |
-| `Ctrl/Cmd 0`  | Reset zoom to 100%       |
-| `Enter`       | Activate focused element |
+| Key | Action |
+|-----|--------|
+| `Tab` | Focus the viewer |
+| `Left Arrow` | Previous page |
+| `Right Arrow` | Next page |
+| `Ctrl/Cmd +` | Zoom in |
+| `Ctrl/Cmd -` | Zoom out |
+| `Ctrl/Cmd 0` | Reset zoom to 100% |
+| `Enter` | Activate focused element |
+
+**Note**: Keyboard zoom requires the viewer container to be focused. The container has `tabindex="0"` set automatically.
 
 ### Screen Reader Support
 
-**Focus & Live Announcements**:
+- Canvas elements are labeled with page numbers via `data-page` attributes
+- A live region (`aria-live="polite"`) announces page changes: "Page X of Y"
+- Search results are announced via a separate live region
+- Loading state is communicated with progress percentage
 
-```javascript
-// Canvases are focusable and labeled with data attributes
-canvas.setAttribute("tabindex", "0");
-canvas.setAttribute("data-page", i + 1);
+### Visible Accessibility Controls
 
-// Screen reader announcements are provided via a live region
-pageAnnouncement.setAttribute("aria-live", "polite");
-// Content is updated as pages are seen: "Page X of Y"
-```
+When `data-show-accessibility-controls-visibly="true"` (default), a collapsible `<details>` element below the viewer provides keyboard shortcut instructions. This can be hidden while keeping full keyboard/screen reader support intact.
 
-**Live Regions**:
+### Focus Management
 
-```javascript
-// Page announcements
-pageAnnouncement.setAttribute("aria-live", "polite");
+The container element receives `tabindex="0"` and shows a visible focus ring (`outline: 3px solid var(--pdfagogo-primary)`) when focused via keyboard.
 
-// Search results
-searchResult.setAttribute("aria-live", "polite");
-```
+## Testing
 
-### Visual Accessibility
+Tests use Playwright and are located in `src/tests/*.spec.ts`.
 
-- High contrast support
-- Keyboard focus indicators
-- Scalable UI elements
-- Screen reader instructions
+### Test Suites
 
-## Testing Strategy
+| File | Description |
+|------|-------------|
+| `zoom.spec.ts` | Pinch, keyboard, mouse wheel zoom |
+| `performance.spec.ts` | Desktop/mobile render times, scroll behavior |
+| `memory-performance.spec.ts` | Tile cache efficiency, memory usage patterns |
+| `stress-test.spec.ts` | Large document handling (827-page PDF) |
+| `fullscreen.spec.ts` | Fullscreen UI behavior |
+| `text-selection.spec.ts` | Text layer rendering and copy/paste |
+| `playground.spec.ts` | Full integration tests (navigation, search, toolbar, clipboard, download, share, fullscreen) |
 
-### Test Structure
+### Test HTML Pages
 
-```
-src/tests/
-├── fullscreen.spec.ts      # Fullscreen UI behavior
-├── performance.spec.ts     # Desktop/Mobile perf + scroll
-├── stress-test.spec.ts     # Large PDF stress tests
-└── zoom.spec.ts            # Zoom interactions and boundaries
-```
+Located in `src/examples/` and `src/tests/`:
 
-### Performance Testing
+| Page | Purpose |
+|------|---------|
+| `index.html` | Basic viewer with standard PDF |
+| `double-spread.html` | Large 12MB PDF for spread testing |
+| `stress-test-large-pdf.html` | 827-page document for stress tests |
+| `html-download-example.html` | HTML redirect/proxy handling |
+| `html-download-example-iframe.html` | Simulated institutional repository redirect |
+| `remote-pdf-allowed.html` | CORS-enabled remote PDF loading |
+| `remote-pdf-cors-fail.html` | CORS failure error handling |
+| `test-small.html` | Small-format viewer for focused tests |
 
-The application includes comprehensive performance tests using Playwright:
-
-```typescript
-// Desktop performance test
-test("should render PDF pages within performance thresholds (desktop)", async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 1280, height: 800 });
-
-  const metrics = await page.evaluate(() => {
-    const container = document.querySelector(".pdfagogo-container") as any;
-    return container?.pdfViewer?.getPerformanceMetrics();
-  });
-
-  // Note: getPerformanceMetrics() returns null unless debug mode is enabled
-  expect(metrics.initialRenderTime).toBeLessThan(5000);
-});
-
-// Mobile performance test with CPU throttling
-test("should render PDF pages within performance thresholds (mobile)", async ({
-  page,
-  context,
-}) => {
-  const client = await context.newCDPSession(page);
-  await client.send("Emulation.setCPUThrottlingRate", { rate: 4 });
-
-  await page.setViewportSize({ width: 375, height: 667 });
-
-  const metrics = await page.evaluate(() => {
-    const container = document.querySelector(".pdfagogo-container") as any;
-    return container?.pdfViewer?.getPerformanceMetrics();
-  });
-
-  // Note: getPerformanceMetrics() returns null unless debug mode is enabled
-  expect(metrics.initialRenderTime).toBeLessThan(10000); // 10s threshold for mobile
-});
-```
-
-### Test Categories
-
-1. **Unit Tests**: Individual function and class testing
-2. **Integration Tests**: Module interaction testing
-3. **E2E Tests**: Full user workflow testing
-4. **Performance Tests**: Render time and memory usage
-5. **Accessibility Tests**: Screen reader and keyboard navigation
-
-## Build & Development
-
-### Development Setup
+### Running Tests
 
 ```bash
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Run tests
+# Run all tests (builds first, starts server, runs Playwright)
 npm test
 
-# Debug tests
+# Debug tests interactively
 npm run test:debug
+
+# Run specific test file (requires dev server running separately)
+npm run test:serve  # Terminal 1
+npx playwright test src/tests/zoom.spec.ts  # Terminal 2
+```
+
+## Build & Deployment
+
+### Build Commands
+
+```bash
+npm install          # Install dependencies
+npm run dev          # Dev server on port 9000 with live reload
+npm run build        # Production build to /dist
 ```
 
 ### Webpack Configuration
 
-The build process uses Webpack 5 with the following key features:
+- **Entry**: `src/assets/js/pdfagogo.js` (UMD library, global name `flipbook`)
+- **Output**: `dist/pdf-a-go-go.js` (main bundle) + `dist/pdf-a-go-go.css` (styles) + `dist/pdf-a-go-go.dependencies.js` (PDF.js worker)
+- **HTML**: Example pages are copied to dist with nav/head partial injection
+- **Dev server**: Port 9000, live reload, no HMR, write files to disk
 
-```javascript
-// Entry points
-entry: {
-  'pdf-a-go-go': {
-    import: './src/assets/js/pdfagogo.js',
-    library: {
-      name: 'flipbook',
-      type: 'umd',
-      umdNamedDefine: true,
-    },
-  },
-}
+### Output Files
 
-// Asset handling
-module: {
-  rules: [
-    {
-      test: /pdf\.worker(\\.min)?\\.mjs$/,
-      type: 'asset/resource',
-      generator: {
-        filename: 'pdf-a-go-go.dependencies.js'
-      }
-    },
-  ],
-}
-```
+| File | Description |
+|------|-------------|
+| `dist/pdf-a-go-go.js` | Main viewer bundle (UMD) |
+| `dist/pdf-a-go-go.css` | Styles with CSS custom properties |
+| `dist/pdf-a-go-go.dependencies.js` | PDF.js worker (loaded automatically) |
+
+### GitHub Pages CI
+
+The `gh-pages.yml` workflow automatically deploys to GitHub Pages on push to `main`:
+
+1. Checkout repository
+2. Install dependencies (`yarn install --frozen-lockfile`)
+3. Install Playwright browsers (Chromium)
+4. Build and test (`yarn test` -- builds, starts server, runs Playwright)
+5. Deploy `dist/` to `gh-pages` branch
 
 ### File Structure
 
 ```
 src/
-├── index.html              # Main demo page
+├── index.html                          # Main demo page
 ├── assets/
 │   ├── css/
-│   │   └── pdf-a-go-go.css         # Styles
+│   │   └── pdf-a-go-go.css            # Styles + CSS custom properties
 │   └── js/
-│       ├── pdfagogo.js              # Main entry point
-│       ├── scrollablePdfViewer.js   # Core viewer class
-│       ├── ui.js                    # UI components
-│       ├── pdfLoader.js             # PDF loading logic
-│       └── htmlDownloadHandler.js  # HTML download handling
+│       ├── pdfagogo.js                 # Entry point, ViewerRegistry, auto-init
+│       ├── scrollablePdfViewer.js      # Core viewer + RenderQueue
+│       ├── tileRenderer.js             # Tile-based page rendering
+│       ├── tileManager.js              # LRU tile cache + resolution tiers
+│       ├── ui.js                       # Toolbar, controls, accessibility
+│       ├── pdfLoader.js                # PDF loading + progress + worker config
+│       ├── search.js                   # Search UI setup
+│       ├── searchController.js         # Instance-scoped search logic
+│       ├── viewerInstance.js           # Per-viewer state encapsulation
+│       └── htmlDownloadHandler.js      # HTML redirect handling
 ├── examples/
-│   ├── *.html                      # Example demo pages
-│   └── *.pdf                       # Example PDF files
-└── tests/                          # Test files
-```
-
-## Advanced Features
-
-### HTML Download Handling
-
-For institutional repositories and document management systems that serve PDFs through HTML redirect pages:
-
-```javascript
-// Automatic detection and handling
-const response = await fetch(url);
-const contentType = response.headers.get("content-type");
-
-if (contentType && contentType.includes("text/html")) {
-  const handler = new HTMLDownloadHandler({
-    downloadTimeout: options.downloadTimeout,
-  });
-  const pdfBlob = await handler.handleHTMLDownload(url);
-  // Continue with PDF.js loading...
-}
-```
-
-### Meta Refresh Parsing
-
-Robust parsing of meta refresh tags:
-
-```javascript
-/**
- * Parses meta refresh content attribute
- * Handles: "5; url=http://example.com/file.pdf"
- *         "0;URL='/file.pdf'"
- *         "3; url=\\"/path/to/file.pdf?foo=bar\\""
- */
-function parseMetaRefresh(content) {
-  const parts = content.split(";");
-  if (parts.length < 2) return null;
-
-  const delay = parseInt(parts[0].trim(), 10) || 0;
-  const urlPart = parts.slice(1).join(";").trim();
-  const urlMatch = urlPart.match(/url\\s*=\\s*['\\"]?([^'\\"]+)['\\"]?/i);
-
-  if (!urlMatch) return null;
-  return { delay, url: urlMatch[1].trim() };
-}
-```
-
-### URL Fragment Support
-
-Shareable page links with URL fragments:
-
-```javascript
-// Generate shareable link
-const shareUrl = `${window.location.origin}${window.location.pathname}#pdf-page-${page}`;
-
-// Parse page from URL
-function getPageFromHash() {
-  const hash = window.location.hash;
-  const match = hash.match(/#pdf-page-(\\d+)/);
-  return match ? parseInt(match[1], 10) : null;
-}
-```
-
-### Debug Mode
-
-Comprehensive debugging with visual indicators:
-
-```javascript
-if (this.debug) {
-  console.log(
-    `%c🎨 Rendering page ${ndx + 1}`,
-    "color: #4CAF50; font-weight: bold;"
-  );
-
-  // Visual debug overlay
-  const debugOverlay = document.createElement("div");
-  debugOverlay.style.background = "#4CAF50";
-  debugOverlay.style.color = "white";
-  debugOverlay.textContent = `Rendering...`;
-  // Add to page...
-}
+│   ├── *.html                          # Example/demo pages
+│   └── *.pdf                           # Example PDF files
+├── partials/
+│   ├── nav.html                        # Navigation partial (injected at build)
+│   └── head.html                       # Head partial (injected at build)
+└── tests/
+    ├── *.spec.ts                       # Playwright test files
+    └── test-small.html                 # Small-format test page
 ```
