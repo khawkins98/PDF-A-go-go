@@ -6,8 +6,7 @@
 
 An embeddable PDF viewer for the web. Add one script tag and a `div` to any HTML page.
 
-<!-- TODO: Replace with an actual screenshot or GIF of the viewer in action -->
-<!-- ![PDF-A-go-go viewer](docs/screenshot.png) -->
+![PDF-A-go-go](src/assets/cover.svg)
 
 **[Try the live demo](https://khawkins98.github.io/PDF-A-go-go/)** | [Kitchen Sink](https://khawkins98.github.io/PDF-A-go-go/kitchen-sink.html) | [Large spread](https://khawkins98.github.io/PDF-A-go-go/double-spread.html#pdf-page-10) | [827-page stress test](https://khawkins98.github.io/PDF-A-go-go/stress-test-large-pdf.html)
 
@@ -49,7 +48,7 @@ No init code, no build step. It reads `data-*` attributes off the container elem
 
 ### What PDF-A-go-go doesn't do
 
-PDF-A-go-go is a read-only viewer. Editing features like **annotations** (highlights, sticky notes, ink, redaction) and **form filling** are out of scope. If you need those, [EmbedPDF] is a good option.
+PDF-A-go-go is a read-only viewer. Editing features like **annotations** (highlights, sticky notes, ink, redaction) and **form filling** aren't something we're planning to add. If you need those, look at [EmbedPDF].
 
 A few viewer features aren't supported yet but are on the radar:
 

@@ -78,6 +78,7 @@ const base = {
         { from: 'src/examples/remote-pdf-allowed.html', to: 'remote-pdf-allowed.html', transform: (content) => injectPartials(content, '.') },
         { from: 'src/examples/remote-pdf-cors-fail.html', to: 'remote-pdf-cors-fail.html', transform: (content) => injectPartials(content, '.') },
         { from: 'src/examples/kitchen-sink.html', to: 'kitchen-sink.html', transform: (content) => injectPartials(content, '.') },
+        { from: 'src/examples/pdf-a-go-go-showcase.pdf', to: 'pdf-a-go-go-showcase.pdf' },
         { from: 'src/examples/example.pdf', to: 'example.pdf' },
         { from: 'src/examples/example_large.pdf', to: 'example_large.pdf' },
         { from: 'src/examples/example_spread.pdf', to: 'example_spread.pdf' },

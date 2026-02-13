@@ -10,7 +10,7 @@
   </header>
   <main>
     <h1>PDF-A-go-go</h1>
-    <p>A lightweight, accessible PDF viewer built on PDF.js. No initialization code needed—just include one JS file and configure via <code>data-*</code> attributes.</p>
+    <p>An embeddable PDF viewer built on PDF.js. Include one JS file, add a <code>div</code> with <code>data-*</code> attributes, and you're done.</p>
     <div class="feature-list">
       <span class="badge">Zero Config</span>
       <span class="badge">Accessible</span>
@@ -21,8 +21,8 @@
 
     <!-- Demo PDF viewer -->
     <div class="pdfagogo-container" id="pdfagogo-container"
-      data-pdf-url="./example.pdf"
-      data-default-page="3"
+      data-pdf-url="./pdf-a-go-go-showcase.pdf"
+      data-default-page="1"
       data-show-toolbar="true"
       data-show-search="true"
       data-show-page-selector="true"
@@ -30,7 +30,7 @@
       data-show-download="true"
       data-show-fullscreen="true"
       data-show-share="true"
-      data-show-resize-grip="false"
+      data-show-resize-grip="true"
       data-show-accessibility-controls-visibly="false"
       data-debug="false">
     </div>
@@ -42,8 +42,8 @@
         <button type="button" class="code-copy" onclick="copyCode()">Copy</button>
       </div>
       <pre id="code-block"><code>&lt;div class="pdfagogo-container"
-  data-pdf-url="./example.pdf"
-  data-default-page="3"
+  data-pdf-url="./pdf-a-go-go-showcase.pdf"
+  data-default-page="1"
   data-show-toolbar="true"
   data-show-search="true"
   data-show-page-selector="true"

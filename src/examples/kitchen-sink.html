@@ -149,7 +149,7 @@
   </header>
   <main>
     <h1>Kitchen Sink</h1>
-    <p>Interactively explore all configuration options. Toggle controls, see the viewer update live, and copy the HTML snippet for your own page.</p>
+    <p>Try every configuration option. The viewer updates as you change settings, and you can copy the resulting HTML snippet.</p>
 
     <div class="ks-layout">
       <!-- Controls Panel -->
@@ -159,6 +159,7 @@
           <label class="ks-text-label">
             PDF file
             <select id="ks-pdfUrl">
+              <option value="./pdf-a-go-go-showcase.pdf">Showcase (33 kB, 3 pages)</option>
               <option value="./example.pdf">example.pdf</option>
               <option value="./example_spread.pdf">example_spread.pdf (12MB)</option>
               <option value="./example_large.pdf">example_large.pdf (827 pages)</option>
@@ -268,7 +269,7 @@
       // --- Configuration map ---
       // Each key maps to: [type, defaultValue, data-attribute-name]
       var CONFIG = {
-        pdfUrl:                         ['string', './example.pdf', 'data-pdf-url'],
+        pdfUrl:                         ['string', './pdf-a-go-go-showcase.pdf', 'data-pdf-url'],
         defaultPage:                    ['int',    1,               'data-default-page'],
         showToolbar:                    ['bool',   true,            'data-show-toolbar'],
         showPageSelector:               ['bool',   true,            'data-show-page-selector'],
