@@ -218,4 +218,24 @@
     font-size: 0.85rem;
     line-height: 1.5;
   }
+
+  .theme-toggle.active {
+    background: var(--accent-light);
+    color: var(--accent);
+  }
 </style>
+<script>
+  function toggleTheme() {
+    var container = document.querySelector('.pdfagogo-container');
+    if (!container) return;
+    var btn = document.querySelector('.theme-toggle');
+    var isDark = container.getAttribute('data-theme') === 'dark';
+    if (isDark) {
+      container.removeAttribute('data-theme');
+      if (btn) { btn.classList.remove('active'); btn.textContent = '\u263D Dark mode'; }
+    } else {
+      container.setAttribute('data-theme', 'dark');
+      if (btn) { btn.classList.add('active'); btn.textContent = '\u263C Light mode'; }
+    }
+  }
+</script>
