@@ -56,7 +56,27 @@
 &lt;script src="pdf-a-go-go.js"&gt;&lt;/script&gt;</code></pre>
     </div>
 
+    <style>
+      .theme-toggle.active {
+        background: var(--accent-light);
+        color: var(--accent);
+      }
+    </style>
     <script>
+      function toggleTheme() {
+        var container = document.getElementById('pdfagogo-container');
+        var btn = document.querySelector('.theme-toggle');
+        var isDark = container.getAttribute('data-theme') === 'dark';
+        if (isDark) {
+          container.removeAttribute('data-theme');
+          btn.classList.remove('active');
+          btn.textContent = '\u263D Dark mode';
+        } else {
+          container.setAttribute('data-theme', 'dark');
+          btn.classList.add('active');
+          btn.textContent = '\u263C Light mode';
+        }
+      }
       function copyCode() {
         var code = document.getElementById('code-block').textContent;
         navigator.clipboard.writeText(code).then(function() {
