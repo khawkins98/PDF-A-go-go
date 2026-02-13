@@ -4,84 +4,177 @@
 [![Open issues](https://img.shields.io/github/issues/khawkins98/PDF-A-go-go.svg)](https://github.com/khawkins98/PDF-A-go-go/issues)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-PDF-A-go-go is a drop-in PDF viewer you can embed with a single script tag. Add a tiny CSS file for polish, set options with `data-*` attributes, and you're done—no framework, no build step, no init code.
+An embeddable PDF viewer for the web. Add one script tag and a `div` to any HTML page.
 
-Read more about [the motivation and design](https://www.allaboutken.com/posts/20250811-pdf-a-go-go/index.html).
+<!-- TODO: Replace with an actual screenshot or GIF of the viewer in action -->
+<!-- ![PDF-A-go-go viewer](docs/screenshot.png) -->
 
-## Quick Start
+**[Try the live demo](https://khawkins98.github.io/PDF-A-go-go/)** | [Kitchen Sink](https://khawkins98.github.io/PDF-A-go-go/kitchen-sink.html) | [Large spread](https://khawkins98.github.io/PDF-A-go-go/double-spread.html#pdf-page-10) | [827-page stress test](https://khawkins98.github.io/PDF-A-go-go/stress-test-large-pdf.html)
+
+## The problem
+
+Embedding PDFs on the web is still surprisingly annoying. Browser `<iframe>` embeds look different everywhere and give you no control over the UI. Raw PDF.js gets you rendering, but you're writing hundreds of lines of setup code before you have anything usable. Most viewer libraries either require React or want you to pay for a hosted service.
+
+If you just want to put a PDF on a web page with search, zoom, and keyboard nav, your options are thin.
+
+## The fix
 
 ```html
-<!-- Optional CSS for styling -->
-<link
-  rel="stylesheet"
-  href="https://khawkins98.github.io/PDF-A-go-go/pdf-a-go-go.css"
-/>
+<link rel="stylesheet" href="https://khawkins98.github.io/PDF-A-go-go/pdf-a-go-go.css" />
+<script defer src="https://khawkins98.github.io/PDF-A-go-go/pdf-a-go-go.js"></script>
 
-<!-- The viewer -->
-<script
-  defer
-  src="https://khawkins98.github.io/PDF-A-go-go/pdf-a-go-go.js"
-></script>
-
-<!-- Your container -->
-<div
-  class="pdfagogo-container"
-  data-pdf-url="./your-document.pdf"
-  style="width:100%;max-width:100%;box-sizing:border-box"
-></div>
+<div class="pdfagogo-container" data-pdf-url="./your-document.pdf"></div>
 ```
 
-## Demo
+No init code, no build step. It reads `data-*` attributes off the container element and does the rest.
 
-- [Basic demo](https://khawkins98.github.io/PDF-A-go-go/)
-- [Large double spread](https://khawkins98.github.io/PDF-A-go-go/double-spread.html#pdf-page-10) (12MB PDF)
-- [827-page stress test](https://khawkins98.github.io/PDF-A-go-go/stress-test-large-pdf.html)
+## How it compares
 
-## Features
+|                       | PDF-A-go-go | [EmbedPDF] | Raw PDF.js | `<iframe>` embed |
+| --------------------- | :---------: | :--------: | :--------: | :--------------: |
+| Lines to embed        |      3      |     3      |    200+    |        1         |
+| Framework required    |     No      |     No     |     No     |        No        |
+| Pinch-to-zoom         |     Yes     |    Yes     |    DIY     |     Browser      |
+| Full-text search      |     Yes     |    Yes     |    DIY     |      Varies      |
+| Annotations           |     No      |    Yes     |     No     |        No        |
+| Memory efficient      |    ~8MB     |     ?      |   ~80MB    |       N/A        |
+| Keyboard accessible   |     Yes     |    Yes     |    DIY     |        No        |
+| Themeable             |  CSS vars   | Light/dark |    DIY     |        No        |
+| Deep linking          |     Yes     |     No     |    DIY     |        No        |
+| Multiple instances    |     Yes     |    Yes     |    DIY     |       Yes        |
+| Transfer size         |   ~550 kB   |  ~2.3 MB   |   ~550 kB  |        0         |
+| PDF engine            |   PDF.js    |   PDFium   |   PDF.js   |      Native      |
 
-- Vertical scroll viewing with smooth momentum
-- Pinch-to-zoom, Ctrl+Plus/Minus, mouse wheel zoom (25%-500%)
-- Tile-based rendering for efficient memory usage (~8MB vs ~80MB)
-- Full-text search with highlighting
-- Keyboard navigation and screen reader support
-- Deep linking and shareable page URLs
-- Mobile responsive with touch-optimized interactions
-- Works in static HTML, CMS templates, and site builders
+[EmbedPDF]: https://github.com/embedpdf/embed-pdf-viewer
 
-## Configuration
+### What PDF-A-go-go doesn't do
 
-Set options via `data-*` attributes:
+PDF-A-go-go is a read-only viewer. Editing features like **annotations** (highlights, sticky notes, ink, redaction) and **form filling** are out of scope. If you need those, [EmbedPDF] is a good option.
 
-| Attribute                 | Default | Description                |
-| ------------------------- | ------- | -------------------------- |
-| `data-pdf-url`            | —       | PDF URL to load (required) |
-| `data-default-page`       | 1       | Starting page (1-based)    |
-| `data-show-search`        | true    | Show search controls       |
-| `data-show-share`         | true    | Show share button          |
-| `data-show-page-selector` | true    | Show page selector         |
-| `data-show-download`      | true    | Show download button       |
-| `data-show-fullscreen`    | true    | Show fullscreen toggle     |
-| `data-show-resize-grip`   | true    | Show height resize handle  |
-| `data-debug`              | false   | Show performance overlay   |
+A few viewer features aren't supported yet but are on the radar:
 
-## Keyboard Shortcuts
+- **Password-protected PDFs** -- PDF.js handles this under the hood, but the UI doesn't expose a password prompt yet.
+- **i18n** -- the UI is English-only for now. Labels like "Search," "Download," and "Next page" are hardcoded.
+- **Thumbnails / outline panel** -- no sidebar for page previews or table of contents navigation.
+- **Page rotation and print** -- pages display as-is. For printing, users can download the PDF directly.
 
-| Shortcut          | Action                |
-| ----------------- | --------------------- |
-| Ctrl + Plus/Minus | Zoom in/out           |
-| Ctrl + 0          | Reset zoom to 100%    |
-| Ctrl + Scroll     | Zoom with mouse wheel |
+Browser-wise, PDF-A-go-go targets modern evergreen browsers. It won't work in IE11, and older mobile browsers (pre-2022) may have issues. See the [browser support table](#browser-support) in the details section below.
 
-## Browser Support
+## Recipes
 
-| Browser        | Minimum Version |
-| -------------- | --------------- |
-| Chrome         | 109+            |
-| Firefox        | 128+            |
-| Safari         | 15.6+           |
-| Edge           | 133+            |
-| iOS Safari     | 15.6+           |
-| Android Chrome | 135+            |
+### Embed a PDF in a blog post
+
+Paste this into your HTML:
+
+```html
+<link rel="stylesheet" href="https://khawkins98.github.io/PDF-A-go-go/pdf-a-go-go.css" />
+<script defer src="https://khawkins98.github.io/PDF-A-go-go/pdf-a-go-go.js"></script>
+
+<div class="pdfagogo-container" data-pdf-url="./report.pdf"></div>
+```
+
+### Open to a specific page with a toolbar
+
+```html
+<div class="pdfagogo-container"
+  data-pdf-url="./handbook.pdf"
+  data-default-page="5"
+  data-show-search="true"
+  data-show-page-selector="true"
+  data-show-download="true"
+  data-show-fullscreen="true"
+  data-show-share="true"></div>
+```
+
+### Dark theme for a dashboard
+
+```html
+<div class="pdfagogo-container"
+  data-pdf-url="./analytics.pdf"
+  data-theme="dark"
+  data-show-toolbar="true"></div>
+```
+
+### Multiple PDFs on the same page
+
+Each viewer gets its own state, so zoom and search in one don't affect the other:
+
+```html
+<div class="pdfagogo-container" data-pdf-url="./chapter-1.pdf"></div>
+<div class="pdfagogo-container" data-pdf-url="./chapter-2.pdf"></div>
+```
+
+### Link directly to a page
+
+Append `#pdf-page-N` to any URL hosting the viewer and it'll open to that page:
+
+```
+https://yoursite.com/docs.html#pdf-page-42
+```
+
+<details>
+<summary><strong>All configuration options</strong></summary>
+
+Set options via `data-*` attributes on the container element:
+
+| Attribute | Default | Description |
+| --- | --- | --- |
+| `data-pdf-url` | -- | PDF file URL (required) |
+| `data-default-page` | `1` | Starting page number |
+| `data-show-toolbar` | `true` | Show the toolbar |
+| `data-show-search` | `true` | Show search controls |
+| `data-show-share` | `true` | Show share button |
+| `data-show-page-selector` | `true` | Show page selector |
+| `data-show-current-page` | `true` | Show current page indicator |
+| `data-show-download` | `true` | Show download button |
+| `data-show-fullscreen` | `true` | Show fullscreen toggle |
+| `data-show-resize-grip` | `true` | Show height resize handle |
+| `data-show-accessibility-controls-visibly` | `false` | Show accessibility controls visually |
+| `data-margin` | `1.0` | Page margin (rem) |
+| `data-margin-top` | `0.5` | Top margin override (rem) |
+| `data-margin-left` | `0.5` | Left margin override (rem) |
+| `data-momentum` | `1.5` | Scroll momentum multiplier |
+| `data-theme` | -- | Color theme (`dark` built-in, or custom) |
+| `data-worker-url` | -- | Custom PDF.js worker URL |
+| `data-fullpage-cache-size` | `10` | Full-page render cache size |
+| `data-text-layer-cache-size` | `10` | Text layer cache size |
+| `data-download-timeout` | `30000` | Download timeout (ms) |
+| `data-disable-webgl` | `true` | Disable WebGL rendering |
+| `data-debug` | `false` | Show performance overlay |
+
+</details>
+
+<details>
+<summary><strong>Keyboard shortcuts</strong></summary>
+
+| Shortcut | Action |
+| --- | --- |
+| Ctrl + Plus/Minus | Zoom in/out |
+| Ctrl + 0 | Reset zoom to 100% |
+| Ctrl + Scroll | Zoom with mouse wheel |
+| Pinch gesture | Zoom on touch devices |
+
+</details>
+
+<details>
+<summary><strong>Browser support</strong></summary>
+
+| Browser | Minimum Version |
+| --- | --- |
+| Chrome | 109+ |
+| Firefox | 128+ |
+| Safari | 15.6+ |
+| Edge | 133+ |
+| iOS Safari | 15.6+ |
+| Android Chrome | 135+ |
+
+</details>
+
+## Under the hood
+
+Pages are divided into a grid of tiles, and only the ones currently visible get rendered. The resolution adapts to the zoom level, so you're not burning memory on 4x tiles for a page at 50% zoom. In practice this means ~8MB of memory for a large document instead of ~80MB with full-page rendering. Old tiles get evicted via an LRU cache.
+
+More on [the motivation and design](https://www.allaboutken.com/posts/20250811-pdf-a-go-go/). Full architecture and API docs are in [DOCUMENTATION.md](DOCUMENTATION.md).
 
 ## Development
 
@@ -94,8 +187,8 @@ npm test             # Run Playwright tests
 
 ## Credits
 
-- [PDF.js](https://github.com/mozilla/pdf.js) - Mozilla's PDF rendering library (Apache 2.0)
-- [Lucide](https://lucide.dev) - Icons (MIT)
+- [PDF.js](https://github.com/mozilla/pdf.js) -- Mozilla's PDF rendering library (Apache 2.0)
+- [Lucide](https://lucide.dev) -- Icons (MIT)
 
 ## License
 
