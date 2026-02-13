@@ -4,7 +4,7 @@ Findings from code audit and architecture review, organized by effort level.
 
 ## Priority 2 -- Medium Effort
 
-- **Test coverage gaps**: Missing test coverage for multi-instance isolation, search functionality, accessibility features, error handling paths, and HTML download handler (`htmlDownloadHandler.js` -- 642 lines, 0 tests).
+- **Test coverage gaps**: ~~Missing test coverage for multi-instance isolation, search functionality, accessibility features, error handling paths, and HTML download handler.~~ Addressed in `multi-instance.spec.ts`, `search.spec.ts`, `accessibility.spec.ts`, `error-handling.spec.ts`, and `html-download.spec.ts`. Remaining: deeper `htmlDownloadHandler.js` unit tests (642 lines, integration-tested only).
 
 ## Priority 3 -- Larger Opportunities
 

@@ -281,14 +281,16 @@ import { setupSearchControls } from './search.js';
 
 export function setupControls(container, featureOptions, viewer, book, pdf, instance) {
   // Remove any existing controls to prevent duplicates
-  // Scope to wrapper if available, otherwise fallback to global
+  // Scope to wrapper if available, otherwise scope to the container itself
+  // (avoids removing another instance's controls in multi-instance setups)
   const existingWrapper = container.closest('.pdfagogo-viewer-wrapper');
+  const cleanupScope = existingWrapper || container;
   [
     "pdfagogo-toolbar",
     "pdfagogo-page-announcement",
     "pdfagogo-a11y-instructions"
   ].forEach((cls) => {
-    const el = existingWrapper ? existingWrapper.querySelector("." + cls) : document.querySelector("." + cls);
+    const el = cleanupScope.querySelector("." + cls);
     if (el && el.parentNode) el.parentNode.removeChild(el);
   });
 

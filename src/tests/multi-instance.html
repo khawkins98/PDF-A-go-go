@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- @@HEAD@@ -->
+  <title>Multi-Instance Test - PDF-A-go-go</title>
+</head>
+<body>
+  <header>
+    <!-- @@NAV@@ -->
+  </header>
+  <main>
+    <h1>Multi-Instance Test</h1>
+    <script defer="defer" src="../pdf-a-go-go.js"></script>
+    <div class="pdfagogo-container" id="viewer-a"
+         data-pdf-url="../example.pdf"
+         data-show-toolbar="true"
+         data-show-search="true"
+         data-show-page-selector="true"
+         data-show-current-page="true"
+         data-debug="true">
+    </div>
+    <div class="pdfagogo-container" id="viewer-b"
+         data-pdf-url="../example_spread.pdf"
+         data-theme="dark"
+         data-show-toolbar="true"
+         data-show-search="true"
+         data-show-page-selector="true"
+         data-show-current-page="true"
+         data-debug="true">
+    </div>
+  </main>
+</body>
+</html>

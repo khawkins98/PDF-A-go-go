@@ -81,7 +81,10 @@ const base = {
         { from: 'src/examples/example_large.pdf', to: 'example_large.pdf' },
         { from: 'src/examples/example_spread.pdf', to: 'example_spread.pdf' },
         { from: 'src/tests/test-small.html', to: 'tests/test-small.html', transform: (content) => injectPartials(content, '..') },
-        { from: 'src/tests', to: 'tests', globOptions: { ignore: ['**/test-small.html'] } },
+        { from: 'src/tests/multi-instance.html', to: 'tests/multi-instance.html', transform: (content) => injectPartials(content, '..') },
+        { from: 'src/tests/error-404.html', to: 'tests/error-404.html', transform: (content) => injectPartials(content, '..') },
+        { from: 'src/tests/accessibility-test.html', to: 'tests/accessibility-test.html', transform: (content) => injectPartials(content, '..') },
+        { from: 'src/tests', to: 'tests', globOptions: { ignore: ['**/test-small.html', '**/multi-instance.html', '**/error-404.html', '**/accessibility-test.html'] } },
       ]
     })
   ]
