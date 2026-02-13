@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="./pdf-a-go-go.css">
+<style>
+  :root {
+    --sidebar-width: 240px;
+    --sidebar-bg: #f8fafc;
+    --sidebar-border: #e2e8f0;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --text-muted: #94a3b8;
+    --accent: #6366f1;
+    --accent-hover: #4f46e5;
+    --accent-light: #eef2ff;
+    --border-radius: 6px;
+    --bg-main: #ffffff;
+    --code-bg: #f1f5f9;
+    --font-mono: 'SF Mono', Monaco, 'Cascadia Code', Consolas, monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-primary);
+    background: var(--bg-main);
+  }
+
+  header {
+    background: var(--sidebar-bg);
+    border-bottom: 1px solid var(--sidebar-border);
+    padding: 1rem 1.25rem;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-decoration: none;
+    margin-bottom: 1rem;
+  }
+
+  .logo svg {
+    width: 24px;
+    height: 24px;
+    color: var(--accent);
+  }
+
+  nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  h2.nav-section {
+    width: 100%;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin: 0.75rem 0 0.25rem;
+  }
+
+  h2.nav-section:first-of-type { margin-top: 0; }
+
+  nav a {
+    display: inline-block;
+    padding: 0.4rem 0.75rem;
+    border-radius: var(--border-radius);
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  nav a:hover,
+  nav a.active {
+    background: var(--accent-light);
+    color: var(--accent);
+  }
+
+  main {
+    padding: 1.5rem;
+    max-width: 900px;
+  }
+
+  main h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem;
+    line-height: 1.3;
+  }
+
+  main > p:first-of-type {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    margin: 0 0 1.5rem;
+  }
+
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: var(--code-bg);
+    padding: 0.15em 0.4em;
+    border-radius: 4px;
+    color: var(--accent);
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.6rem;
+    background: var(--accent-light);
+    color: var(--accent);
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 99px;
+    margin: 0 0.5rem 0.5rem 0;
+  }
+
+  .feature-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  @media (min-width: 768px) {
+    body {
+      display: grid;
+      grid-template-columns: var(--sidebar-width) 1fr;
+      min-height: 100vh;
+    }
+    header {
+      border-bottom: none;
+      border-right: 1px solid var(--sidebar-border);
+      padding: 1.5rem;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    .logo { margin-bottom: 1.5rem; }
+    nav {
+      flex-direction: column;
+      flex-wrap: nowrap;
+      gap: 0.125rem;
+    }
+    nav a {
+      display: block;
+      padding: 0.45rem 0.75rem;
+    }
+    main { padding: 2.5rem 3rem; }
+    main h1 { font-size: 2rem; }
+  }
+
+  .pdfagogo-container {
+    border-radius: var(--border-radius);
+    overflow: hidden;
+  }
+
+  /* Code example block */
+  .code-example {
+    margin-top: 1.5rem;
+    border: 1px solid var(--sidebar-border);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+  }
+
+  .code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background: #2d2d2d;
+    color: #999;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .code-copy {
+    padding: 0.35rem 0.75rem;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .code-copy:hover { background: var(--accent-hover); }
+
+  .code-example pre {
+    margin: 0;
+    padding: 1rem;
+    background: #1e1e1e;
+    overflow-x: auto;
+  }
+
+  .code-example code {
+    background: none;
+    padding: 0;
+    color: #d4d4d4;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .theme-toggle.active {
+    background: var(--accent-light);
+    color: var(--accent);
+  }
+</style>
+<script>
+  function toggleTheme() {
+    var container = document.querySelector('.pdfagogo-container');
+    if (!container) return;
+    var btn = document.querySelector('.theme-toggle');
+    var isDark = container.getAttribute('data-theme') === 'dark';
+    if (isDark) {
+      container.removeAttribute('data-theme');
+      if (btn) { btn.classList.remove('active'); btn.textContent = '\u263D Dark mode'; }
+    } else {
+      container.setAttribute('data-theme', 'dark');
+      if (btn) { btn.classList.add('active'); btn.textContent = '\u263C Light mode'; }
+    }
+  }
+</script>
+
+  <title>Kitchen Sink - PDF-A-go-go</title>
+  <style>
+    /* Override the default main max-width for wider layout */
+    main { max-width: 1400px !important; }
+
+    .ks-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 960px) {
+      .ks-layout {
+        flex-direction: row;
+        align-items: flex-start;
+      }
+      .ks-controls {
+        width: 340px;
+        min-width: 340px;
+        position: sticky;
+        top: 1rem;
+        max-height: calc(100vh - 2rem);
+        overflow-y: auto;
+      }
+      .ks-viewer-area { flex: 1; min-width: 0; }
+    }
+
+    .ks-controls {
+      background: var(--sidebar-bg, #f8fafc);
+      border: 1px solid var(--sidebar-border, #e2e8f0);
+      border-radius: var(--border-radius, 6px);
+      padding: 1rem;
+    }
+
+    .ks-controls fieldset {
+      border: 1px solid var(--sidebar-border, #e2e8f0);
+      border-radius: var(--border-radius, 6px);
+      padding: 0.5rem 0.75rem 0.75rem;
+      margin: 0 0 0.75rem;
+    }
+
+    .ks-controls legend {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted, #94a3b8);
+      padding: 0 0.35rem;
+    }
+
+    .ks-controls label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--text-secondary, #64748b);
+      padding: 0.2rem 0;
+      cursor: pointer;
+    }
+
+    .ks-controls label.ks-text-label {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.25rem;
+    }
+
+    .ks-controls input[type="number"],
+    .ks-controls input[type="text"],
+    .ks-controls select {
+      width: 100%;
+      padding: 0.35rem 0.5rem;
+      border: 1px solid var(--sidebar-border, #e2e8f0);
+      border-radius: 4px;
+      font-size: 0.85rem;
+      font-family: inherit;
+      background: var(--bg-main, #fff);
+      color: var(--text-primary, #1e293b);
+    }
+
+    .ks-hint {
+      font-size: 0.75rem;
+      color: var(--text-muted, #94a3b8);
+      line-height: 1.4;
+    }
+
+    .ks-hint-inline {
+      font-size: 0.75rem;
+      color: var(--text-muted, #94a3b8);
+      line-height: 1.4;
+      display: block;
+      margin-top: 0.15rem;
+    }
+
+    .ks-coming-soon {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--accent, #6366f1);
+      background: var(--accent-light, #eef2ff);
+      padding: 0.1rem 0.4rem;
+      border-radius: 3px;
+      margin-left: 0.35rem;
+    }
+
+    .ks-controls label.ks-disabled,
+    .ks-controls label.ks-disabled .ks-text-label {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    .ks-controls input:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .ks-btn-reset {
+      display: block;
+      width: 100%;
+      padding: 0.5rem;
+      background: var(--accent, #6366f1);
+      color: #fff;
+      border: none;
+      border-radius: var(--border-radius, 6px);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .ks-btn-reset:hover { background: var(--accent-hover, #4f46e5); }
+
+    .ks-viewer-container {
+      border-radius: var(--border-radius, 6px);
+      overflow: hidden;
+      min-height: 500px;
+    }
+
+    .ks-snippet { margin-top: 1.5rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="./" class="logo">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+    <polyline points="14 2 14 8 20 8"/>
+    <line x1="16" y1="13" x2="8" y2="13"/>
+    <line x1="16" y1="17" x2="8" y2="17"/>
+    <line x1="10" y1="9" x2="8" y2="9"/>
+  </svg>
+  PDF-A-go-go
+</a>
+<nav>
+  <h2 class="nav-section">Get Started</h2>
+  <a href="./">Overview</a>
+  <a href="https://github.com/khawkins98/PDF-A-go-go#installation" target="_blank" rel="noopener">Installation</a>
+  <a href="https://github.com/khawkins98/PDF-A-go-go#configuration" target="_blank" rel="noopener">Configuration</a>
+  <h2 class="nav-section">Examples</h2>
+  <a href="./double-spread.html">Large PDF (12MB)</a>
+  <a href="./stress-test-large-pdf.html">Many Pages (827)</a>
+  <a href="./html-download-example.html">HTML Proxy</a>
+  <a href="./remote-pdf-allowed.html">Remote CORS</a>
+  <a href="./remote-pdf-cors-fail.html">CORS Error</a>
+  <a href="./kitchen-sink.html">Kitchen Sink</a>
+  <h2 class="nav-section">Resources</h2>
+  <a href="https://github.com/khawkins98/PDF-A-go-go" target="_blank" rel="noopener">GitHub</a>
+  <h2 class="nav-section">Theme</h2>
+  <a href="#" class="theme-toggle" onclick="toggleTheme(); return false;">&#9789; Dark mode</a>
+</nav>
+
+  </header>
+  <main>
+    <h1>Kitchen Sink</h1>
+    <p>Try every configuration option. The viewer updates as you change settings, and you can copy the resulting HTML snippet.</p>
+
+    <div class="ks-layout">
+      <!-- Controls Panel -->
+      <div class="ks-controls">
+        <fieldset>
+          <legend>PDF Source</legend>
+          <label class="ks-text-label">
+            PDF file
+            <select id="ks-pdfUrl">
+              <option value="./pdf-a-go-go-showcase.pdf">Showcase (33 kB, 3 pages)</option>
+              <option value="./example.pdf">example.pdf</option>
+              <option value="./example_spread.pdf">example_spread.pdf (12MB)</option>
+              <option value="./example_large.pdf">example_large.pdf (827 pages)</option>
+            </select>
+          </label>
+          <label class="ks-text-label">
+            Default page
+            <input type="number" id="ks-defaultPage" min="1" value="1">
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Toolbar Features</legend>
+          <label><input type="checkbox" id="ks-showToolbar" checked> Show toolbar</label>
+          <label><input type="checkbox" id="ks-showPageSelector" checked> Page selector</label>
+          <label><input type="checkbox" id="ks-showCurrentPage" checked> Current page indicator</label>
+          <label><input type="checkbox" id="ks-showSearch" checked> Search</label>
+          <label><input type="checkbox" id="ks-showDownload" checked> Download</label>
+          <label><input type="checkbox" id="ks-showShare" checked> Share</label>
+          <label><input type="checkbox" id="ks-showFullscreen" checked> Fullscreen</label>
+          <label><input type="checkbox" id="ks-showResizeGrip" checked> Resize grip</label>
+          <label><input type="checkbox" id="ks-showAccessibilityControlsVisibly"> Accessibility controls visible</label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Appearance</legend>
+          <label class="ks-text-label">
+            Theme
+            <select id="ks-theme">
+              <option value="">(default / light)</option>
+              <option value="dark">dark</option>
+            </select>
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Layout <span class="ks-coming-soon">Coming soon</span></legend>
+          <label class="ks-text-label ks-disabled">
+            Margin
+            <input type="number" id="ks-margin" min="0" max="5" step="0.1" value="1.0" disabled>
+          </label>
+          <label class="ks-text-label ks-disabled">
+            Margin top
+            <input type="number" id="ks-marginTop" min="0" max="5" step="0.1" value="0.5" disabled>
+          </label>
+          <label class="ks-text-label ks-disabled">
+            Margin left
+            <input type="number" id="ks-marginLeft" min="0" max="5" step="0.1" value="0.5" disabled>
+          </label>
+          <label class="ks-text-label ks-disabled">
+            Scroll momentum
+            <input type="number" id="ks-momentum" min="0" max="5" step="0.1" value="1.5" disabled>
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Performance</legend>
+          <label class="ks-text-label">
+            Full-page cache size
+            <span class="ks-hint">Rendered pages kept in memory. Higher values use more RAM but make scrolling back faster. When unset, defaults to 10 on desktop and 5 on mobile. Setting a value applies to both.</span>
+            <input type="number" id="ks-fullpageCacheSize" min="1" max="50" value="10">
+          </label>
+          <label class="ks-text-label">
+            Text layer cache size
+            <span class="ks-hint">Selectable text overlays kept in memory. Affects copy/paste and search highlighting. When unset, defaults to 10 on desktop and 5 on mobile. Setting a value applies to both.</span>
+            <input type="number" id="ks-textLayerCacheSize" min="1" max="50" value="10">
+          </label>
+          <label class="ks-text-label">
+            Download timeout (ms)
+            <span class="ks-hint">Max wait time when loading PDFs served through HTML redirect pages (e.g. institutional repositories). Increase for slow servers.</span>
+            <input type="number" id="ks-downloadTimeout" min="1000" max="120000" step="1000" value="30000">
+          </label>
+          <label>
+            <input type="checkbox" id="ks-disableWebgl" checked> Disable WebGL
+            <span class="ks-hint-inline">Uses Canvas 2D instead. Leave checked unless you have a specific reason to enable WebGL.</span>
+          </label>
+          <label>
+            <input type="checkbox" id="ks-debug"> Debug mode
+            <span class="ks-hint-inline">Shows tile boundaries, render times, and cache stats in the console.</span>
+          </label>
+        </fieldset>
+
+        <button type="button" class="ks-btn-reset" id="ks-reset">Reset to Defaults</button>
+      </div>
+
+      <!-- Viewer + Snippet -->
+      <div class="ks-viewer-area">
+        <div id="ks-viewer" class="ks-viewer-container"></div>
+
+        <div class="ks-snippet">
+          <div class="code-example">
+            <div class="code-header">
+              <span>HTML</span>
+              <button type="button" class="code-copy" id="ks-copy-btn">Copy</button>
+            </div>
+            <pre id="ks-code-block"><code id="ks-code"></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script defer="defer" src="pdf-a-go-go.js"></script>
+    <script>
+    (function() {
+      'use strict';
+
+      // --- Configuration map ---
+      // Each key maps to: [type, defaultValue, data-attribute-name]
+      var CONFIG = {
+        pdfUrl:                         ['string', './pdf-a-go-go-showcase.pdf', 'data-pdf-url'],
+        defaultPage:                    ['int',    1,               'data-default-page'],
+        showToolbar:                    ['bool',   true,            'data-show-toolbar'],
+        showPageSelector:               ['bool',   true,            'data-show-page-selector'],
+        showCurrentPage:                ['bool',   true,            'data-show-current-page'],
+        showSearch:                     ['bool',   true,            'data-show-search'],
+        showDownload:                   ['bool',   true,            'data-show-download'],
+        showShare:                      ['bool',   true,            'data-show-share'],
+        showFullscreen:                 ['bool',   true,            'data-show-fullscreen'],
+        showResizeGrip:                 ['bool',   true,            'data-show-resize-grip'],
+        showAccessibilityControlsVisibly: ['bool', false,           'data-show-accessibility-controls-visibly'],
+        theme:                          ['string', '',              'data-theme'],
+        // Layout options are parsed but not yet implemented (coming soon)
+        // margin, marginTop, marginLeft, momentum
+        fullpageCacheSize:              ['int',    10,              'data-fullpage-cache-size'],
+        textLayerCacheSize:             ['int',    10,              'data-text-layer-cache-size'],
+        downloadTimeout:                ['int',    30000,           'data-download-timeout'],
+        disableWebgl:                   ['bool',   true,            'data-disable-webgl'],
+        debug:                          ['bool',   false,           'data-debug']
+      };
+
+      var container = document.getElementById('ks-viewer');
+      var debounceTimer = null;
+
+      // --- State helpers ---
+
+      function getDefaults() {
+        var state = {};
+        for (var key in CONFIG) {
+          state[key] = CONFIG[key][1];
+        }
+        return state;
+      }
+
+      function readState() {
+        var state = {};
+        for (var key in CONFIG) {
+          var type = CONFIG[key][0];
+          var el = document.getElementById('ks-' + key);
+          if (!el) continue;
+          if (type === 'bool') {
+            state[key] = el.checked;
+          } else if (type === 'int') {
+            state[key] = parseInt(el.value, 10) || CONFIG[key][1];
+          } else if (type === 'float') {
+            state[key] = parseFloat(el.value) || CONFIG[key][1];
+          } else {
+            state[key] = el.value;
+          }
+        }
+        return state;
+      }
+
+      function applyStateToControls(state) {
+        for (var key in CONFIG) {
+          var type = CONFIG[key][0];
+          var el = document.getElementById('ks-' + key);
+          if (!el) continue;
+          if (type === 'bool') {
+            el.checked = state[key];
+          } else {
+            el.value = state[key];
+          }
+        }
+      }
+
+      // --- URL serialization ---
+
+      function stateToURL(state) {
+        var defaults = getDefaults();
+        var params = [];
+        for (var key in state) {
+          if (state[key] !== defaults[key]) {
+            params.push(encodeURIComponent(key) + '=' + encodeURIComponent(state[key]));
+          }
+        }
+        return params.length ? '?' + params.join('&') : location.pathname;
+      }
+
+      function stateFromURL() {
+        var defaults = getDefaults();
+        var params = new URLSearchParams(location.search);
+        var state = {};
+        for (var key in CONFIG) {
+          var type = CONFIG[key][0];
+          if (params.has(key)) {
+            var raw = params.get(key);
+            if (type === 'bool') {
+              state[key] = raw === 'true';
+            } else if (type === 'int') {
+              state[key] = parseInt(raw, 10) || defaults[key];
+            } else if (type === 'float') {
+              state[key] = parseFloat(raw) || defaults[key];
+            } else {
+              state[key] = raw;
+            }
+          } else {
+            state[key] = defaults[key];
+          }
+        }
+        return state;
+      }
+
+      function syncURL(state) {
+        var url = stateToURL(state);
+        history.replaceState(null, '', url);
+      }
+
+      // --- Code snippet ---
+
+      function updateCodeSnippet(state) {
+        var defaults = getDefaults();
+        var attrs = [];
+        // Always include pdf-url
+        attrs.push('  ' + CONFIG.pdfUrl[2] + '="' + state.pdfUrl + '"');
+        for (var key in state) {
+          if (key === 'pdfUrl') continue;
+          if (state[key] !== defaults[key]) {
+            attrs.push('  ' + CONFIG[key][2] + '="' + state[key] + '"');
+          }
+        }
+        var html = '<div class="pdfagogo-container"\n' + attrs.join('\n') + '>\n</div>\n\n<script src="pdf-a-go-go.js"></' + 'script>';
+        document.getElementById('ks-code').textContent = html;
+      }
+
+      // --- Viewer lifecycle ---
+
+      function reinitViewer() {
+        var state = readState();
+        syncURL(state);
+        updateCodeSnippet(state);
+
+        // Destroy existing instance
+        if (typeof flipbook !== 'undefined' && flipbook.default && flipbook.default.registry) {
+          flipbook.default.registry.destroyInstance(container);
+        }
+
+        // Clean up any leftover wrapper
+        var wrapper = container.closest('.pdfagogo-viewer-wrapper');
+        if (wrapper && wrapper.parentNode && wrapper.getAttribute('data-pdfagogo-created') === 'true') {
+          wrapper.parentNode.insertBefore(container, wrapper);
+          wrapper.parentNode.removeChild(wrapper);
+        }
+
+        // Clear container
+        container.innerHTML = '';
+        container.className = 'ks-viewer-container pdfagogo-container';
+
+        // Remove old data-* attributes
+        var existingAttrs = [].slice.call(container.attributes);
+        existingAttrs.forEach(function(attr) {
+          if (attr.name.indexOf('data-') === 0) {
+            container.removeAttribute(attr.name);
+          }
+        });
+
+        // Set new data-* attributes
+        for (var key in CONFIG) {
+          var dataAttr = CONFIG[key][2];
+          container.setAttribute(dataAttr, String(state[key]));
+        }
+
+        // Ensure container has an ID
+        container.id = 'ks-viewer';
+
+        // Initialize via the public API
+        if (typeof flipbook !== 'undefined' && flipbook.default && flipbook.default.initializeContainer) {
+          flipbook.default.initializeContainer(container).catch(function(err) {
+            console.error('[Kitchen Sink] reinit error:', err);
+          });
+        }
+      }
+
+      // --- Debounced reinit for text/number inputs ---
+
+      function debouncedReinit() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(reinitViewer, 500);
+      }
+
+      // --- Event binding ---
+
+      function bindEvents() {
+        for (var key in CONFIG) {
+          var type = CONFIG[key][0];
+          var el = document.getElementById('ks-' + key);
+          if (!el) continue;
+          if (type === 'bool') {
+            el.addEventListener('change', reinitViewer);
+          } else if (el.tagName === 'SELECT') {
+            el.addEventListener('change', reinitViewer);
+          } else {
+            el.addEventListener('input', debouncedReinit);
+          }
+        }
+
+        // Reset button
+        document.getElementById('ks-reset').addEventListener('click', function() {
+          applyStateToControls(getDefaults());
+          // Clear URL params
+          history.replaceState(null, '', location.pathname);
+          reinitViewer();
+        });
+
+        // Copy button
+        document.getElementById('ks-copy-btn').addEventListener('click', function() {
+          var code = document.getElementById('ks-code').textContent;
+          var btn = document.getElementById('ks-copy-btn');
+          navigator.clipboard.writeText(code).then(function() {
+            btn.textContent = 'Copied!';
+            setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
+          });
+        });
+      }
+
+      // --- Init ---
+
+      function init() {
+        // Load state from URL (if any params present) or use defaults
+        var state = location.search ? stateFromURL() : getDefaults();
+        applyStateToControls(state);
+        updateCodeSnippet(state);
+        bindEvents();
+
+        // The container starts without .pdfagogo-container so auto-init skips it.
+        // We'll do the first init after a tick to ensure the library is loaded.
+        var poll = setInterval(function() {
+          if (typeof flipbook !== 'undefined' && flipbook.default && flipbook.default.initializeContainer) {
+            clearInterval(poll);
+            reinitViewer();
+          }
+        }, 100);
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+    })();
+    </script>
+  </main>
+</body>
+</html>
