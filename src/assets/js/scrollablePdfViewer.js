@@ -371,8 +371,14 @@ export class ScrollablePdfViewer extends EventEmitter {
       this._setupDebugDisplay();
     }
 
-    /** @type {Set<number>} Set of currently visible page indices */
+    /** @type {Set<number>} Set of currently visible page numbers (1-based) */
     this._visiblePages = new Set();
+
+    /** @type {Map<number, number>} Map of page number (1-based) to intersection ratio */
+    this._pageVisibilityRatios = new Map();
+
+    /** @type {IntersectionObserver|null} Observer for page visibility detection */
+    this._visibilityObserver = null;
 
     // Zoom functionality
     /** @type {number} Current zoom level (1.0 = 100%) */
@@ -550,9 +556,14 @@ export class ScrollablePdfViewer extends EventEmitter {
     }
     this.app.removeChild(offscreenContainer);
 
-    // Second pass: Render only visible pages
-    await this._updateVisiblePages();
-    const visiblePages = Array.from(this._visiblePages);
+    // Second pass: Determine visible pages synchronously and start observer
+    this._getVisiblePagesSync();
+    this._setupVisibilityObserver();
+
+    // Queue renders for the initially visible pages
+    for (const pageNum of this._visiblePages) {
+      this.renderQueue.add(() => this._renderPage(pageNum - 1));
+    }
 
     // Emit initialRenderComplete event
     // After layout is established, recalculate overlay positions in case scrollbars appeared
@@ -778,67 +789,133 @@ export class ScrollablePdfViewer extends EventEmitter {
     }
   }
 
-  _updateVisiblePages() {
-    const container = this.scrollContainer;
-    const containerRect = container.getBoundingClientRect();
-    const visiblePages = new Set();
-    let maxVisiblePage = null;
-    let maxVisibleRatio = 0;
+  /**
+   * Set up an IntersectionObserver to track which pages are visible.
+   * Replaces the old scroll-based getBoundingClientRect() approach to
+   * avoid layout thrashing on every scroll frame.
+   * @private
+   */
+  _setupVisibilityObserver() {
+    if (this._visibilityObserver) {
+      this._visibilityObserver.disconnect();
+    }
 
-    // Extend the visible area vertically to include pages that are nearly visible
-    const extendedTop = containerRect.top - containerRect.height * 0.5;
-    const extendedBottom = containerRect.bottom + containerRect.height * 0.5;
-
-    const wrappers = this.pagesContainer.querySelectorAll('.pdfagogo-page-wrapper');
-
-
-    wrappers.forEach((wrapper, index) => {
-      const pageNum = parseInt(wrapper.querySelector('canvas')?.getAttribute('data-page'), 10);
-      if (isNaN(pageNum) || pageNum < 1) return;
-
-      const rect = wrapper.getBoundingClientRect();
-      const isVisible = rect.bottom > extendedTop && rect.top < extendedBottom;
-
-
-
-      if (isVisible) {
-        const visibleHeight = Math.min(rect.bottom, containerRect.bottom) -
-                              Math.max(rect.top, containerRect.top);
-        const percentVisible = visibleHeight / rect.height;
-        visiblePages.add(pageNum);
-
-        if (percentVisible > maxVisibleRatio) {
-          maxVisibleRatio = percentVisible;
-          maxVisiblePage = pageNum;
-        }
-
-
+    this._visibilityObserver = new IntersectionObserver(
+      (entries) => this._handleVisibilityChanges(entries),
+      {
+        root: this.scrollContainer,
+        // Match existing 50% pre-render buffer above and below
+        rootMargin: '50% 0px',
+        // Fire at 0% (enters/exits) and 25% (most-visible threshold)
+        threshold: [0, 0.25, 0.5, 0.75]
       }
-    });
+    );
 
-    // Update current page if we found a most visible page
-    if (maxVisiblePage !== null && maxVisibleRatio > 0.25) {
-      const newPage = maxVisiblePage - 1;
-      if (this.currentPage !== newPage) {
-        this.currentPage = newPage;
-        this.emit("seen", maxVisiblePage);
+    this.pagesContainer.querySelectorAll('.pdfagogo-page-wrapper').forEach(wrapper => {
+      this._visibilityObserver.observe(wrapper);
+    });
+  }
+
+  /**
+   * Handle IntersectionObserver callbacks to maintain visible page state.
+   * @param {IntersectionObserverEntry[]} entries
+   * @private
+   */
+  _handleVisibilityChanges(entries) {
+    let changed = false;
+
+    for (const entry of entries) {
+      const canvas = entry.target.querySelector('canvas');
+      const pageNum = parseInt(canvas?.getAttribute('data-page'), 10);
+      if (isNaN(pageNum) || pageNum < 1) continue;
+
+      if (entry.isIntersecting) {
+        if (!this._visiblePages.has(pageNum)) {
+          this._visiblePages.add(pageNum);
+          changed = true;
+        }
+        this._pageVisibilityRatios.set(pageNum, entry.intersectionRatio);
+      } else {
+        if (this._visiblePages.delete(pageNum)) {
+          changed = true;
+        }
+        this._pageVisibilityRatios.delete(pageNum);
       }
     }
 
-    // Check if visible pages changed
-    const oldVisible = Array.from(this._visiblePages).sort().join(',');
-    const newVisible = Array.from(visiblePages).sort().join(',');
+    this._updateMostVisiblePage();
 
-    if (oldVisible !== newVisible) {
-      this._visiblePages = visiblePages;
-      this.emit("visiblePages", Array.from(visiblePages));
+    if (changed) {
+      this.emit("visiblePages", Array.from(this._visiblePages));
 
-      // Render newly visible pages in high resolution
-      const newPages = Array.from(visiblePages).filter(pageNum => !oldVisible.includes(pageNum.toString()));
-      for (const pageNum of newPages) {
+      // Queue renders for newly visible pages
+      for (const pageNum of this._visiblePages) {
         this.renderQueue.add(() => this._renderPage(pageNum - 1));
       }
     }
+  }
+
+  /**
+   * Determine the most visible page from stored intersection ratios
+   * and update currentPage / emit "seen" event accordingly.
+   * @private
+   */
+  _updateMostVisiblePage() {
+    let maxRatio = 0;
+    let maxPage = null;
+
+    for (const [pageNum, ratio] of this._pageVisibilityRatios) {
+      if (ratio > maxRatio) {
+        maxRatio = ratio;
+        maxPage = pageNum;
+      }
+    }
+
+    if (maxPage !== null && maxRatio > 0.25) {
+      const newPage = maxPage - 1;
+      if (this.currentPage !== newPage) {
+        this.currentPage = newPage;
+        this.emit("seen", maxPage);
+      }
+    }
+  }
+
+  /**
+   * Synchronously determine visible pages using getBoundingClientRect.
+   * Used only once during initial render before the IntersectionObserver
+   * has had a chance to fire its first callback.
+   * @private
+   */
+  _getVisiblePagesSync() {
+    const containerRect = this.scrollContainer.getBoundingClientRect();
+    const extendedTop = containerRect.top - containerRect.height * 0.5;
+    const extendedBottom = containerRect.bottom + containerRect.height * 0.5;
+
+    this.pagesContainer.querySelectorAll('.pdfagogo-page-wrapper').forEach(wrapper => {
+      const canvas = wrapper.querySelector('canvas');
+      const pageNum = parseInt(canvas?.getAttribute('data-page'), 10);
+      if (isNaN(pageNum) || pageNum < 1) return;
+
+      const rect = wrapper.getBoundingClientRect();
+      if (rect.bottom > extendedTop && rect.top < extendedBottom) {
+        this._visiblePages.add(pageNum);
+        const visibleHeight = Math.min(rect.bottom, containerRect.bottom) -
+                              Math.max(rect.top, containerRect.top);
+        this._pageVisibilityRatios.set(pageNum, visibleHeight / rect.height);
+      }
+    });
+
+    this._updateMostVisiblePage();
+  }
+
+  /**
+   * Disconnect and re-create the visibility observer.
+   * Called after resize when the observer's root element dimensions have changed.
+   * @private
+   */
+  _refreshVisibilityObserver() {
+    this._visibilityObserver?.disconnect();
+    this._setupVisibilityObserver();
   }
 
   _cleanupOffscreenPages(force = false) {
@@ -925,9 +1002,6 @@ export class ScrollablePdfViewer extends EventEmitter {
 
     // Clear render queue for off-screen pages
     this.renderQueue.clear();
-
-    // Re-queue visible pages if needed
-    this._updateVisiblePages();
   }
 
   _setupResizeHandler() {
@@ -959,38 +1033,20 @@ export class ScrollablePdfViewer extends EventEmitter {
     // Clear the render queue
     this.renderQueue.clear();
 
-    // Update visible pages and re-render them
-    await this._updateVisiblePages();
-    const visiblePages = Array.from(this._visiblePages);
-
-    // Queue high-res renders for visible pages
-    visiblePages.forEach(pageNum => {
-      // const canvas = this.pageCanvases[pageNum - 1];
-      this.renderQueue.add(() => this._renderPage(pageNum - 1));
-    });
+    // Reconnect visibility observer (rootMargin may need recalc)
+    this._refreshVisibilityObserver();
   }
 
   _setupScrollHandler() {
     let scrollTimeout;
-    let lastScrollTime = Date.now();
 
     this.scrollContainer.addEventListener("scroll", () => {
-      const now = Date.now();
+      if (scrollTimeout) clearTimeout(scrollTimeout);
 
-      // Clear any existing timeout
-      if (scrollTimeout) {
-        clearTimeout(scrollTimeout);
-      }
-
-      // Update visible pages immediately for responsive feedback
-      this._updateVisiblePages();
-
-      // Also set a timeout for cleanup and memory management
-      // Scale cleanup delay naturally with document size to reduce churn
+      // Visibility is tracked by IntersectionObserver — only schedule cleanup
       const cleanupDelay = Math.min(1000, 150 + Math.ceil(this.pageCount / 10));
 
       scrollTimeout = setTimeout(() => {
-        this._updateVisiblePages();
         this._cleanupOffscreenPages();
         scrollTimeout = null;
       }, cleanupDelay);
@@ -1501,11 +1557,18 @@ export class ScrollablePdfViewer extends EventEmitter {
       this.scrollContainer.parentNode.removeChild(this.scrollContainer);
     }
 
+    // Disconnect visibility observer
+    if (this._visibilityObserver) {
+      this._visibilityObserver.disconnect();
+      this._visibilityObserver = null;
+    }
+
     // Clear canvas and text layer references
     this.pageCanvases = {};
     this.textLayers = {};
     this.textLayerOrder = [];
     this._visiblePages.clear();
+    this._pageVisibilityRatios.clear();
 
     // Clear metrics
     this.metrics = {

@@ -9,5 +9,4 @@ Findings from code audit and architecture review, organized by effort level.
 ## Priority 3 -- Larger Opportunities
 
 - **OffscreenCanvas rendering**: Now universally supported in modern browsers. Could move tile rendering to web workers via `ImageBitmap` transfer for non-blocking rendering.
-- **IntersectionObserver for visibility detection**: Replace current scroll-position-based visibility calculation with `IntersectionObserver` API for more efficient and accurate visible page detection.
 - **PDF.js struct tree support**: PDF.js v5.x has improved tagged PDF and accessibility tree features. Worth exposing for better screen reader support on tagged PDFs.
