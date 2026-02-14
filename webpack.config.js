@@ -56,7 +56,7 @@ const base = {
   module: {
     rules: [
       {
-        test: /pdf\.worker(\.min)?\.mjs$/,
+        test: /legacy\/build\/pdf\.worker(\.min)?\.mjs$/,
         type: 'asset/resource',
         generator: {
           filename: 'pdf-a-go-go.dependencies.js'

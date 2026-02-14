@@ -8,5 +8,7 @@ Findings from code audit and architecture review, organized by effort level.
 
 ## Priority 3 -- Larger Opportunities
 
+- **Switch back to PDF.js modern build**: Currently using the legacy build (`pdfjs-dist/legacy/build/`) to support Samsung Internet, which lacks `Uint8Array.toHex()` (requires Chromium 140+). Samsung Internet 29 ships Chromium 136. Revisit once Samsung Internet reaches Chromium 140+ (estimated late 2026). See `pdfLoader.js` imports and `webpack.config.js` worker rule.
+
 - **OffscreenCanvas rendering**: Now universally supported in modern browsers. Could move tile rendering to web workers via `ImageBitmap` transfer for non-blocking rendering.
 - **PDF.js struct tree support**: PDF.js v5.x has improved tagged PDF and accessibility tree features. Worth exposing for better screen reader support on tagged PDFs.
