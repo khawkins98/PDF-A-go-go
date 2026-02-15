@@ -160,12 +160,13 @@ Set options via `data-*` attributes on the container element:
 
 | Browser | Minimum Version |
 | --- | --- |
-| Chrome | 109+ |
-| Firefox | 128+ |
-| Safari | 15.6+ |
-| Edge | 133+ |
-| iOS Safari | 15.6+ |
-| Android Chrome | 135+ |
+| Chrome | 119+ |
+| Firefox | 124+ |
+| Safari | 17.4+ |
+| Edge | 119+ |
+| iOS Safari | 17.4+ |
+| Android Chrome | 119+ |
+| Samsung Internet | 25+ |
 
 </details>
 

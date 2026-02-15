@@ -26,8 +26,8 @@
  * @param {number} options.downloadTimeout - Timeout for HTML download handling
  * @returns {Promise<Object>} Resolves with the loaded PDF document.
  */
-import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
-import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.min.mjs";
+import * as pdfjsLib from "pdfjs-dist/build/pdf.mjs";
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs";
 import { HTMLDownloadHandler } from "./htmlDownloadHandler.js";
 
 /** @type {string|null} Custom worker URL (null = use bundled default) */
