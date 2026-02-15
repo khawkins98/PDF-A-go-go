@@ -158,14 +158,15 @@ Set options via `data-*` attributes on the container element:
 <details>
 <summary><strong>Browser support</strong></summary>
 
-| Browser | Minimum Version |
-| --- | --- |
-| Chrome | 109+ |
-| Firefox | 128+ |
-| Safari | 15.6+ |
-| Edge | 133+ |
-| iOS Safari | 15.6+ |
-| Android Chrome | 135+ |
+| Browser | Minimum Version | Release Date | Limiting API |
+| --- | --- | --- | --- |
+| Chrome | 119+ | Oct 2023 | `Promise.withResolvers()` |
+| Firefox | 124+ | Mar 2024 | `AbortSignal.any()` |
+| Safari | 17.4+ | Mar 2024 | `Promise.withResolvers()`, `AbortSignal.any()` |
+| Edge | 119+ | Nov 2023 | `Promise.withResolvers()` |
+| iOS Safari | 17.4+ | Mar 2024 | `Promise.withResolvers()`, `AbortSignal.any()` |
+| Android Chrome | 119+ | Oct 2023 | `Promise.withResolvers()` |
+| Samsung Internet | 25+ | May 2024 | `Promise.withResolvers()` |
 
 </details>
 

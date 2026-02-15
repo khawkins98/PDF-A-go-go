@@ -56,7 +56,7 @@ const base = {
   module: {
     rules: [
       {
-        test: /legacy\/build\/pdf\.worker(\.min)?\.mjs$/,
+        test: /pdf\.worker(\.min)?\.mjs$/,
         type: 'asset/resource',
         generator: {
           filename: 'pdf-a-go-go.dependencies.js'
@@ -94,11 +94,6 @@ const base = {
 
 const prod = Object.assign({}, base, {
   mode: "production",
-  optimization: {
-    // Disable scope hoisting: pdfjs-dist is a pre-built webpack bundle whose
-    // internal module registry variable collides with ours when concatenated.
-    concatenateModules: false,
-  },
 })
 
 const dev = Object.assign({}, base, {
