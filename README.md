@@ -176,6 +176,10 @@ Pages are divided into a grid of tiles, and only the ones currently visible get 
 
 More on [the motivation and design](https://www.allaboutken.com/posts/20250811-pdf-a-go-go/). Full architecture and API docs are in [DOCUMENTATION.md](DOCUMENTATION.md).
 
+## See also
+
+- **[PDF-A-go-slim](https://github.com/khawkins98/PDF-A-go-slim)** -- Optimize PDF file sizes before embedding. Useful for reducing transfer times when serving PDFs through PDF-A-go-go.
+
 ## Development
 
 ```bash
