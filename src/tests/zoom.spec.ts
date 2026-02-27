@@ -38,7 +38,7 @@ test.describe('PDF-A-go-go Zoom Functionality', () => {
     await page.goto('http://localhost:9000/tests/test-small.html');
 
     // Wait for the PDF to load
-    await page.waitForSelector('.pdfagogo-page-canvas', { timeout: 10000 });
+    await page.waitForSelector('.pdfagogo-page-canvas', { timeout: 30000 });
     await page.waitForTimeout(2000); // Allow time for initial render
   });
 

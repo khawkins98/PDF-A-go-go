@@ -495,8 +495,8 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
       }
       return;
     }
-    if (typeof viewer.go_to_page === "function") {
-      viewer.go_to_page(pageNum - 1); // zero-based
+    if (typeof viewer.goToPage === "function") {
+      viewer.goToPage(pageNum);
       return;
     }
   }

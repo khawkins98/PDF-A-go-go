@@ -1483,6 +1483,11 @@ export class ScrollablePdfViewer extends EventEmitter {
     }
   }
 
+  // Navigate to a specific page (1-based page number)
+  goToPage(pageNum) {
+    this.go_to_page(pageNum - 1);
+  }
+
   /**
    * Update overlay positions so the right overlay does not cover the scrollbar.
    * Calculates the native scrollbar width and offsets the right overlay by that amount.

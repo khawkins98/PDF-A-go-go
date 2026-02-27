@@ -133,7 +133,7 @@ Builds the toolbar (search, share, download, fullscreen, page selector), loading
 
 ### 6. `pdfLoader.js` -- PDF Loading
 
-Loads PDFs via PDF.js with progress callbacks. Checks the response content-type and routes HTML responses to `HTMLDownloadHandler` automatically. Worker URL is configurable via `setWorkerUrl()` / `getWorkerUrl()`, defaulting to the bundled worker (`pdf-a-go-go.dependencies.js`).
+Loads PDFs via PDF.js with progress callbacks. Checks the response content-type and routes HTML responses to `HTMLDownloadHandler` automatically. Worker URL is configurable via `setWorkerUrl()` / `getWorkerUrl()`, defaulting to the bundled worker (`pdf-a-go-go.worker.js`).
 
 ### 7. `search.js` -- Search UI Setup
 
@@ -247,7 +247,8 @@ The core viewer class. Extends `EventEmitter`.
 // Navigation
 viewer.flip_forward()           // Go to next page
 viewer.flip_back()              // Go to previous page
-viewer.go_to_page(pageNum)      // Go to specific page (0-based)
+viewer.go_to_page(pageNum)      // Go to specific page (0-based, internal)
+viewer.goToPage(pageNum)        // Go to specific page (1-based)
 viewer.scrollBy(pages)          // Scroll by number of pages
 
 // Zoom
@@ -734,8 +735,8 @@ yarn build            # Production build to /dist
 
 ### Webpack config
 
-- **Entry**: `src/assets/js/pdfagogo.js` (UMD library, global name `flipbook`)
-- **Output**: `dist/pdf-a-go-go.js` (main bundle) + `dist/pdf-a-go-go.css` (styles) + `dist/pdf-a-go-go.dependencies.js` (PDF.js worker)
+- **Entry**: `src/assets/js/pdfagogo.js` (UMD library, global name `pdfagogo`)
+- **Output**: `dist/pdf-a-go-go.js` (main bundle) + `dist/pdf-a-go-go.css` (styles) + `dist/pdf-a-go-go.worker.js` (PDF.js worker)
 - **HTML**: Example pages are copied to dist with nav/head partial injection
 - **Dev server**: Port 9000, live reload, no HMR, write files to disk
 
@@ -745,7 +746,7 @@ yarn build            # Production build to /dist
 |------|-------------|
 | `dist/pdf-a-go-go.js` | Main viewer bundle (UMD) |
 | `dist/pdf-a-go-go.css` | Styles with CSS custom properties |
-| `dist/pdf-a-go-go.dependencies.js` | PDF.js worker (loaded automatically) |
+| `dist/pdf-a-go-go.worker.js` | PDF.js worker (loaded automatically) |
 
 ### GitHub Pages CI
 

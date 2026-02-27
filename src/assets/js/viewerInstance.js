@@ -243,8 +243,8 @@ export class ViewerInstance {
    * @param {number} pageNum - Page number (1-based)
    */
   goToPage(pageNum) {
-    if (this.viewer && typeof this.viewer.go_to_page === 'function') {
-      this.viewer.go_to_page(pageNum - 1); // Convert to 0-based
+    if (this.viewer && typeof this.viewer.goToPage === 'function') {
+      this.viewer.goToPage(pageNum);
     }
   }
 }
