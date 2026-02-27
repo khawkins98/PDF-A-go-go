@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
 <link rel="stylesheet" href="./pdf-a-go-go.css">
 <style>
   :root {
@@ -670,8 +671,8 @@
         updateCodeSnippet(state);
 
         // Destroy existing instance
-        if (typeof flipbook !== 'undefined' && flipbook.default && flipbook.default.registry) {
-          flipbook.default.registry.destroyInstance(container);
+        if (typeof pdfagogo !== 'undefined' && pdfagogo.default && pdfagogo.default.registry) {
+          pdfagogo.default.registry.destroyInstance(container);
         }
 
         // Clean up any leftover wrapper
@@ -703,8 +704,8 @@
         container.id = 'ks-viewer';
 
         // Initialize via the public API
-        if (typeof flipbook !== 'undefined' && flipbook.default && flipbook.default.initializeContainer) {
-          flipbook.default.initializeContainer(container).catch(function(err) {
+        if (typeof pdfagogo !== 'undefined' && pdfagogo.default && pdfagogo.default.initializeContainer) {
+          pdfagogo.default.initializeContainer(container).catch(function(err) {
             console.error('[Kitchen Sink] reinit error:', err);
           });
         }
@@ -764,7 +765,7 @@
         // The container starts without .pdfagogo-container so auto-init skips it.
         // We'll do the first init after a tick to ensure the library is loaded.
         var poll = setInterval(function() {
-          if (typeof flipbook !== 'undefined' && flipbook.default && flipbook.default.initializeContainer) {
+          if (typeof pdfagogo !== 'undefined' && pdfagogo.default && pdfagogo.default.initializeContainer) {
             clearInterval(poll);
             reinitViewer();
           }
