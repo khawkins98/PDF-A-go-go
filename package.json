@@ -26,7 +26,7 @@
     "dev": "webpack serve --mode development",
     "build": "webpack --mode production",
     "test:serve": "serve dist -l 9000",
-    "pretest": "npm run build",
+    "pretest": "yarn build",
     "test": "start-server-and-test test:serve http://localhost:9000 'playwright test'",
     "test:debug": "start-server-and-test test:serve http://localhost:9000 'playwright test --debug'"
   },
