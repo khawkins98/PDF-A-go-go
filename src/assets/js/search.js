@@ -136,8 +136,8 @@ export function setupSearchControls(container, featureOptions, viewer, book, pdf
       prevMatchPage = pageIdx;
     } else if (typeof viewer._renderAllPages === 'function') {
       viewer._renderAllPages();
-    } else if (typeof viewer.go_to_page === 'function') {
-      viewer.go_to_page(viewer.currentPage || 0);
+    } else if (typeof viewer.goToPage === 'function') {
+      viewer.goToPage((viewer.currentPage || 0) + 1);
     }
 
     // Update result count (compact format)

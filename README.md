@@ -183,10 +183,10 @@ More on [the motivation and design](https://www.allaboutken.com/posts/20250811-p
 ## Development
 
 ```bash
-npm install          # Install dependencies
-npm run dev          # Start dev server (port 9000)
-npm run build        # Production build to /dist
-npm test             # Run Playwright tests
+yarn install          # Install dependencies
+yarn dev              # Start dev server (port 9000)
+yarn build            # Production build to /dist
+yarn test             # Run Playwright tests
 ```
 
 ## Credits

@@ -41,7 +41,7 @@ const base = {
     'pdf-a-go-go': {
       import: './src/assets/js/pdfagogo.js',
       library: {
-        name: 'flipbook',
+        name: 'pdfagogo',
         type: 'umd',
         umdNamedDefine: true,
       },
@@ -59,7 +59,7 @@ const base = {
         test: /pdf\.worker(\.min)?\.mjs$/,
         type: 'asset/resource',
         generator: {
-          filename: 'pdf-a-go-go.dependencies.js'
+          filename: 'pdf-a-go-go.worker.js'
         }
       },
     ],
@@ -69,6 +69,7 @@ const base = {
     new CopyPlugin({
       patterns: [
         { from: 'src/assets/css/pdf-a-go-go.css', to: 'pdf-a-go-go.css' },
+        { from: 'src/assets/favicon.svg', to: 'favicon.svg' },
         // HTML with header injection
         { from: 'src/index.html', to: 'index.html', transform: (content) => injectPartials(content, '.') },
         { from: 'src/examples/double-spread.html', to: 'double-spread.html', transform: (content) => injectPartials(content, '.') },
