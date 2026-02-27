@@ -2,7 +2,7 @@
 
 This file covers common gotchas and exceptions. For standard guidance, see `README.md` and `DOCUMENTATION.md`.
 
-## Common Mistakes
+## Common mistakes
 
 - **Use `yarn`, not `npm`**. There is no `package-lock.json`; the project uses yarn exclusively.
 - **Source is vanilla JS; tests are TypeScript.** Source files in `src/assets/js/` are plain `.js`. Only Playwright test files (`src/tests/*.spec.ts`) are TypeScript. Don't convert source to TS or introduce framework patterns.

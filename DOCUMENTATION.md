@@ -1,19 +1,19 @@
 # PDF-A-go-go documentation
 
-## Table of Contents
+## Table of contents
 
-1. [Project Overview](#project-overview)
-2. [Architecture Overview](#architecture-overview)
-3. [Core Modules](#core-modules)
-4. [API Reference](#api-reference)
-5. [Configuration Options](#configuration-options)
-6. [CSS Theming](#css-theming)
-7. [Multi-Instance Support](#multi-instance-support)
-8. [Memory Management](#memory-management)
+1. [Overview](#overview)
+2. [Architecture overview](#architecture-overview)
+3. [Core modules](#core-modules)
+4. [API reference](#api-reference)
+5. [Configuration options](#configuration-options)
+6. [CSS theming](#css-theming)
+7. [Multi-instance support](#multi-instance-support)
+8. [Memory management](#memory-management)
 9. [Performance](#performance)
 10. [Accessibility](#accessibility)
 11. [Testing](#testing)
-12. [Build & Deployment](#build--deployment)
+12. [Build & deployment](#build--deployment)
 
 ## Overview
 
@@ -280,7 +280,7 @@ viewer.on('visiblePages', (pages) => {})
 viewer.on('zoom', ({ level, percentage }) => {})
 ```
 
-### Accessing Viewer Instances
+### Accessing viewer instances
 
 ```javascript
 // Via container element
@@ -309,7 +309,7 @@ Set via `data-*` attributes on the container element. No JavaScript initializati
 | `data-pdf-url` | string | `"./example.pdf"` | URL of the PDF to load |
 | `data-default-page` | number | `1` | Initial page to display |
 
-### UI Feature Toggles
+### UI feature toggles
 
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -342,14 +342,14 @@ Set via `data-*` attributes on the container element. No JavaScript initializati
 | `data-disable-webgl` | boolean | `true` | Disable WebGL rendering in PDF.js |
 | `data-debug` | boolean | `false` | Enable debug mode with performance overlay |
 
-### Memory & Performance
+### Memory & performance
 
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `data-fullpage-cache-size` | number | 10 (desktop) / 5 (mobile) | Max full-page canvases to cache |
 | `data-text-layer-cache-size` | number | 10 (desktop) / 5 (mobile) | Max text layers to keep in DOM |
 
-### Worker & Downloads
+### Worker & downloads
 
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -594,27 +594,27 @@ Full-page canvases cached for fast display while scrolling:
 - **Mobile default**: 5 pages
 - **Configurable via**: `data-fullpage-cache-size`
 
-### Text Layer Cache
+### Text layer cache
 
-The `ScrollablePdfViewer` limits text layers in the DOM using LRU eviction:
+`ScrollablePdfViewer` caps text layers in the DOM with LRU eviction:
 
 - **Desktop default**: 10 text layers
 - **Mobile default**: 5 text layers
 - **Configurable via**: `data-text-layer-cache-size`
 
-When the limit is reached, the least recently used text layer is removed from the DOM. It can be re-rendered when the page becomes visible again.
+When the limit is hit, the oldest text layer is removed from the DOM and re-rendered if the page becomes visible again.
 
 ## Performance
 
-### Tile-Based Rendering
+### Tile-based rendering
 
 Pages are divided into fixed-size tiles, and only visible ones get rendered at a resolution matching the current zoom level. Off-screen content isn't rendered, which keeps memory usage low. Tiles at adjacent resolution tiers are pre-cached for smooth zooming, and lower-res tiles act as fallbacks while high-res tiles render.
 
-### Render Queue
+### Render queue
 
 The `RenderQueue` uses `requestAnimationFrame` with two priority levels: visible page tiles render first, then off-screen pages get pre-rendered. Race condition guards prevent issues during rapid navigation.
 
-### Zoom Performance
+### Zoom performance
 
 Zoom applies a CSS transform immediately for visual feedback, then re-renders tiles at the right resolution tier in the background:
 
@@ -626,7 +626,7 @@ Zoom applies a CSS transform immediately for visual feedback, then re-renders ti
 
 Zoom changes are debounced so rapid pinching or scrolling doesn't trigger a pile of re-renders.
 
-### Performance Metrics
+### Performance metrics
 
 Enable `data-debug="true"` for a floating metrics overlay:
 
@@ -648,7 +648,7 @@ Performance thresholds for tests: Desktop < 5s initial render, Mobile < 10s (wit
 
 ## Accessibility
 
-### Keyboard Navigation
+### Keyboard navigation
 
 | Key | Action |
 |-----|--------|
@@ -662,12 +662,12 @@ Performance thresholds for tests: Desktop < 5s initial render, Mobile < 10s (wit
 
 **Note**: Keyboard zoom requires the viewer container to be focused. The container has `tabindex="0"` set automatically.
 
-### Screen Reader Support
+### Screen reader support
 
-- Canvas elements are labeled with page numbers via `data-page` attributes
+- Canvas elements have page numbers via `data-page` attributes
 - A live region (`aria-live="polite"`) announces page changes: "Page X of Y"
-- Search results are announced via a separate live region
-- Loading state is communicated with progress percentage
+- Search results get their own live region
+- Loading progress is announced as a percentage
 
 ### Visible accessibility controls
 
@@ -681,7 +681,7 @@ The container gets `tabindex="0"` and shows a focus ring (`outline: 3px solid va
 
 Tests use Playwright and are located in `src/tests/*.spec.ts`.
 
-### Test Suites
+### Test suites
 
 | File | Description |
 |------|-------------|
@@ -693,7 +693,7 @@ Tests use Playwright and are located in `src/tests/*.spec.ts`.
 | `text-selection.spec.ts` | Text layer rendering and copy/paste |
 | `playground.spec.ts` | Full integration tests (navigation, search, toolbar, clipboard, download, share, fullscreen) |
 
-### Test HTML Pages
+### Test HTML pages
 
 Located in `src/examples/` and `src/tests/`:
 
@@ -708,7 +708,7 @@ Located in `src/examples/` and `src/tests/`:
 | `remote-pdf-cors-fail.html` | CORS failure error handling |
 | `test-small.html` | Small-format viewer for focused tests |
 
-### Running Tests
+### Running tests
 
 ```bash
 # Run all tests (builds first, starts server, runs Playwright)
@@ -722,9 +722,9 @@ yarn test:serve  # Terminal 1
 npx playwright test src/tests/zoom.spec.ts  # Terminal 2
 ```
 
-## Build & Deployment
+## Build & deployment
 
-### Build Commands
+### Build commands
 
 ```bash
 yarn install          # Install dependencies
@@ -732,14 +732,14 @@ yarn dev              # Dev server on port 9000 with live reload
 yarn build            # Production build to /dist
 ```
 
-### Webpack Configuration
+### Webpack config
 
 - **Entry**: `src/assets/js/pdfagogo.js` (UMD library, global name `flipbook`)
 - **Output**: `dist/pdf-a-go-go.js` (main bundle) + `dist/pdf-a-go-go.css` (styles) + `dist/pdf-a-go-go.dependencies.js` (PDF.js worker)
 - **HTML**: Example pages are copied to dist with nav/head partial injection
 - **Dev server**: Port 9000, live reload, no HMR, write files to disk
 
-### Output Files
+### Output files
 
 | File | Description |
 |------|-------------|
@@ -757,7 +757,7 @@ The `gh-pages.yml` workflow automatically deploys to GitHub Pages on push to `ma
 4. Build and test (`yarn test` -- builds, starts server, runs Playwright)
 5. Deploy `dist/` to `gh-pages` branch
 
-### File Structure
+### File structure
 
 ```
 src/
