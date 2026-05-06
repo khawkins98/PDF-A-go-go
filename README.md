@@ -170,6 +170,30 @@ Set options via `data-*` attributes on the container element:
 
 </details>
 
+<details>
+<summary><strong>Content Security Policy (CSP) recipe</strong></summary>
+
+If your host page sets a CSP header, the viewer needs the following directives to load and render PDFs:
+
+```
+script-src 'self' blob:;
+worker-src 'self' blob:;
+connect-src 'self' https:;
+img-src 'self' blob: data:;
+style-src 'self' 'unsafe-inline';
+```
+
+Why each directive is needed:
+
+- `worker-src` and `script-src` need `blob:` — PDF.js spawns its worker from a Blob URL when loading the worker script.
+- `connect-src` needs whatever hosts you serve PDFs from. Use `'self'` if same-origin; add the explicit hostname for cross-origin.
+- `img-src` needs `blob:` (rendered page tiles) and `data:` (icon spritesheet inlining in some build modes).
+- `style-src 'unsafe-inline'` is currently required for the toolbar's inline style adjustments. Removing this is a known follow-up; see issue #17.
+
+If you cannot allow `'unsafe-inline'` for styles in your environment, scope the viewer to a CSP-relaxed iframe that you embed into the strict-CSP host.
+
+</details>
+
 ## Under the hood
 
 Pages are divided into a grid of tiles, and only the ones currently visible get rendered. The resolution adapts to the zoom level, so you're not burning memory on 4x tiles for a page at 50% zoom. In practice this means ~8MB of memory for a large document instead of ~80MB with full-page rendering. Old tiles get evicted via an LRU cache.
