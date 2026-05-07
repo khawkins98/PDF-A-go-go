@@ -31,18 +31,18 @@
     "test:debug": "start-server-and-test test:serve http://localhost:9000 'playwright test --debug'"
   },
   "devDependencies": {
-    "@playwright/test": "^1.42.1",
-    "@types/node": "^20.11.30",
-    "copy-webpack-plugin": "^13.0.0",
-    "serve": "^14.2.0",
-    "start-server-and-test": "^2.0.3",
-    "typescript": "^5.4.2",
-    "webpack": "^5.91.0",
-    "webpack-cli": "^5.1.4",
+    "@playwright/test": "^1.59.1",
+    "@types/node": "^25.6.0",
+    "copy-webpack-plugin": "^14.0.0",
+    "serve": "^14.2.6",
+    "start-server-and-test": "^3.0.2",
+    "typescript": "^6.0.0",
+    "webpack": "^5.106.2",
+    "webpack-cli": "^7.0.0",
     "webpack-dev-server": "^5.2.1"
   },
   "dependencies": {
-    "pdfjs-dist": "^5.2.133"
+    "pdfjs-dist": "^5.7.284"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
