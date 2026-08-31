@@ -157,7 +157,11 @@ Handles PDFs served through HTML redirect pages (common in academic repositories
 
 ### ViewerRegistry
 
-The global registry manages all viewer instances. Accessed via `pdfagogo.registry`.
+The global registry manages all viewer instances. Accessed via `pdfagogo.default.registry`.
+
+> The UMD bundle exposes the library's default export under `.default`, so the
+> public API is reached as `pdfagogo.default.*` (e.g.
+> `pdfagogo.default.initializeContainer(...)`, `pdfagogo.default.registry`).
 
 ```javascript
 class ViewerRegistry {
@@ -291,12 +295,12 @@ const viewer = container.pdfViewer;  // backward-compatible shortcut
 
 // Via registry
 import pdfagogo from 'pdf-a-go-go';
-const instance = pdfagogo.registry.getInstance('viewer1');
-const allInstances = pdfagogo.registry.getAllInstances();
+const instance = pdfagogo.default.registry.getInstance('viewer1');
+const allInstances = pdfagogo.default.registry.getAllInstances();
 
 // Destroy
-pdfagogo.registry.destroyInstance('viewer1');
-pdfagogo.registry.destroyAll();
+pdfagogo.default.registry.destroyInstance('viewer1');
+pdfagogo.default.registry.destroyAll();
 ```
 
 ## Configuration options
@@ -603,16 +607,16 @@ Each viewer has its own:
 import pdfagogo from 'pdf-a-go-go';
 
 // Get a specific instance
-const instance = pdfagogo.registry.getInstance('viewer1');
+const instance = pdfagogo.default.registry.getInstance('viewer1');
 
 // Get all instances
-const all = pdfagogo.registry.getAllInstances();
+const all = pdfagogo.default.registry.getAllInstances();
 
 // Destroy a specific instance (cleans up all resources)
-pdfagogo.registry.destroyInstance('viewer1');
+pdfagogo.default.registry.destroyInstance('viewer1');
 
 // Destroy all instances
-pdfagogo.registry.destroyAll();
+pdfagogo.default.registry.destroyAll();
 ```
 
 ### Container access
