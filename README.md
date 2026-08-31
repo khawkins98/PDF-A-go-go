@@ -54,7 +54,7 @@ A few viewer features aren't supported yet but are on the radar:
 
 - **Password-protected PDFs** -- PDF.js handles this under the hood, but the UI doesn't expose a password prompt yet.
 - **i18n** -- the UI is English-only for now. Labels like "Search," "Download," and "Next page" are hardcoded.
-- **Thumbnails / outline panel** -- no sidebar for page previews or table of contents navigation.
+- **Thumbnails** -- no sidebar of page previews. (Table-of-contents / outline navigation *is* supported: a toolbar toggle opens the PDF's outline when it has bookmarks.)
 - **Page rotation and print** -- pages display as-is. For printing, users can download the PDF directly.
 
 Browser-wise, PDF-A-go-go targets modern evergreen browsers. It won't work in IE11, and older mobile browsers (pre-2022) may have issues. See the [browser support table](#browser-support) in the details section below.
