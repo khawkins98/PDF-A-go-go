@@ -104,7 +104,9 @@ UI switches in one attribute:
 ```
 
 Bundled locales: **`de`** (German). Contributions of more are welcome — add a
-code to [`src/assets/js/locales.js`](src/assets/js/locales.js).
+code to [`src/assets/js/locales.js`](src/assets/js/locales.js). See the
+[multilingual demo](https://www.allaboutken.com/PDF-A-go-go/multilingual.html)
+for a live language switcher.
 
 **Per-string overrides.** Every UI label (button tooltips, screen-reader
 announcements, search and error text) is also individually overridable. Pass a

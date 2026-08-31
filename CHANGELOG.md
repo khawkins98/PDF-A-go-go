@@ -17,6 +17,9 @@ realigned with the tag as of 1.6.0.
   locale pack → `data-strings` → `strings` option, so a bundled locale can be
   adjusted per key. Unknown locale codes warn and stay English. Add more locales
   in `src/assets/js/locales.js`.
+- Multilingual demo page (`multilingual.html`) with a language switcher
+  (English, bundled German, and a custom French string set) that re-renders the
+  viewer live.
 
 ## [1.8.0] - 2026-08-31
 
