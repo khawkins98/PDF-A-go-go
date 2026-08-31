@@ -343,42 +343,91 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
     toolbar.style.display = 'none';
   }
 
-  let toolbarHTML = '';
+  // Toolbar is built with DOM APIs (rather than an HTML string) to keep the
+  // XSS surface minimal. Icons from Lucide (https://lucide.dev) - MIT License;
+  // the SVG markup below is static and trusted, parsed into nodes without
+  // innerHTML. Wrapped in a block so these build-time locals don't collide with
+  // the element lookups later in this function.
+  {
+  const TOOLBAR_ICONS = {
+    prevPage: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>',
+    nextPage: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>',
+    download: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>',
+    fullscreen: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>',
+    share: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>'
+  };
+
+  // Parse a static, trusted SVG string into a DOM node (no innerHTML).
+  function svgIcon(markup) {
+    return new DOMParser().parseFromString(markup, 'image/svg+xml').documentElement;
+  }
+
+  function iconButton(className, ariaLabel, title, iconKey) {
+    const btn = document.createElement('button');
+    btn.className = className;
+    btn.setAttribute('type', 'button');
+    btn.setAttribute('aria-label', ariaLabel);
+    btn.setAttribute('title', title);
+    btn.appendChild(svgIcon(TOOLBAR_ICONS[iconKey]));
+    return btn;
+  }
+
+  function toolbarSection(modifier) {
+    const div = document.createElement('div');
+    div.className = 'pdfagogo-toolbar-section ' + modifier;
+    return div;
+  }
 
   // Left section: page navigation with prev/next buttons and editable page input
-  // Icons from Lucide (https://lucide.dev) - MIT License
-  toolbarHTML += '<div class="pdfagogo-toolbar-section pdfagogo-toolbar-left">';
+  const leftSection = toolbarSection('pdfagogo-toolbar-left');
   if (featureOptions.showPageSelector !== false || featureOptions.showCurrentPage !== false) {
-    toolbarHTML += '<div class="pdfagogo-page-nav">';
-    toolbarHTML += '<button class="pdfagogo-prev-page" aria-label="Previous page" title="Previous page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>';
-    toolbarHTML += '<input class="pdfagogo-goto-page" type="text" inputmode="numeric" pattern="\\d*" min="1" aria-label="Current page" title="Go to page" />';
-    toolbarHTML += '<span class="pdfagogo-page-total"></span>';
-    toolbarHTML += '<button class="pdfagogo-next-page" aria-label="Next page" title="Next page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>';
-    toolbarHTML += '</div>';
+    const pageNav = document.createElement('div');
+    pageNav.className = 'pdfagogo-page-nav';
+    pageNav.appendChild(iconButton('pdfagogo-prev-page', 'Previous page', 'Previous page', 'prevPage'));
+
+    const gotoInput = document.createElement('input');
+    gotoInput.className = 'pdfagogo-goto-page';
+    gotoInput.setAttribute('type', 'text');
+    gotoInput.setAttribute('inputmode', 'numeric');
+    gotoInput.setAttribute('pattern', '\\d*');
+    gotoInput.setAttribute('min', '1');
+    gotoInput.setAttribute('aria-label', 'Current page');
+    gotoInput.setAttribute('title', 'Go to page');
+    pageNav.appendChild(gotoInput);
+
+    const pageTotal = document.createElement('span');
+    pageTotal.className = 'pdfagogo-page-total';
+    pageNav.appendChild(pageTotal);
+
+    pageNav.appendChild(iconButton('pdfagogo-next-page', 'Next page', 'Next page', 'nextPage'));
+    leftSection.appendChild(pageNav);
   }
-  toolbarHTML += '</div>';
 
   // Center section: search (handled by search module, placeholder for spacing)
-  toolbarHTML += '<div class="pdfagogo-toolbar-section pdfagogo-toolbar-center"></div>';
+  const centerSection = toolbarSection('pdfagogo-toolbar-center');
 
   // Right section: zoom + actions
-  // Icons from Lucide (https://lucide.dev) - MIT License
-  toolbarHTML += '<div class="pdfagogo-toolbar-section pdfagogo-toolbar-right">';
-  toolbarHTML += '<span class="pdfagogo-zoom-indicator" aria-live="polite"></span>';
+  const rightSection = toolbarSection('pdfagogo-toolbar-right');
+  const zoomIndicator = document.createElement('span');
+  zoomIndicator.className = 'pdfagogo-zoom-indicator';
+  zoomIndicator.setAttribute('aria-live', 'polite');
+  rightSection.appendChild(zoomIndicator);
   if (featureOptions.showDownload) {
-    toolbarHTML += '<button class="pdfagogo-download" aria-label="Download PDF" title="Download PDF"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button>';
+    rightSection.appendChild(iconButton('pdfagogo-download', 'Download PDF', 'Download PDF', 'download'));
   }
   if (featureOptions.showFullscreen !== false) {
-    toolbarHTML += '<button class="pdfagogo-fullscreen" aria-label="Fullscreen" title="Fullscreen"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>';
+    rightSection.appendChild(iconButton('pdfagogo-fullscreen', 'Fullscreen', 'Fullscreen', 'fullscreen'));
   }
   if (featureOptions.showShare !== false) {
-    toolbarHTML += '<button class="pdfagogo-share" aria-label="Share link" title="Copy link to this page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>';
+    rightSection.appendChild(iconButton('pdfagogo-share', 'Share link', 'Copy link to this page', 'share'));
   }
-  toolbarHTML += '</div>';
 
-  toolbar.innerHTML = toolbarHTML;
+  toolbar.appendChild(leftSection);
+  toolbar.appendChild(centerSection);
+  toolbar.appendChild(rightSection);
   // Insert toolbar at the top of the container
   container.insertBefore(toolbar, container.firstChild);
+  }
 
   // Page announcement for screen readers
   let pageAnnouncement = wrapper.querySelector(".pdfagogo-page-announcement");
@@ -400,17 +449,32 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
   if (!a11yInstructions && featureOptions.showAccessibilityControlsVisibly) {
     a11yInstructions = document.createElement("details");
     a11yInstructions.className = "pdfagogo-a11y-instructions";
-    a11yInstructions.innerHTML = `
-      <summary>Keyboard shortcuts</summary>
-      <ul>
-        <li><kbd>Tab</kbd> to focus the viewer</li>
-        <li><kbd>↑</kbd> / <kbd>←</kbd> previous page</li>
-        <li><kbd>↓</kbd> / <kbd>→</kbd> next page</li>
-        <li><kbd>Ctrl</kbd>+<kbd>+</kbd> / <kbd>-</kbd> zoom in/out</li>
-        <li><kbd>Ctrl</kbd>+<kbd>0</kbd> reset zoom</li>
-        <li><kbd>Ctrl</kbd>+<kbd>F</kbd> search</li>
-      </ul>
-    `;
+
+    // Built with DOM APIs (no innerHTML) to keep the XSS surface minimal.
+    const kbd = (text) => {
+      const el = document.createElement('kbd');
+      el.textContent = text;
+      return el;
+    };
+    const li = (...parts) => {
+      const el = document.createElement('li');
+      parts.forEach((p) => el.appendChild(typeof p === 'string' ? document.createTextNode(p) : p));
+      return el;
+    };
+
+    const summary = document.createElement('summary');
+    summary.textContent = 'Keyboard shortcuts';
+    a11yInstructions.appendChild(summary);
+
+    const list = document.createElement('ul');
+    list.appendChild(li(kbd('Tab'), ' to focus the viewer'));
+    list.appendChild(li(kbd('↑'), ' / ', kbd('←'), ' previous page'));
+    list.appendChild(li(kbd('↓'), ' / ', kbd('→'), ' next page'));
+    list.appendChild(li(kbd('Ctrl'), '+', kbd('+'), ' / ', kbd('-'), ' zoom in/out'));
+    list.appendChild(li(kbd('Ctrl'), '+', kbd('0'), ' reset zoom'));
+    list.appendChild(li(kbd('Ctrl'), '+', kbd('F'), ' search'));
+    a11yInstructions.appendChild(list);
+
     // Place a11y instructions below the container
     wrapper.appendChild(a11yInstructions);
   } else if (a11yInstructions && !featureOptions.showAccessibilityControlsVisibly) {
