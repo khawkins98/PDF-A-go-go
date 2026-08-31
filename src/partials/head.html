@@ -256,7 +256,10 @@
     var btn = document.querySelector('.theme-toggle');
     var isDark = container.getAttribute('data-theme') === 'dark';
     if (isDark) {
-      container.removeAttribute('data-theme');
+      // Set an explicit "light" theme rather than removing the attribute, so the
+      // viewer's prefers-color-scheme auto-dark rule (which targets
+      // :not([data-theme])) can't re-apply dark on a dark-OS machine.
+      container.setAttribute('data-theme', 'light');
       if (btn) { btn.classList.remove('active'); btn.setAttribute('aria-pressed', 'false'); btn.textContent = '\u263D Dark mode'; }
     } else {
       container.setAttribute('data-theme', 'dark');

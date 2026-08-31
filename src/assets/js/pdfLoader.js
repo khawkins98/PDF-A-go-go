@@ -155,7 +155,16 @@ async function probeContentType(url) {
   try {
     const headResponse = await fetch(url, { method: 'HEAD' });
     if (headResponse.ok) {
-      return headResponse.headers.get('content-type');
+      const headType = headResponse.headers.get('content-type');
+      // Only trust HEAD when it gives a *definitive* answer (clearly HTML or
+      // PDF). Some servers — and the HTML-redirect gateways this loader exists
+      // to handle — answer HEAD with 200 but a missing or generic content-type
+      // (e.g. application/octet-stream), which would silently bypass HTML
+      // detection. In those ambiguous cases fall through to GET, which reads
+      // the authoritative content-type exactly as the original code did.
+      if (headType && (headType.includes('text/html') || headType.includes('application/pdf'))) {
+        return headType;
+      }
     }
   } catch (err) {
     // HEAD failed (CORS, method not allowed, network) — fall through to GET

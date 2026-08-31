@@ -1,6 +1,6 @@
 {
   "name": "pdf-a-go-go",
-  "version": "1.3.0",
+  "version": "1.6.0",
   "description": "A lightweight, accessible, embeddable PDF viewer that uses pdf.js.",
   "keywords": [
     "pdf",

@@ -10,7 +10,10 @@ import { test, expect, Page } from '@playwright/test';
  */
 
 async function waitForViewer(page: Page) {
-  await page.goto('http://localhost:9000/tests/test-small.html');
+  // Use the local, multi-page (example.pdf) fixture with sharing enabled so the
+  // navigation case actually exercises a second page and the test doesn't depend
+  // on a remote PDF host.
+  await page.goto('http://localhost:9000/tests/accessibility-test.html');
   await page.waitForSelector('.pdfagogo-page-canvas', { timeout: 10000 });
   await page.waitForTimeout(1000);
 }

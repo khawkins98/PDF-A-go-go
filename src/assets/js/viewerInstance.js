@@ -196,7 +196,10 @@ export class ViewerInstance {
     if (this.pdf) {
       if (typeof this.pdf.destroy === 'function') {
         try {
-          this.pdf.destroy();
+          // destroy() returns a promise; the viewer may already have destroyed
+          // this document, so swallow both synchronous throws and async
+          // rejections rather than leaking an unhandled rejection.
+          Promise.resolve(this.pdf.destroy()).catch(() => {});
         } catch (e) {
           // already destroyed by the viewer — safe to ignore
         }

@@ -99,7 +99,7 @@ All modules are located in `src/assets/js/`.
 
 Entry point. Contains `ViewerRegistry` for managing multiple viewer instances. Auto-initializes all `.pdfagogo-container` elements on DOM load. Parses `data-*` attributes into typed config via `getOptionsFromDataAttrs()`.
 
-**Exports**: `init()`, `registry`, `initializeContainer()`, `ViewerInstance`, `SearchController`
+**Exports**: `registry`, `initializeContainer()`, `ViewerInstance`, `SearchController`
 
 ### 2. `scrollablePdfViewer.js` -- Core Viewer
 

@@ -215,13 +215,15 @@ yarn test             # Run Playwright tests
 
 ### Git hooks
 
-A tracked `commit-msg` hook in [`.githooks/`](.githooks/) rejects commit messages that contain AI/agent co-author trailers (e.g. `Co-authored-by: Claude`, Copilot, Cursor, GPT/Codex, or a generic `Bot`) or machine-generated attribution lines (`Generated with`, `🤖 Generated`). Matching is case-insensitive.
+A tracked `commit-msg` hook in [`.githooks/`](.githooks/) rejects commit messages that contain AI/agent co-author trailers (e.g. `Co-authored-by: Claude`, Copilot, Cursor, Gemini, GPT/Codex) or machine-generated attribution lines (`Generated with`, `🤖 Generated`, `Written by …`). Matching is case-insensitive and deliberately narrow: genuine human co-authors are never blocked — including those with a `.ai` email domain — and ordinary prose like "generated with webpack" passes.
 
 `yarn install` wires it up automatically via the `prepare` script (which runs `git config core.hooksPath .githooks`). You can also enable it manually:
 
 ```bash
 git config core.hooksPath .githooks
 ```
+
+Note: setting `core.hooksPath` makes git use only `.githooks`, so any personal hooks in `.git/hooks` (or Husky) won't run while it's configured.
 
 ## Credits
 
