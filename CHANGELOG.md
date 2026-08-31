@@ -62,3 +62,11 @@ realigned with the tag as of 1.6.0.
   `webpack-dev-server`, `start-server-and-test`.
 - CI now runs build + test on pull requests (not just pushes to `main`), so
   failures are caught before merge; deploy still runs only on `main`.
+- CI enforces a gzipped bundle-size budget (`yarn size`, a dependency-free
+  check) to catch size regressions.
+
+### Security
+
+- The toolbar and the accessibility-instructions panel are built with DOM APIs
+  instead of HTML-string concatenation / `innerHTML`, minimizing the XSS
+  surface (icon SVGs are static, trusted markup parsed without `innerHTML`).

@@ -29,7 +29,8 @@
     "test:serve": "serve dist -l 9000",
     "pretest": "yarn build",
     "test": "start-server-and-test test:serve http://localhost:9000 'playwright test'",
-    "test:debug": "start-server-and-test test:serve http://localhost:9000 'playwright test --debug'"
+    "test:debug": "start-server-and-test test:serve http://localhost:9000 'playwright test --debug'",
+    "size": "node scripts/check-bundle-size.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
