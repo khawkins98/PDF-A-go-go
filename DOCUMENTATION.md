@@ -370,8 +370,14 @@ and the outline panel — is translatable. Supply overrides two ways:
 
 - **Attribute:** `data-strings='{"nextPage":"Page suivante"}'` (a JSON object).
   Invalid JSON is ignored (with a console warning) and the UI stays English.
-- **JS API:** `pdfagogo.initializeContainer(el, { strings: { nextPage: 'Page suivante' } })`.
+- **JS API:** `pdfagogo.default.initializeContainer(el, { strings: { nextPage: 'Page suivante' } })`.
   When both are present, the `strings` option wins over `data-strings`.
+
+> **Apostrophes in `data-strings`:** the attribute holds JSON inside single
+> quotes, so a value containing an apostrophe (`L'aperçu`, `Aller à l'accueil`)
+> closes the attribute early and the whole object is ignored (the instance
+> falls back to English). Escape apostrophes as `&#39;`, or pass those strings
+> via the JavaScript `strings` option, which has no such quoting constraint.
 
 Some strings interpolate values via `{token}` placeholders — keep the tokens in
 your translation:

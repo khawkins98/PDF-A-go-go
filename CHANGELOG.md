@@ -21,6 +21,14 @@ realigned with the tag as of 1.6.0.
   key list lives in `src/assets/js/strings.js`. No bundled locale packs — you
   supply the translations.
 
+### Security
+
+- The loading and error UIs are now built with DOM APIs instead of `innerHTML`,
+  so a translated `loading`/error string cannot inject markup. The error
+  screen's "open directly" link sanitizes `data-pdf-url` (http/https only),
+  preventing a `javascript:`-scheme or attribute-breakout link. `resolveStrings`
+  ignores inherited and non-string override values.
+
 ## [1.7.0] - 2026-08-31
 
 ### Added

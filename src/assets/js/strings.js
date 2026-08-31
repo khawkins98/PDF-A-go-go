@@ -96,7 +96,11 @@ export function resolveStrings(overrides) {
   const resolved = { ...defaultStrings };
   if (overrides && typeof overrides === 'object') {
     for (const key of Object.keys(defaultStrings)) {
-      if (typeof overrides[key] === 'string') {
+      // Own-property + string check: ignores unknown keys, inherited/prototype
+      // properties, and non-string values (numbers, null, objects) so a
+      // malformed override can never inject a non-string into a label.
+      if (Object.prototype.hasOwnProperty.call(overrides, key) &&
+          typeof overrides[key] === 'string') {
         resolved[key] = overrides[key];
       }
     }

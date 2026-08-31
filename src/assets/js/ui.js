@@ -48,17 +48,38 @@ export function createLoadingBar(container, strings = defaultStrings) {
   loadingDiv.style.margin = "2rem auto";
   loadingDiv.style.textAlign = "center";
   loadingDiv.style.padding = "1.5rem 0";
-  // {percent} expands to the live percentage span, which updateLoadingBar keeps
-  // in sync; the label around it comes from the (translatable) `loading` string.
-  const loadingText = format(strings.loading, {
-    percent: '<span class="pdfagogo-loading-percent">0%</span>'
-  });
-  loadingDiv.innerHTML = `
-    <div class="pdfagogo-loading-text">${loadingText}</div>
-    <progress class="pdfagogo-progress-bar" value="0" max="1" style="width:80%;height:1.2em;"></progress>
-  `;
+  // Build via DOM APIs (not innerHTML) so a translated `loading` string can
+  // never inject markup. The live percentage lives in its own span, substituted
+  // at the first {percent} placeholder; updateLoadingBar keeps it in sync. If a
+  // translation omits the token, no percentage span is shown (handled there).
+  const textDiv = document.createElement("div");
+  textDiv.className = "pdfagogo-loading-text";
+  const template = String(strings.loading != null ? strings.loading : defaultStrings.loading);
+  const tokenIdx = template.indexOf("{percent}");
+  if (tokenIdx === -1) {
+    textDiv.appendChild(document.createTextNode(template));
+  } else {
+    const before = template.slice(0, tokenIdx);
+    const after = template.slice(tokenIdx + "{percent}".length);
+    if (before) textDiv.appendChild(document.createTextNode(before));
+    const percentSpan = document.createElement("span");
+    percentSpan.className = "pdfagogo-loading-percent";
+    percentSpan.textContent = "0%";
+    textDiv.appendChild(percentSpan);
+    if (after) textDiv.appendChild(document.createTextNode(after));
+  }
+
+  const progress = document.createElement("progress");
+  progress.className = "pdfagogo-progress-bar";
+  progress.value = 0;
+  progress.max = 1;
+  progress.style.width = "80%";
+  progress.style.height = "1.2em";
+
+  loadingDiv.appendChild(textDiv);
+  loadingDiv.appendChild(progress);
   container.appendChild(loadingDiv);
-  return loadingDiv.querySelector(".pdfagogo-progress-bar");
+  return progress;
 }
 
 /**
@@ -203,24 +224,54 @@ export function showError(message, targetContainer, strings = defaultStrings) {
   }
   if (!loadingDiv) return;
 
-  const pdfUrl = (container && container.getAttribute('data-pdf-url')) || '#';
+  // Sanitize the "open directly" link: resolve relative to the page and allow
+  // only http/https so a javascript:/data: URL (or an attribute-breakout via
+  // quotes) in data-pdf-url can't ride the user-clickable link.
+  const rawUrl = (container && container.getAttribute('data-pdf-url')) || '';
+  let safeHref = '#';
+  try {
+    const u = new URL(rawUrl, window.location.href);
+    if (u.protocol === 'http:' || u.protocol === 'https:') safeHref = u.href;
+  } catch (e) {
+    // Unparseable URL: leave the placeholder '#'.
+  }
 
-  // Escape any string interpolated into the error markup (the dev message and
-  // the translatable labels) to avoid HTML injection.
-  const esc = (s) => String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-  const safeMessage = esc(message);
+  // Build via DOM APIs (textContent / property assignment) rather than an
+  // innerHTML template, so neither the translated labels nor the dev message
+  // nor the URL can inject markup.
+  loadingDiv.textContent = '';
 
-  loadingDiv.innerHTML = `
-    <div class="pdfagogo-loading-text" style="margin-bottom:0.5rem;">${esc(strings.errorTitle)}</div>
-    <div class="pdfagogo-loading-error">${esc(strings.errorBody)}</div>
-    <div class="pdfagogo-error-actions">
-      <a class="primary" href="${pdfUrl}" target="_blank" rel="noopener noreferrer">${esc(strings.errorOpenDirect)}</a>
-    </div>
-    <details class="pdfagogo-error-details"><summary>${esc(strings.errorTechnicalDetails)}</summary><pre>${safeMessage}</pre></details>
-  `;
+  const titleDiv = document.createElement('div');
+  titleDiv.className = 'pdfagogo-loading-text';
+  titleDiv.style.marginBottom = '0.5rem';
+  titleDiv.textContent = strings.errorTitle;
+  loadingDiv.appendChild(titleDiv);
+
+  const bodyDiv = document.createElement('div');
+  bodyDiv.className = 'pdfagogo-loading-error';
+  bodyDiv.textContent = strings.errorBody;
+  loadingDiv.appendChild(bodyDiv);
+
+  const actions = document.createElement('div');
+  actions.className = 'pdfagogo-error-actions';
+  const link = document.createElement('a');
+  link.className = 'primary';
+  link.href = safeHref;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.textContent = strings.errorOpenDirect;
+  actions.appendChild(link);
+  loadingDiv.appendChild(actions);
+
+  const details = document.createElement('details');
+  details.className = 'pdfagogo-error-details';
+  const summary = document.createElement('summary');
+  summary.textContent = strings.errorTechnicalDetails;
+  details.appendChild(summary);
+  const pre = document.createElement('pre');
+  pre.textContent = String(message);
+  details.appendChild(pre);
+  loadingDiv.appendChild(details);
 }
 
 /**

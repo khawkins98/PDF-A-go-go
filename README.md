@@ -110,13 +110,19 @@ placeholders — keep them.
 Or, when initializing from JavaScript, pass a `strings` object:
 
 ```js
-pdfagogo.initializeContainer(el, {
+pdfagogo.default.initializeContainer(el, {
   strings: { nextPage: 'Page suivante', noMatches: 'Aucun résultat' }
 });
 ```
 
 The full list of keys and their English defaults is in
 [`src/assets/js/strings.js`](src/assets/js/strings.js).
+
+> **Apostrophes in `data-strings`:** the attribute value is JSON wrapped in
+> single quotes, so a translation containing an apostrophe (e.g. `L'aperçu`)
+> would close the attribute early and be ignored (falling back to English).
+> Escape apostrophes as `&#39;` in the attribute, or supply those strings via
+> the JavaScript `strings` option instead.
 
 ### Multiple PDFs on the same page
 
