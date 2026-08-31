@@ -23,6 +23,10 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: '22'
+          # setup-node@v5 enables package-manager caching by default, which
+          # requires a committed yarn.lock. This repo intentionally gitignores
+          # yarn.lock, so disable the cache (matches the v4 behavior).
+          package-manager-cache: false
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
