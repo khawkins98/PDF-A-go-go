@@ -60,3 +60,5 @@ realigned with the tag as of 1.6.0.
   attribution lines while leaving genuine human commits untouched.
 - Dev-dependency bumps: `@playwright/test`, `webpack`, `webpack-cli`,
   `webpack-dev-server`, `start-server-and-test`.
+- CI now runs build + test on pull requests (not just pushes to `main`), so
+  failures are caught before merge; deploy still runs only on `main`.
