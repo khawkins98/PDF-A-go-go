@@ -191,4 +191,39 @@ test.describe('Search Functionality', () => {
     const reSearchTotal = reSearchText?.match(/\d+\s*\/\s*(\d+)/)?.[1];
     expect(parseInt(reSearchTotal!)).toBe(total);
   });
+
+  test('Overlapping searches do not duplicate or inflate results', async ({ page }) => {
+    // Regression: two search() runs overlapping across their internal await
+    // points (e.g. a debounced live search firing while an Enter-triggered
+    // search is mid-flight) used to both push into the shared result arrays,
+    // duplicating pages and inflating the match count.
+    const result = await page.evaluate(async () => {
+      const container = document.querySelector('#pdfagogo-container') as any;
+      const controller = container?._pdfagogoInstance?.searchController;
+      if (!controller) return { error: 'no searchController' } as any;
+
+      // Baseline: a single, clean, fully-awaited search.
+      await controller.search('pdf');
+      const baseline = controller.getMatchCount();
+
+      // Fire two searches for the same query concurrently (do not await the
+      // first before starting the second) so they interleave.
+      await Promise.all([controller.search('pdf'), controller.search('pdf')]);
+
+      const pages = controller.matchPages.slice();
+      const unique = Array.from(new Set(pages));
+      return {
+        baseline,
+        after: controller.getMatchCount(),
+        hasDuplicates: pages.length !== unique.length
+      };
+    });
+
+    expect(result.error).toBeFalsy();
+    expect(result.baseline).toBeGreaterThan(0);
+    // No duplicate page entries from the overlap.
+    expect(result.hasDuplicates).toBe(false);
+    // Count equals a single clean search — not inflated by the concurrent run.
+    expect(result.after).toBe(result.baseline);
+  });
 });

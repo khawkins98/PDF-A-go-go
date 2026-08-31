@@ -93,10 +93,17 @@ export function setupSearchControls(container, featureOptions, viewer, book, pdf
       return;
     }
 
-    setPageByNumber(result.pageNum);
-
+    // Reflect controller state into the UI first, so the match counter and nav
+    // buttons update synchronously even if the page scroll below is slow or
+    // throws (scrolling is a side-effect, not part of the navigation contract).
     setResultText(`${searchController.getCurrentMatchNumber()} / ${searchController.getMatchCount()}`);
     showNavButtons(true);
+
+    try {
+      setPageByNumber(result.pageNum);
+    } catch (e) {
+      // Non-fatal: the match is selected and counted; only the scroll failed.
+    }
   }
 
   // Run a fresh search for the current input value.
@@ -134,9 +141,15 @@ export function setupSearchControls(container, featureOptions, viewer, book, pdf
 
   // Keyboard handling
   if (searchBox) {
+    // Pending debounced live-search timer, shared so Enter can cancel it and
+    // avoid a redundant second search overlapping the manual one.
+    let searchTimeout = null;
+
     searchBox.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') {
         e.preventDefault();
+        // A manual search supersedes any pending debounced one.
+        clearTimeout(searchTimeout);
         const query = searchBox.value.trim().toLowerCase();
         if (query && query === searchController.getLastQuery() && searchController.hasMatches()) {
           // Same query - navigate matches
@@ -150,12 +163,12 @@ export function setupSearchControls(container, featureOptions, viewer, book, pdf
           doSearch();
         }
       } else if (e.key === 'Escape') {
+        clearTimeout(searchTimeout);
         clearSearch();
       }
     });
 
     // Live search as user types (debounced)
-    let searchTimeout = null;
     searchBox.addEventListener('input', function () {
       // Clear stale results while typing (keep the live region in the DOM)
       setResultText('');
