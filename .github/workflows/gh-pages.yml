@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -31,6 +34,8 @@ jobs:
         run: yarn test
 
       - name: Deploy to GitHub Pages
+        # Only deploy from pushes to main; pull requests run build + test only.
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}

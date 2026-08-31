@@ -54,6 +54,12 @@ export class SearchController {
 
     /** @type {string} Last search query */
     this.lastQuery = '';
+
+    /** @type {number} Monotonic token identifying the most recent search run.
+     * Guards against overlapping search() calls (e.g. a debounced live search
+     * firing while an Enter-triggered search is still in flight) corrupting the
+     * shared result arrays. */
+    this._searchToken = 0;
   }
 
   /**
@@ -88,6 +94,10 @@ export class SearchController {
    * @returns {Promise<void>}
    */
   async search(query) {
+    // Claim a token for this run. Any earlier in-flight search() becomes stale
+    // and must not write into the shared result arrays.
+    const token = ++this._searchToken;
+
     this.matchPages = [];
     this.currentMatchIdx = 0;
     this.matchHighlights = {};
@@ -98,6 +108,11 @@ export class SearchController {
     const normalizedQuery = query.toLowerCase();
     const numPages = this.pdf.numPages;
     const batchSize = 10; // Process pages in batches for parallel loading
+
+    // Accumulate into locals; commit to the instance only if still current, so
+    // overlapping searches can't interleave pushes into the same arrays.
+    const localPages = [];
+    const localHighlights = {};
 
     // Process a single page and return results
     const searchPage = async (pageIndex) => {
@@ -127,6 +142,9 @@ export class SearchController {
 
     // Process pages in parallel batches
     for (let batchStart = 0; batchStart < numPages; batchStart += batchSize) {
+      // Abandon if a newer search has started.
+      if (token !== this._searchToken) return;
+
       const batchEnd = Math.min(batchStart + batchSize, numPages);
       const batchPromises = [];
 
@@ -136,17 +154,23 @@ export class SearchController {
 
       const batchResults = await Promise.all(batchPromises);
 
+      // A newer search may have started while this batch was loading.
+      if (token !== this._searchToken) return;
+
       // Collect results from this batch
       for (const result of batchResults) {
         if (result) {
-          this.matchPages.push(result.pageIndex);
-          this.matchHighlights[result.pageIndex] = result.boxes;
+          localPages.push(result.pageIndex);
+          localHighlights[result.pageIndex] = result.boxes;
         }
       }
     }
 
-    // Sort matchPages to ensure they're in page order
-    this.matchPages.sort((a, b) => a - b);
+    // Still the current search — commit the results (sorted into page order).
+    if (token !== this._searchToken) return;
+    localPages.sort((a, b) => a - b);
+    this.matchPages = localPages;
+    this.matchHighlights = localHighlights;
   }
 
   /**

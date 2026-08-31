@@ -23,6 +23,11 @@ realigned with the tag as of 1.6.0.
 - Window/document event listeners are removed on `destroy()` (no leaks in
   single-page-app / multi-instance teardown).
 - `data-momentum="0"` is now respected instead of being coerced to the default.
+- Overlapping searches (e.g. a debounced live search firing while an
+  Enter-triggered search is still running) no longer corrupt the shared result
+  arrays, which previously duplicated pages and inflated the match count.
+- Match navigation reflects the current match counter even when the page scroll
+  side-effect is slow or fails, fixing an intermittent test failure.
 
 ### Added — accessibility (WCAG 2.1 AA)
 
@@ -55,3 +60,5 @@ realigned with the tag as of 1.6.0.
   attribution lines while leaving genuine human commits untouched.
 - Dev-dependency bumps: `@playwright/test`, `webpack`, `webpack-cli`,
   `webpack-dev-server`, `start-server-and-test`.
+- CI now runs build + test on pull requests (not just pushes to `main`), so
+  failures are caught before merge; deploy still runs only on `main`.
