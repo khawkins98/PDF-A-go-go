@@ -7,6 +7,17 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 Releases are tagged in git (`v1.5`, `v1.6`, …); the `package.json` version is
 realigned with the tag as of 1.6.0.
 
+## [1.7.0] - 2026-08-31
+
+### Added
+
+- Outline / table-of-contents panel. A toolbar toggle opens an overlay panel
+  listing the PDF's bookmarks (nested sub-entries included); clicking an entry
+  navigates to that page. The toggle only appears when the document actually
+  has an outline, so PDFs without bookmarks are unaffected. Opt out with
+  `data-show-outline="false"`. Keyboard-operable (Escape closes and restores
+  focus to the toggle) and built with DOM APIs (no `innerHTML`).
+
 ## [1.6.0] - 2026-08-31
 
 ### Fixed

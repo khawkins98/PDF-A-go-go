@@ -114,6 +114,7 @@ const defaultOptions = {
   showPageSelector: true,
   showCurrentPage: true,
   showSearch: true,
+  showOutline: true,
   showResizeGrip: true,
   pdfUrl: "./example.pdf",
   showDownload: true,
@@ -164,6 +165,7 @@ function getOptionsFromDataAttrs(container) {
   if (map.showPageSelector !== undefined) opts.showPageSelector = parseBool(map.showPageSelector, undefined);
   if (map.showCurrentPage !== undefined) opts.showCurrentPage = parseBool(map.showCurrentPage, undefined);
   if (map.showSearch !== undefined) opts.showSearch = parseBool(map.showSearch, undefined);
+  if (map.showOutline !== undefined) opts.showOutline = parseBool(map.showOutline, undefined);
   if (map.showResizeGrip !== undefined) opts.showResizeGrip = parseBool(map.showResizeGrip, undefined);
   if (map.showFullscreen !== undefined) opts.showFullscreen = parseBool(map.showFullscreen, undefined);
   if (map.showDownload !== undefined) opts.showDownload = parseBool(map.showDownload, undefined);
