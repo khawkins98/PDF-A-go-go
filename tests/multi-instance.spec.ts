@@ -146,14 +146,46 @@ test.describe('Multi-Instance Isolation', () => {
     // Search in viewer-a
     await searchInputA.fill('pdf');
     await searchInputA.press('Enter');
-    await page.waitForTimeout(1000);
 
     // Viewer-a should have search results
+    await expect(searchResultA).toHaveText(/\d+\s*\/\s*\d+/);
     await expect(searchResultA).toBeVisible();
-    const resultTextA = await searchResultA.textContent();
-    expect(resultTextA).toMatch(/\d+\s*\/\s*\d+/);
 
-    // Viewer-b search result should not be visible (no search performed)
-    await expect(searchResultB).not.toBeVisible();
+    // Viewer-b's result live region should stay empty (no search performed)
+    await expect(searchResultB).toHaveText('');
+  });
+
+  test('Search highlights do not leak between viewers', async ({ page }) => {
+    const searchInputA = page.locator('#viewer-a .pdfagogo-search-input');
+    const searchResultA = page.locator('#viewer-a .pdfagogo-search-result');
+
+    // Search in viewer-a only
+    await searchInputA.fill('pdf');
+    await searchInputA.press('Enter');
+    await expect(searchResultA).toHaveText(/\d+\s*\/\s*\d+/);
+
+    // Count highlights across pages via each viewer's own TileManager.
+    // getHighlights() previously fell back to a shared window global, so a
+    // regression there would surface viewer-a's highlights inside viewer-b.
+    const countHighlights = (selector: string) =>
+      page.evaluate((sel) => {
+        const container = document.querySelector(sel) as any;
+        const tm = container?.pdfViewer?.tileRenderer?.tileManager;
+        if (!tm || typeof tm.getHighlights !== 'function') return -1;
+        let total = 0;
+        for (let p = 0; p < 40; p++) {
+          const hl = tm.getHighlights(p);
+          if (Array.isArray(hl)) total += hl.length;
+        }
+        return total;
+      }, selector);
+
+    // Viewer-a has highlights for the current match.
+    const highlightsA = await countHighlights('#viewer-a');
+    expect(highlightsA).toBeGreaterThan(0);
+
+    // Viewer-b must have no highlights — its search was never run.
+    const highlightsB = await countHighlights('#viewer-b');
+    expect(highlightsB).toBe(0);
   });
 });
