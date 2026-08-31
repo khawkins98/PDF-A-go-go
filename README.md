@@ -8,7 +8,7 @@ An embeddable PDF viewer for the web. Add one script tag and a `div` to any HTML
 
 ![PDF-A-go-go](src/assets/cover.svg)
 
-**[Try the live demo](https://khawkins98.github.io/PDF-A-go-go/)** | [Kitchen Sink](https://khawkins98.github.io/PDF-A-go-go/kitchen-sink.html) | [Large spread](https://khawkins98.github.io/PDF-A-go-go/double-spread.html#pdf-page-10) | [827-page stress test](https://khawkins98.github.io/PDF-A-go-go/stress-test-large-pdf.html)
+**[Try the live demo](https://www.allaboutken.com/PDF-A-go-go/)** | [Kitchen Sink](https://www.allaboutken.com/PDF-A-go-go/kitchen-sink.html) | [Large spread](https://www.allaboutken.com/PDF-A-go-go/double-spread.html#pdf-page-10) | [827-page stress test](https://www.allaboutken.com/PDF-A-go-go/stress-test-large-pdf.html)
 
 ## The problem
 
