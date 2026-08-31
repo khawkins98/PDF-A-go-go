@@ -354,7 +354,8 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
     nextPage: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>',
     download: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>',
     fullscreen: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>',
-    share: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>'
+    share: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>',
+    outline: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>'
   };
 
   // Parse a static, trusted SVG string into a DOM node (no innerHTML).
@@ -380,6 +381,15 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
 
   // Left section: page navigation with prev/next buttons and editable page input
   const leftSection = toolbarSection('pdfagogo-toolbar-left');
+  // Outline / table-of-contents toggle. Created hidden and only revealed later
+  // (see the outline panel section below) if the PDF actually carries bookmarks,
+  // so documents without an outline show no affordance at all.
+  if (featureOptions.showOutline !== false) {
+    const outlineBtn = iconButton('pdfagogo-outline', 'Table of contents', 'Table of contents', 'outline');
+    outlineBtn.setAttribute('aria-expanded', 'false');
+    outlineBtn.hidden = true;
+    leftSection.appendChild(outlineBtn);
+  }
   if (featureOptions.showPageSelector !== false || featureOptions.showCurrentPage !== false) {
     const pageNav = document.createElement('div');
     pageNav.className = 'pdfagogo-page-nav';
@@ -924,6 +934,130 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
     // Attach event listeners to the resize grip for mouse and touch support
     resizeGrip.addEventListener('mousedown', onMouseDown);
     resizeGrip.addEventListener('touchstart', onMouseDown, { passive: false });
+  }
+
+  // --- Outline / table-of-contents panel ---------------------------------
+  // A toolbar toggle opens an overlay panel listing the PDF's bookmarks. The
+  // panel is built lazily and the toggle stays hidden unless getOutline()
+  // returns entries, so PDFs without bookmarks are unaffected. Clicking an
+  // entry navigates via setPageByNumber (inheriting its hash + screen-reader
+  // announcement side-effects). Overlay only — the page never reflows.
+  const outlineToggle = toolbar.querySelector('.pdfagogo-outline');
+  if (outlineToggle && pdf && typeof pdf.getOutline === 'function') {
+    let panel = null;
+    let isOpen = false;
+
+    // Resolve an outline item's destination to a 1-based page number. The dest
+    // is either a named-destination string or an explicit array whose first
+    // element is a page ref. Returns null if it cannot be resolved.
+    const destToPage = async (dest) => {
+      try {
+        const explicit = typeof dest === 'string' ? await pdf.getDestination(dest) : dest;
+        if (!Array.isArray(explicit) || !explicit[0]) return null;
+        const index = await pdf.getPageIndex(explicit[0]); // 0-based
+        return index + 1; // 1-based for setPageByNumber
+      } catch (e) {
+        return null;
+      }
+    };
+
+    const openPanel = () => {
+      if (!panel) return;
+      // Anchor the overlay just below the toolbar (its height is dynamic).
+      panel.style.top = toolbar.offsetHeight + 'px';
+      panel.hidden = false;
+      isOpen = true;
+      outlineToggle.setAttribute('aria-expanded', 'true');
+      const first = panel.querySelector('.pdfagogo-outline-entry:not([disabled])');
+      if (first) first.focus();
+    };
+    const closePanel = (refocus) => {
+      if (!panel) return;
+      panel.hidden = true;
+      isOpen = false;
+      outlineToggle.setAttribute('aria-expanded', 'false');
+      if (refocus) outlineToggle.focus();
+    };
+
+    // Build a nested <ul> from outline items. Each item's page is resolved up
+    // front so click handlers are synchronous and cannot race.
+    const buildList = async (items) => {
+      const ul = document.createElement('ul');
+      ul.className = 'pdfagogo-outline-list';
+      for (const item of items) {
+        const page = item.dest ? await destToPage(item.dest) : null;
+        const li = document.createElement('li');
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'pdfagogo-outline-entry';
+        btn.textContent = item.title || '(untitled)';
+        if (page == null) {
+          btn.disabled = true;
+        } else {
+          btn.addEventListener('click', () => {
+            setPageByNumber(page);
+            closePanel(false);
+            // Land focus on the viewer so keyboard users continue on content
+            // (arrow-key page nav) rather than losing focus to <body>.
+            if (!container.hasAttribute('tabindex')) {
+              container.setAttribute('tabindex', '-1');
+            }
+            container.focus();
+          });
+        }
+        li.appendChild(btn);
+        if (item.items && item.items.length) {
+          li.appendChild(await buildList(item.items));
+        }
+        ul.appendChild(li);
+      }
+      return ul;
+    };
+
+    // Escape closes and returns focus to the toggle.
+    const onKeydown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        e.stopPropagation();
+        closePanel(true);
+      }
+    };
+
+    (async () => {
+      let outline = null;
+      try { outline = await pdf.getOutline(); } catch (e) { outline = null; }
+      if (!outline || !outline.length) return; // no bookmarks: toggle stays hidden
+
+      panel = document.createElement('nav');
+      panel.className = 'pdfagogo-outline-panel';
+      panel.setAttribute('aria-label', 'Table of contents');
+      panel.hidden = true;
+
+      const heading = document.createElement('div');
+      heading.className = 'pdfagogo-outline-heading';
+      heading.textContent = 'Contents';
+      panel.appendChild(heading);
+      panel.appendChild(await buildList(outline));
+      // Appended to the container (position: relative) so the panel overlays the
+      // page area without reflowing it; the container's overflow clips it.
+      container.appendChild(panel);
+
+      // Reveal the toggle now that there is content to show.
+      outlineToggle.hidden = false;
+      outlineToggle.addEventListener('click', () => {
+        if (isOpen) closePanel(true); else openPanel();
+      });
+      outlineToggle.addEventListener('keydown', onKeydown);
+      panel.addEventListener('keydown', onKeydown);
+
+      // Click outside the panel (and off the toggle) closes it.
+      const onDocMouseDown = (e) => {
+        if (!isOpen) return;
+        if (panel.contains(e.target) || outlineToggle.contains(e.target)) return;
+        closePanel(false);
+      };
+      document.addEventListener('mousedown', onDocMouseDown);
+      cleanupFns.push(() => document.removeEventListener('mousedown', onDocMouseDown));
+    })();
   }
 
   // Expose a cleanup routine so the owning instance can remove document/window

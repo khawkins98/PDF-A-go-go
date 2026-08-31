@@ -318,6 +318,7 @@ Set via `data-*` attributes on the container element. No JavaScript initializati
 | `data-show-page-selector` | boolean | `true` | Show page number input field |
 | `data-show-current-page` | boolean | `true` | Show current page indicator |
 | `data-show-search` | boolean | `true` | Show search controls |
+| `data-show-outline` | boolean | `true` | Show the table-of-contents (outline) toggle. The button only appears when the PDF contains an outline/bookmarks; clicking an entry navigates to that page. |
 | `data-show-share` | boolean | `true` | Show share button |
 | `data-show-download` | boolean | `true` | Show download button |
 | `data-show-fullscreen` | boolean | `true` | Show fullscreen button |

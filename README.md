@@ -122,6 +122,7 @@ Set options via `data-*` attributes on the container element:
 | `data-default-page` | `1` | Starting page number |
 | `data-show-toolbar` | `true` | Show the toolbar |
 | `data-show-search` | `true` | Show search controls |
+| `data-show-outline` | `true` | Show the table-of-contents toggle (only appears if the PDF has bookmarks) |
 | `data-show-share` | `true` | Show share button |
 | `data-show-page-selector` | `true` | Show page selector |
 | `data-show-current-page` | `true` | Show current page indicator |

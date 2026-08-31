@@ -272,6 +272,75 @@
   background: none;
   border-color: transparent;
 }
+/* The button rule above sets display:inline-flex, which out-specifies the
+   default [hidden] behavior; restore it so hidden toolbar buttons stay hidden. */
+.pdfagogo-toolbar button[hidden] {
+  display: none;
+}
+
+/* --- Outline / table-of-contents panel --------------------------------- */
+.pdfagogo-outline-panel[hidden] {
+  display: none;
+}
+.pdfagogo-outline-panel {
+  position: absolute;
+  top: 0; /* overridden at open time to sit below the toolbar */
+  left: 0;
+  bottom: 0;
+  z-index: 20;
+  width: 280px;
+  max-width: 80%;
+  overflow-y: auto;
+  background: var(--pdfagogo-bg-toolbar);
+  border-right: 1px solid var(--pdfagogo-border);
+  box-shadow: 2px 0 8px var(--pdfagogo-shadow);
+  text-align: left;
+  padding: 8px 0;
+  box-sizing: border-box;
+}
+.pdfagogo-outline-heading {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--pdfagogo-text-muted);
+  padding: 4px 16px 8px;
+}
+.pdfagogo-outline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+/* Nested levels indent progressively. */
+.pdfagogo-outline-list .pdfagogo-outline-list {
+  padding-left: 14px;
+}
+.pdfagogo-outline-entry {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 16px;
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1.3;
+  color: var(--pdfagogo-text-secondary);
+  border-radius: 0;
+}
+.pdfagogo-outline-entry:hover {
+  background: var(--pdfagogo-bg-hover);
+  color: var(--pdfagogo-text-primary);
+}
+.pdfagogo-outline-entry:focus-visible {
+  outline: 2px solid var(--pdfagogo-primary);
+  outline-offset: -2px;
+}
+.pdfagogo-outline-entry:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
 /* Page navigation group */
 .pdfagogo-page-nav {
   display: flex;
