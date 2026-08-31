@@ -139,11 +139,43 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
  *   }
  * }
  */
+/**
+ * Probe a URL's content type without downloading the full body.
+ *
+ * Uses a lightweight HEAD request so a real PDF isn't downloaded twice
+ * (once here to sniff, once again by PDF.js). HEAD can be blocked by CORS
+ * or rejected by some servers where GET is allowed, so on any failure we
+ * fall back to a GET request (matching the original behavior) to keep
+ * HTML-redirect detection working.
+ *
+ * @param {string} url - The URL to probe
+ * @returns {Promise<string|null>} The content-type header, or null if unknown
+ */
+async function probeContentType(url) {
+  try {
+    const headResponse = await fetch(url, { method: 'HEAD' });
+    if (headResponse.ok) {
+      return headResponse.headers.get('content-type');
+    }
+  } catch (err) {
+    // HEAD failed (CORS, method not allowed, network) — fall through to GET
+  }
+
+  try {
+    const getResponse = await fetch(url);
+    return getResponse.headers.get('content-type');
+  } catch (err) {
+    // If we can't determine the content type at all, assume it's a PDF and
+    // let PDF.js handle loading (and surface any real errors from there).
+    return null;
+  }
+}
+
 export async function loadPdfWithProgress(url, onProgress, options = {}) {
   try {
-    // First try to fetch the URL to check its content type
-    const response = await fetch(url);
-    const contentType = response.headers.get('content-type');
+    // Probe the content type first (HEAD, with GET fallback) so a genuine PDF
+    // isn't downloaded twice.
+    const contentType = await probeContentType(url);
 
     // If it's HTML content, handle it with HTMLDownloadHandler
     if (contentType && contentType.includes('text/html')) {

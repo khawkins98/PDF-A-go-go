@@ -1,20 +1,21 @@
 /**
- * @file Search controls and text highlighting for PDF-A-go-go.
+ * @file Search controls (toolbar UI) for PDF-A-go-go.
  *
- * This module encapsulates the search UI (input, buttons, results) and the
- * logic to find matches across the PDF, navigate between them, and render
- * highlight rectangles on the page canvas via the viewer.
+ * This module builds the search UI (input, buttons, result status) and wires it
+ * to the viewer instance's {@link SearchController}, which owns all search logic
+ * (finding matches, computing highlight boxes, match navigation, and rendering
+ * highlights via the per-instance TileManager). This module contains no search
+ * logic of its own — it only reflects controller state into the DOM and forwards
+ * user intent (typing, Enter/Shift+Enter, button clicks, Escape) to the controller.
  */
 
 /**
- * Create and wire up search controls.
+ * Create and wire up search controls, driving the instance's SearchController.
  *
  * @param {HTMLElement} container - The main viewer container element
  * @param {Object} featureOptions - Feature toggles and configuration options
  * @param {import('./scrollablePdfViewer').ScrollablePdfViewer} viewer - The initialized PDF viewer instance
  * @param {Object} book - The PDF book object with page access methods
- * @param {Function} book.numPages - Returns total number of pages
- * @param {Function} book.getPage - Retrieves a specific page
  * @param {Object} pdf - The loaded PDF.js document instance
  * @param {Function} setPageByNumber - Function to navigate to a 1-based page number
  * @returns {void}
@@ -32,6 +33,15 @@ export function setupSearchControls(container, featureOptions, viewer, book, pdf
     return;
   }
 
+  // The canonical search implementation lives in the per-instance SearchController.
+  // It is created in pdfagogo.js and stored on the instance before controls are set up.
+  const instance = container._pdfagogoInstance;
+  const searchController = instance ? instance.searchController : null;
+  if (!searchController) {
+    console.warn('PDF-A-go-go: SearchController not available, search disabled');
+    return;
+  }
+
   // Remove any existing search controls to avoid duplicates
   toolbarCenter.innerHTML = '';
 
@@ -41,7 +51,7 @@ export function setupSearchControls(container, featureOptions, viewer, book, pdf
   searchControls.className = 'pdfagogo-search-group';
   searchControls.innerHTML = `
     <input class="pdfagogo-search-input" type="text" placeholder="Search..." aria-label="Search in document" />
-    <span class="pdfagogo-search-result"></span>
+    <span class="pdfagogo-search-result" role="status" aria-live="polite" aria-atomic="true"></span>
     <button class="pdfagogo-prev-match-btn" aria-label="Previous match" title="Previous (Shift+Enter)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg></button>
     <button class="pdfagogo-next-match-btn" aria-label="Next match" title="Next (Enter)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
   `;
@@ -52,137 +62,74 @@ export function setupSearchControls(container, featureOptions, viewer, book, pdf
   const prevMatchBtn = searchControls.querySelector('.pdfagogo-prev-match-btn');
   const nextMatchBtn = searchControls.querySelector('.pdfagogo-next-match-btn');
 
-  // Initially hide result count and nav buttons
-  if (searchResult) searchResult.style.display = 'none';
-  if (prevMatchBtn) prevMatchBtn.style.display = 'none';
-  if (nextMatchBtn) nextMatchBtn.style.display = 'none';
+  // The result span stays in the DOM as a live region so updates are announced to
+  // screen readers. It is left visually empty (rather than display:none) while
+  // there is nothing to report. Nav buttons are hidden until there are matches.
+  showNavButtons(false);
 
-  // --- Search state ---
-  let matchPages = [];
-  let currentMatchIdx = 0;
-  let matchHighlights = {}; // {pageIndex: [highlightBox, ...]}
-  let prevMatchPage = null; // Track previous match page index
-  let lastQuery = '';
+  // Update the live-region result text (kept in DOM for screen-reader announcements).
+  function setResultText(text) {
+    if (searchResult) searchResult.textContent = text || '';
+  }
 
-  // Find text across pages and compute highlight boxes per page.
-  async function searchPdf(query) {
-    matchPages = [];
-    currentMatchIdx = 0;
-    matchHighlights = {};
-    window.__pdfagogo__highlights = {};
-
-    for (let i = 0; i < pdf.numPages; i++) {
-      const page = await pdf.getPage(i + 1);
-      const textContent = await page.getTextContent();
-      const items = textContent.items;
-      const text = items.map((item) => item.str).join(' ').toLowerCase();
-      if (text.includes(query)) {
-        matchPages.push(i);
-        // Compute bounding boxes for matches on this page
-        const boxes = [];
-        for (let j = 0; j < items.length; j++) {
-          const item = items[j];
-          const itemText = item.str.toLowerCase();
-          const idx = itemText.indexOf(query);
-          if (idx !== -1) {
-            const x = item.transform[4];
-            const y = item.transform[5];
-            const h = item.height || 12;
-            boxes.push({ x, y, width: item.width, height: h });
-          }
-        }
-        matchHighlights[i] = boxes;
-      }
+  // Show or hide the prev/next navigation buttons.
+  function showNavButtons(show) {
+    if (prevMatchBtn) {
+      prevMatchBtn.disabled = !show;
+      prevMatchBtn.style.display = show ? '' : 'none';
+    }
+    if (nextMatchBtn) {
+      nextMatchBtn.disabled = !show;
+      nextMatchBtn.style.display = show ? '' : 'none';
     }
   }
 
+  // Navigate to a match by index, reflecting controller state into the UI.
   function showMatch(idx) {
-    if (matchPages.length === 0) {
-      window.__pdfagogo__highlights = {};
-      if (searchResult) {
-        searchResult.textContent = 'No matches';
-        searchResult.style.display = '';
-      }
-      if (prevMatchBtn) {
-        prevMatchBtn.disabled = true;
-        prevMatchBtn.style.display = 'none';
-      }
-      if (nextMatchBtn) {
-        nextMatchBtn.disabled = true;
-        nextMatchBtn.style.display = 'none';
-      }
+    const result = searchController.goToMatch(idx);
+    if (!result) {
+      setResultText('No matches');
+      showNavButtons(false);
       return;
     }
 
-    // Wrap around
-    currentMatchIdx = ((idx % matchPages.length) + matchPages.length) % matchPages.length;
-    const pageNum = matchPages[currentMatchIdx] + 1; // 1-based
-    const pageIdx = matchPages[currentMatchIdx];
+    setPageByNumber(result.pageNum);
 
-    // Highlight only the current match page
-    const highlights = matchHighlights[pageIdx] || [];
-    window.__pdfagogo__highlights = {};
-    window.__pdfagogo__highlights[pageIdx] = highlights;
+    setResultText(`${searchController.getCurrentMatchNumber()} / ${searchController.getMatchCount()}`);
+    showNavButtons(true);
+  }
 
-    setPageByNumber(pageNum);
-
-    // Re-render current and previous pages to update highlights
-    if (typeof viewer.rerenderPage === 'function') {
-      viewer.rerenderPage(pageIdx);
-      if (prevMatchPage !== null && prevMatchPage !== pageIdx) {
-        window.__pdfagogo__highlights[prevMatchPage] = [];
-        viewer.rerenderPage(prevMatchPage);
-      }
-      prevMatchPage = pageIdx;
-    } else if (typeof viewer._renderAllPages === 'function') {
-      viewer._renderAllPages();
-    } else if (typeof viewer.goToPage === 'function') {
-      viewer.goToPage((viewer.currentPage || 0) + 1);
-    }
-
-    // Update result count (compact format)
-    if (searchResult) {
-      searchResult.textContent = `${currentMatchIdx + 1} / ${matchPages.length}`;
-      searchResult.style.display = '';
-    }
-
-    // Show navigation buttons
-    if (prevMatchBtn) {
-      prevMatchBtn.disabled = false;
-      prevMatchBtn.style.display = '';
-    }
-    if (nextMatchBtn) {
-      nextMatchBtn.disabled = false;
-      nextMatchBtn.style.display = '';
+  // Run a fresh search for the current input value.
+  async function doSearch() {
+    const query = searchBox ? searchBox.value.trim() : '';
+    if (!query) return;
+    setResultText('...');
+    await searchController.search(query.toLowerCase());
+    if (searchController.hasMatches()) {
+      showMatch(0);
+    } else {
+      setResultText('No matches');
+      showNavButtons(false);
     }
   }
 
-  // Search function - triggered on Enter
-  async function doSearch() {
-    const query = searchBox ? searchBox.value.trim().toLowerCase() : '';
-    if (!query) return;
-    if (searchResult) {
-      searchResult.textContent = '...';
-      searchResult.style.display = '';
-    }
-    await searchPdf(query);
-    lastQuery = query;
-    if (matchPages.length > 0) {
-      showMatch(0);
-    } else {
-      showMatch(-1); // Will show "No matches"
-    }
+  // Clear search state, highlights, and UI.
+  function clearSearch() {
+    if (searchBox) searchBox.value = '';
+    searchController.clearSearch();
+    setResultText('');
+    showNavButtons(false);
   }
 
   // Navigation button handlers
   if (prevMatchBtn)
     prevMatchBtn.onclick = function () {
-      showMatch(currentMatchIdx - 1);
+      showMatch(searchController.currentMatchIdx - 1);
     };
 
   if (nextMatchBtn)
     nextMatchBtn.onclick = function () {
-      showMatch(currentMatchIdx + 1);
+      showMatch(searchController.currentMatchIdx + 1);
     };
 
   // Keyboard handling
@@ -191,12 +138,12 @@ export function setupSearchControls(container, featureOptions, viewer, book, pdf
       if (e.key === 'Enter') {
         e.preventDefault();
         const query = searchBox.value.trim().toLowerCase();
-        if (query && query === lastQuery && matchPages.length > 0) {
+        if (query && query === searchController.getLastQuery() && searchController.hasMatches()) {
           // Same query - navigate matches
           if (e.shiftKey) {
-            showMatch(currentMatchIdx - 1);
+            showMatch(searchController.currentMatchIdx - 1);
           } else {
-            showMatch(currentMatchIdx + 1);
+            showMatch(searchController.currentMatchIdx + 1);
           }
         } else {
           // New query - search
@@ -210,10 +157,9 @@ export function setupSearchControls(container, featureOptions, viewer, book, pdf
     // Live search as user types (debounced)
     let searchTimeout = null;
     searchBox.addEventListener('input', function () {
-      // Hide results while typing
-      if (searchResult) searchResult.style.display = 'none';
-      if (prevMatchBtn) prevMatchBtn.style.display = 'none';
-      if (nextMatchBtn) nextMatchBtn.style.display = 'none';
+      // Clear stale results while typing (keep the live region in the DOM)
+      setResultText('');
+      showNavButtons(false);
 
       // Debounce search
       clearTimeout(searchTimeout);
@@ -223,36 +169,4 @@ export function setupSearchControls(container, featureOptions, viewer, book, pdf
       }
     });
   }
-
-  // Clear search function
-  function clearSearch() {
-    lastQuery = '';
-    matchPages = [];
-    currentMatchIdx = 0;
-    if (searchBox) searchBox.value = '';
-    if (searchResult) {
-      searchResult.textContent = '';
-      searchResult.style.display = 'none';
-    }
-    // Clear highlights and rerender affected page(s)
-    const pageToClear = prevMatchPage;
-    window.__pdfagogo__highlights = {};
-    if (typeof viewer.rerenderPage === 'function') {
-      if (typeof pageToClear === 'number') {
-        viewer.rerenderPage(pageToClear);
-      }
-    } else if (typeof viewer._renderAllPages === 'function') {
-      viewer._renderAllPages();
-    }
-    if (prevMatchBtn) {
-      prevMatchBtn.disabled = true;
-      prevMatchBtn.style.display = 'none';
-    }
-    if (nextMatchBtn) {
-      nextMatchBtn.disabled = true;
-      nextMatchBtn.style.display = 'none';
-    }
-  }
 }
-
-

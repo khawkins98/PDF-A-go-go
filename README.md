@@ -213,6 +213,16 @@ yarn build            # Production build to /dist
 yarn test             # Run Playwright tests
 ```
 
+### Git hooks
+
+A tracked `commit-msg` hook in [`.githooks/`](.githooks/) rejects commit messages that contain AI/agent co-author trailers (e.g. `Co-authored-by: Claude`, Copilot, Cursor, GPT/Codex, or a generic `Bot`) or machine-generated attribution lines (`Generated with`, `🤖 Generated`). Matching is case-insensitive.
+
+`yarn install` wires it up automatically via the `prepare` script (which runs `git config core.hooksPath .githooks`). You can also enable it manually:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 ## Credits
 
 - [PDF.js](https://github.com/mozilla/pdf.js) -- Mozilla's PDF rendering library (Apache 2.0)

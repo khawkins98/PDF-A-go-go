@@ -25,14 +25,6 @@ class WatchPartialsPlugin {
       compilation.fileDependencies.add(navPartial);
       compilation.fileDependencies.add(headPartial);
     });
-
-    // Force the dev server to do a full reload after each compilation
-    compiler.hooks.afterEmit.tap('WatchPartialsPlugin', () => {
-      if (compiler.options.mode === 'development' && compiler.watching) {
-        // Touch a file that webpack definitely watches to trigger reload
-        // The dev server will see the new compilation and reload
-      }
-    });
   }
 }
 

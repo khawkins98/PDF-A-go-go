@@ -181,7 +181,7 @@ class RenderQueue {
  * and accessibility features.
  *
  * Key features:
- * - Horizontal scrolling PDF viewer with smooth navigation
+ * - Vertical scrolling PDF viewer with smooth navigation
  * - Render queue system for optimal performance
  * - Memory management with automatic cleanup
  * - Mobile and desktop optimization
@@ -290,12 +290,6 @@ export class ScrollablePdfViewer extends EventEmitter {
     // Device detection and optimization settings
     /** @type {boolean} Whether the device is detected as mobile */
     this.isMobile = window.innerWidth <= 768;
-
-    /** @type {number} Maximum number of pages to keep in memory cache */
-    this.maxCachedPages = this.isMobile ? 3 : 5;
-
-    /** @type {number} Range of pages to render around the current view */
-    this.visibleRange = this.isMobile ? 1 : 2; // Pages to render around current view
 
     // Create main scroll container
     /** @type {HTMLElement} Main scrolling container element */
@@ -440,20 +434,22 @@ export class ScrollablePdfViewer extends EventEmitter {
     this._setupBasicScrolling();
     this._setupZoomHandlers();
 
-    // Memory management event handlers
-    document.addEventListener('visibilitychange', () => {
+    // Memory management event handlers (bound refs stored for removal in destroy())
+    this._onVisibilityChange = () => {
       if (document.hidden) {
         // Use normal cleanup that respects buffer for all document sizes
         this._cleanupOffscreenPages(false);
       }
-    });
+    };
+    document.addEventListener('visibilitychange', this._onVisibilityChange);
 
     // Handle memory pressure events (if supported by browser)
     if ('onmemorypressure' in window) {
-      window.addEventListener('memorypressure', () => {
+      this._onMemoryPressure = () => {
         // On memory pressure, force cleanup for all document sizes
         this._cleanupOffscreenPages(true);
-      });
+      };
+      window.addEventListener('memorypressure', this._onMemoryPressure);
     }
   }
 
@@ -518,7 +514,10 @@ export class ScrollablePdfViewer extends EventEmitter {
 
         const canvas = document.createElement("canvas");
         canvas.className = "pdfagogo-page-canvas";
-        canvas.setAttribute("tabindex", "0");
+        // Note: page canvases are intentionally not focusable. The scroll
+        // container (this.app) is the focusable arrow-key scroll surface;
+        // making every page a tab stop would create hundreds of nameless
+        // stops on large documents (a11y regression).
         canvas.setAttribute("data-page", i + 1);
         canvas.setAttribute("data-resolution", "placeholder");
 
@@ -927,7 +926,8 @@ export class ScrollablePdfViewer extends EventEmitter {
     const start = Math.min(...visiblePages);
     const end = Math.max(...visiblePages);
 
-    // Use tile renderer cleanup
+    // Tile renderer is always present (initializeContainer always supplies a
+    // pdfDocument), so tile-based cleanup is the only path.
     if (this.tileRenderer) {
       const currentPage = Math.floor((start + end) / 2) - 1; // 0-based
       this.tileRenderer.cleanup(currentPage, this.isMobile ? 2 : 3);
@@ -936,90 +936,26 @@ export class ScrollablePdfViewer extends EventEmitter {
         const stats = this.tileRenderer.getStats();
         console.log(`[PDF-A-go-go Debug] Tile cache: ${stats.cacheSize} tiles, ${stats.pendingCount} pending`);
       }
-      return;
     }
-
-    // Legacy cleanup path
-    // Adaptive buffer size - scales naturally with document size and device
-    const baseBuffer = this.isMobile ? 2 : 4;
-    const scalingFactor = Math.ceil(this.pageCount / 100);
-    const buffer = Math.max(baseBuffer, Math.min(baseBuffer * scalingFactor, this.isMobile ? 10 : 20));
-
-    const keepRange = new Set();
-    for (let i = start - buffer; i <= end + buffer; i++) {
-      if (i >= 1 && i <= this.pageCount) {
-        keepRange.add(i);
-      }
-    }
-
-    Object.keys(this.pageCanvases).forEach(pageNum => {
-      pageNum = parseInt(pageNum);
-      if (!keepRange.has(pageNum + 1) || force) {
-        const canvas = this.pageCanvases[pageNum];
-        if (canvas && canvas.getContext) {
-          const ctx = canvas.getContext('2d');
-          const memoryBefore = canvas.width * canvas.height * 4;
-
-          // Add visual debug indicator for cleanup
-          if (this.debug) {
-            console.log(`%c🗑️ Releasing page ${pageNum + 1}`, 'color: #F44336; font-weight: bold;');
-            const debugOverlay = document.createElement('div');
-            debugOverlay.style.position = 'absolute';
-            debugOverlay.style.top = '0';
-            debugOverlay.style.right = '0';
-            debugOverlay.style.background = '#F44336';
-            debugOverlay.style.color = 'white';
-            debugOverlay.style.padding = '4px 8px';
-            debugOverlay.style.borderRadius = '0 8px 0 8px';
-            debugOverlay.style.fontSize = '12px';
-            debugOverlay.style.zIndex = '100';
-            debugOverlay.textContent = `Releasing ${pageNum + 1}`;
-            canvas.parentElement.appendChild(debugOverlay);
-            setTimeout(() => debugOverlay.remove(), 1000);
-          }
-
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          canvas.width = canvas.height = 32;
-          canvas.setAttribute('data-resolution', 'placeholder');
-
-          // Clear corresponding text layer
-          const textLayer = this.textLayers[pageNum];
-          if (textLayer) {
-            textLayer.innerHTML = '';
-          }
-
-          if (this.debug) {
-            this.metrics.memoryUsage[pageNum] = {
-              freed: memoryBefore,
-              timestamp: Date.now()
-            };
-            console.log(`%c♻️ Released page ${pageNum + 1} (Freed: ${(memoryBefore / 1024 / 1024).toFixed(1)}MB)`,
-              'color: #F44336; font-weight: bold;');
-          }
-        }
-      }
-    });
-
-    // Clear render queue for off-screen pages
-    this.renderQueue.clear();
   }
 
   _setupResizeHandler() {
-    let resizeTimeout = null;
-    window.addEventListener("resize", () => {
+    this._resizeTimeout = null;
+    this._onResize = () => {
       // Clear any existing timeout
-      if (resizeTimeout) {
-        clearTimeout(resizeTimeout);
+      if (this._resizeTimeout) {
+        clearTimeout(this._resizeTimeout);
       }
 
       // Set new timeout to wait for resize to finish
-      resizeTimeout = setTimeout(() => {
+      this._resizeTimeout = setTimeout(() => {
         this._handleResize();
         // Recalculate overlay positions after layout changes
         this._updateOverlayPositions();
-        resizeTimeout = null;
+        this._resizeTimeout = null;
       }, 300);
-    });
+    };
+    window.addEventListener("resize", this._onResize);
   }
 
   async _handleResize() {
@@ -1216,14 +1152,15 @@ export class ScrollablePdfViewer extends EventEmitter {
       const active = document.activeElement;
       return active === this.app || (active && this.app.contains(active));
     };
-    window.addEventListener('wheel', (e) => {
+    this._onWindowWheel = (e) => {
       if (!(e.ctrlKey || e.metaKey)) return;
       if (!isViewerFocused()) return;
       e.preventDefault();
       const delta = e.deltaY;
       const zoomChange = delta > 0 ? -this.zoomStep : this.zoomStep;
       this.setZoom(this.zoomLevel + zoomChange);
-    }, { passive: false });
+    };
+    window.addEventListener('wheel', this._onWindowWheel, { passive: false });
   }
 
   /**
@@ -1380,14 +1317,15 @@ export class ScrollablePdfViewer extends EventEmitter {
     this._debugInterval = setInterval(() => this._updateDebugInfo(), 500);
 
     // Clean up on page unload
-    window.addEventListener('unload', () => {
+    this._onUnload = () => {
       if (this._debugInterval) {
         clearInterval(this._debugInterval);
       }
       if (this.debugElement && this.debugElement.parentNode) {
         this.debugElement.parentNode.removeChild(this.debugElement);
       }
-    });
+    };
+    window.addEventListener('unload', this._onUnload);
   }
 
   _updateDebugInfo() {
@@ -1512,6 +1450,32 @@ export class ScrollablePdfViewer extends EventEmitter {
   destroy() {
     if (this.debug) {
       console.log('[PDF-A-go-go] Destroying viewer...');
+    }
+
+    // Remove global (window/document) event listeners added during setup
+    if (this._onResize) {
+      window.removeEventListener('resize', this._onResize);
+      this._onResize = null;
+    }
+    if (this._resizeTimeout) {
+      clearTimeout(this._resizeTimeout);
+      this._resizeTimeout = null;
+    }
+    if (this._onWindowWheel) {
+      window.removeEventListener('wheel', this._onWindowWheel);
+      this._onWindowWheel = null;
+    }
+    if (this._onVisibilityChange) {
+      document.removeEventListener('visibilitychange', this._onVisibilityChange);
+      this._onVisibilityChange = null;
+    }
+    if (this._onMemoryPressure) {
+      window.removeEventListener('memorypressure', this._onMemoryPressure);
+      this._onMemoryPressure = null;
+    }
+    if (this._onUnload) {
+      window.removeEventListener('unload', this._onUnload);
+      this._onUnload = null;
     }
 
     // Clear debug interval

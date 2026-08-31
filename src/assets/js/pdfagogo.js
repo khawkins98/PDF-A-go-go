@@ -173,7 +173,10 @@ function getOptionsFromDataAttrs(container) {
   }
 
   // Behavioral options
-  if (map.momentum !== undefined) opts.momentum = parseFloat(map.momentum) || 1.5;
+  if (map.momentum !== undefined) {
+    const parsedMomentum = parseFloat(map.momentum);
+    opts.momentum = Number.isNaN(parsedMomentum) ? 1.5 : parsedMomentum;
+  }
   if (map.debug !== undefined) opts.debug = parseBool(map.debug, false);
 
   // Worker URL configuration
@@ -213,7 +216,7 @@ function createBookObject(pdf) {
   return {
     numPages: () => pdf.numPages,
 
-    getPage: (num, cb, highlights, targetScale) => {
+    getPage: (num, cb) => {
       const pageNum = num + 1;
 
       if (pageNum < 1 || pageNum > pdf.numPages) {
@@ -223,49 +226,14 @@ function createBookObject(pdf) {
 
       pdf
         .getPage(pageNum)
-        .then(async function (page) {
-          const scale = targetScale || window.devicePixelRatio || 1.8;
-
-          if (targetScale && window.console) {
-            console.log(`%c📄 PDF page ${pageNum} rendered at scale: ${scale.toFixed(2)}x (requested: ${targetScale.toFixed(2)}x)`, 'color: #FF5722;');
-          }
-
-          const viewport = page.getViewport({ scale });
-
-          const canvas = document.createElement("canvas");
-          const context = canvas.getContext("2d");
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-
-          await page.render({ canvasContext: context, viewport: viewport }).promise;
-
-          if (Array.isArray(highlights) && highlights.length > 0) {
-            context.save();
-            const prevComp = context.globalCompositeOperation;
-            context.globalCompositeOperation = 'multiply';
-            context.globalAlpha = 1.0;
-            context.fillStyle = "rgba(255,255,0,1)";
-
-            for (const hl of highlights) {
-              const rect = viewport.convertToViewportRectangle([
-                hl.x,
-                hl.y,
-                hl.x + hl.width,
-                hl.y + hl.height
-              ]);
-              const left = Math.min(rect[0], rect[2]);
-              const top = Math.min(rect[1], rect[3]);
-              const width = Math.abs(rect[2] - rect[0]);
-              const height = Math.abs(rect[3] - rect[1]);
-              context.fillRect(left, top, width, height);
-            }
-
-            context.globalCompositeOperation = prevComp;
-            context.restore();
-          }
+        .then(function (page) {
+          // Only expose page dimensions and lazy text/viewport accessors.
+          // Tile rendering rasterizes on its own (via TileRenderer + the raw
+          // PDF.js document), so we deliberately avoid producing a full-page
+          // canvas here — it was previously rendered and then discarded.
+          const viewport = page.getViewport({ scale: 1 });
 
           cb(null, {
-            img: canvas,
             width: viewport.width,
             height: viewport.height,
             getTextContent: () => page.getTextContent(),
@@ -379,41 +347,6 @@ async function initializeContainer(container, options = {}) {
 }
 
 /**
- * Initialize the PDF-A-go-go viewer with comprehensive error handling and accessibility support.
- *
- * @param {Object} book - PDF book object with numPages() and getPage() methods
- * @param {string} id - DOM element ID for the viewer container
- * @param {Object} [opts={}] - Viewer configuration options
- * @param {Function} [cb] - Callback function called with (error, viewer) upon completion
- * @returns {void}
- */
-function init(book, id, opts, cb) {
-  if (typeof opts === "function") {
-    cb = opts;
-    opts = {};
-  }
-  if (!opts) opts = {};
-  if (!cb) cb = () => 1;
-
-  const app = document.getElementById(id);
-  if (!app) {
-    const emsg = "scrollable-pdf-viewer: Failed to find container for viewer: " + id;
-    console.error(emsg);
-    cb(emsg);
-    return;
-  }
-
-  while (app.firstChild) app.removeChild(app.firstChild);
-
-  const viewer = new ScrollablePdfViewer({
-    app,
-    book,
-    options: opts,
-  });
-  cb(null, viewer);
-}
-
-/**
  * Main entry point for PDF-A-go-go application.
  * Automatically initializes all .pdfagogo-container elements on the page.
  */
@@ -445,10 +378,9 @@ function init(book, id, opts, cb) {
 })();
 
 /**
- * Default export object providing the init function and registry for external use.
+ * Default export object providing the registry and initializer for external use.
  */
 export default {
-  init,
   registry,
   initializeContainer,
   ViewerInstance,

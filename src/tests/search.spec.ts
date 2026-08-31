@@ -1,11 +1,15 @@
 import { test, expect } from '@playwright/test';
 
+// The search result span is a live region that stays in the DOM (visually empty
+// when there is nothing to report), so "cleared" is asserted via empty text
+// rather than via visibility.
+const RESULT_COUNT = /\d+\s*\/\s*\d+/;
+
 test.describe('Search Functionality', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('http://localhost:9000/');
     await page.locator('#pdfagogo-container .pdfagogo-page-canvas').first().waitFor({ timeout: 15000 });
-    await page.waitForTimeout(1000);
   });
 
   test('No matches found shows "No matches" text', async ({ page }) => {
@@ -14,10 +18,9 @@ test.describe('Search Functionality', () => {
 
     await searchInput.fill('xyznonexistent123');
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
 
-    await expect(searchResult).toBeVisible();
     await expect(searchResult).toHaveText('No matches');
+    await expect(searchResult).toBeVisible();
   });
 
   test('Search is case insensitive', async ({ page }) => {
@@ -27,7 +30,7 @@ test.describe('Search Functionality', () => {
     // Search uppercase
     await searchInput.fill('PDF');
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
+    await expect(searchResult).toHaveText(RESULT_COUNT);
 
     const upperResult = await searchResult.textContent();
     const upperCount = upperResult?.match(/\d+\s*\/\s*(\d+)/)?.[1];
@@ -35,7 +38,7 @@ test.describe('Search Functionality', () => {
     // Search lowercase
     await searchInput.fill('pdf');
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
+    await expect(searchResult).toHaveText(RESULT_COUNT);
 
     const lowerResult = await searchResult.textContent();
     const lowerCount = lowerResult?.match(/\d+\s*\/\s*(\d+)/)?.[1];
@@ -51,7 +54,7 @@ test.describe('Search Functionality', () => {
 
     await searchInput.fill('pdf');
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
+    await expect(searchResult).toHaveText(RESULT_COUNT);
 
     // Get total match count
     const resultText = await searchResult.textContent();
@@ -64,7 +67,7 @@ test.describe('Search Functionality', () => {
     const nextBtn = page.locator('#pdfagogo-container .pdfagogo-next-match-btn');
     for (let i = 1; i < total; i++) {
       await nextBtn.click();
-      await page.waitForTimeout(200);
+      await expect(searchResult).toHaveText(`${i + 1} / ${total}`);
     }
 
     // Should be at last match
@@ -73,7 +76,6 @@ test.describe('Search Functionality', () => {
     // Press Enter to wrap to first match
     await searchInput.focus();
     await searchInput.press('Enter');
-    await page.waitForTimeout(500);
 
     await expect(searchResult).toHaveText(`1 / ${total}`);
   });
@@ -84,7 +86,7 @@ test.describe('Search Functionality', () => {
 
     await searchInput.fill('pdf');
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
+    await expect(searchResult).toHaveText(RESULT_COUNT);
 
     // Get total match count
     const resultText = await searchResult.textContent();
@@ -95,7 +97,6 @@ test.describe('Search Functionality', () => {
     // At first match "1 / N", press Shift+Enter to wrap backward
     await expect(searchResult).toHaveText(`1 / ${total}`);
     await searchInput.press('Shift+Enter');
-    await page.waitForTimeout(500);
 
     await expect(searchResult).toHaveText(`${total} / ${total}`);
   });
@@ -107,19 +108,16 @@ test.describe('Search Functionality', () => {
     // Perform a search first
     await searchInput.fill('pdf');
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
-
-    await expect(searchResult).toBeVisible();
+    await expect(searchResult).toHaveText(RESULT_COUNT);
 
     // Press Escape to clear
     await searchInput.press('Escape');
-    await page.waitForTimeout(500);
 
     // Input should be cleared
     await expect(searchInput).toHaveValue('');
 
-    // Results should be hidden
-    await expect(searchResult).not.toBeVisible();
+    // Result live region should be emptied (kept in DOM for announcements)
+    await expect(searchResult).toHaveText('');
   });
 
   test('Multiple successive searches return different counts', async ({ page }) => {
@@ -129,7 +127,7 @@ test.describe('Search Functionality', () => {
     // First search
     await searchInput.fill('pdf');
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
+    await expect(searchResult).toHaveText(RESULT_COUNT);
 
     const firstResult = await searchResult.textContent();
     const firstCount = firstResult?.match(/\d+\s*\/\s*(\d+)/)?.[1];
@@ -137,7 +135,7 @@ test.describe('Search Functionality', () => {
     // Second search (different term)
     await searchInput.fill('page');
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
+    await expect(searchResult).toHaveText(RESULT_COUNT);
 
     const secondResult = await searchResult.textContent();
     const secondCount = secondResult?.match(/\d+\s*\/\s*(\d+)/)?.[1];
@@ -149,7 +147,7 @@ test.describe('Search Functionality', () => {
     // Re-search first term should restore count
     await searchInput.fill('pdf');
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
+    await expect(searchResult).toHaveText(RESULT_COUNT);
 
     const thirdResult = await searchResult.textContent();
     const thirdCount = thirdResult?.match(/\d+\s*\/\s*(\d+)/)?.[1];
@@ -164,7 +162,7 @@ test.describe('Search Functionality', () => {
     // First search
     await searchInput.fill('pdf');
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
+    await expect(searchResult).toHaveText(RESULT_COUNT);
 
     const resultText = await searchResult.textContent();
     const match = resultText?.match(/(\d+)\s*\/\s*(\d+)/);
@@ -179,16 +177,15 @@ test.describe('Search Functionality', () => {
     // Navigate forward and verify position increments
     const nextBtn = page.locator('#pdfagogo-container .pdfagogo-next-match-btn');
     await nextBtn.click();
-    await page.waitForTimeout(300);
 
     await expect(searchResult).toHaveText(`2 / ${total}`);
 
     // Clear and re-search same term — count should be identical
     await searchInput.press('Escape');
-    await page.waitForTimeout(300);
+    await expect(searchResult).toHaveText('');
     await searchInput.fill('pdf');
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
+    await expect(searchResult).toHaveText(RESULT_COUNT);
 
     const reSearchText = await searchResult.textContent();
     const reSearchTotal = reSearchText?.match(/\d+\s*\/\s*(\d+)/)?.[1];
