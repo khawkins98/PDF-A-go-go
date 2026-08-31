@@ -362,16 +362,28 @@ Set via `data-*` attributes on the container element. No JavaScript initializati
 
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `data-strings` | JSON string | -- | Object of UI string overrides; omitted keys fall back to English |
+| `data-locale` | string | -- | Bundled locale pack to apply (e.g. `de`); unknown codes warn and stay English |
+| `data-strings` | JSON string | -- | Object of UI string overrides; omitted keys fall back to the locale pack, then English |
 
 Every user-facing label — toolbar tooltips/aria-labels, page and zoom
 announcements, search UI, error and loading text, the keyboard-shortcuts panel,
-and the outline panel — is translatable. Supply overrides two ways:
+and the outline panel — is translatable.
+
+**Bundled locales.** Set `data-locale` (or the `locale` option) to switch the
+whole UI to a curated language pack in one step. Available: `de` (German). Add
+more in `src/assets/js/locales.js`. Per-key `data-strings`/`strings` overrides
+still apply on top.
+
+Supply overrides two ways:
 
 - **Attribute:** `data-strings='{"nextPage":"Page suivante"}'` (a JSON object).
   Invalid JSON is ignored (with a console warning) and the UI stays English.
-- **JS API:** `pdfagogo.default.initializeContainer(el, { strings: { nextPage: 'Page suivante' } })`.
-  When both are present, the `strings` option wins over `data-strings`.
+- **JS API:** `pdfagogo.default.initializeContainer(el, { locale: 'de', strings: { nextPage: 'Page suivante' } })`.
+
+Overrides layer, later winning: **English defaults → `data-locale`/`locale`
+pack → `data-strings` → the JS `strings` option**. So you can start from a
+bundled locale and adjust individual strings, and the `strings` option wins over
+everything.
 
 > **Apostrophes in `data-strings`:** the attribute holds JSON inside single
 > quotes, so a value containing an apostrophe (`L'aperçu`, `Aller à l'accueil`)

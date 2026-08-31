@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- @@HEAD@@ -->
+  <title>Locale Test - PDF-A-go-go</title>
+</head>
+<body>
+  <header>
+    <!-- @@NAV@@ -->
+  </header>
+  <main>
+    <h1>Locale Test</h1>
+    <script defer="defer" src="../pdf-a-go-go.js"></script>
+
+    <!-- Instance A: full German UI from the bundled locale pack, one attribute. -->
+    <div class="pdfagogo-container" id="pdfagogo-de"
+         data-pdf-url="../example.pdf"
+         data-show-search="true"
+         data-show-outline="true"
+         data-locale="de">
+    </div>
+
+    <h2>Locale + per-key override</h2>
+    <!-- Instance B: German pack, but one key overridden via data-strings, which
+         must win over the pack. -->
+    <div class="pdfagogo-container" id="pdfagogo-de-override"
+         data-pdf-url="../example.pdf"
+         data-show-search="true"
+         data-locale="de"
+         data-strings='{"nextPage":"Weiterblättern"}'>
+    </div>
+
+    <h2>Unknown locale (should stay English)</h2>
+    <!-- Instance C: unknown locale contributes nothing; UI stays English. -->
+    <div class="pdfagogo-container" id="pdfagogo-unknown"
+         data-pdf-url="../pdf-a-go-go-showcase.pdf"
+         data-show-search="true"
+         data-locale="xx">
+    </div>
+  </main>
+</body>
+</html>

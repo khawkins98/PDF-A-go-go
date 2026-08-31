@@ -80,7 +80,8 @@ const base = {
         { from: 'src/tests/error-404.html', to: 'tests/error-404.html', transform: (content) => injectPartials(content, '..') },
         { from: 'src/tests/accessibility-test.html', to: 'tests/accessibility-test.html', transform: (content) => injectPartials(content, '..') },
         { from: 'src/tests/i18n-test.html', to: 'tests/i18n-test.html', transform: (content) => injectPartials(content, '..') },
-        { from: 'src/tests', to: 'tests', globOptions: { ignore: ['**/test-small.html', '**/multi-instance.html', '**/error-404.html', '**/accessibility-test.html', '**/i18n-test.html'] } },
+        { from: 'src/tests/locale-test.html', to: 'tests/locale-test.html', transform: (content) => injectPartials(content, '..') },
+        { from: 'src/tests', to: 'tests', globOptions: { ignore: ['**/test-small.html', '**/multi-instance.html', '**/error-404.html', '**/accessibility-test.html', '**/i18n-test.html', '**/locale-test.html'] } },
       ]
     })
   ]
