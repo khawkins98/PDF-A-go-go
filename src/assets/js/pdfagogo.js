@@ -15,6 +15,7 @@ import { createLoadingBar, updateLoadingBar, removeLoadingBar, showError, setupC
 import { ScrollablePdfViewer } from "./scrollablePdfViewer.js";
 import { ViewerInstance } from "./viewerInstance.js";
 import { SearchController } from "./searchController.js";
+import { resolveStrings } from "./strings.js";
 
 /**
  * Registry for managing multiple PDF viewer instances.
@@ -191,6 +192,18 @@ function getOptionsFromDataAttrs(container) {
   // Theme configuration
   if (map.theme) opts.theme = map.theme;
 
+  // i18n: a JSON object of UI string overrides. Invalid JSON is ignored (with a
+  // warning) so a malformed attribute degrades to the English defaults rather
+  // than breaking initialization.
+  if (map.strings) {
+    try {
+      const parsed = JSON.parse(map.strings);
+      if (parsed && typeof parsed === 'object') opts.strings = parsed;
+    } catch (e) {
+      console.warn('PDF-A-go-go: could not parse data-strings as JSON; using default UI strings.', e);
+    }
+  }
+
   return opts;
 }
 
@@ -261,6 +274,13 @@ async function initializeContainer(container, options = {}) {
   const dataOptions = getOptionsFromDataAttrs(container);
   const featureOptions = Object.assign({}, defaultOptions, dataOptions, options);
 
+  // Resolve the UI string table: merge data-strings (base) with the JS
+  // `strings` option (which wins), then fill any gaps from the English
+  // defaults. featureOptions.strings is always a complete table downstream.
+  featureOptions.strings = resolveStrings(
+    Object.assign({}, dataOptions.strings, options.strings)
+  );
+
   // Create viewer instance
   const instance = registry.createInstance(container, featureOptions);
 
@@ -288,7 +308,7 @@ async function initializeContainer(container, options = {}) {
   }
 
   // Create loading bar
-  const progressBar = createLoadingBar(container);
+  const progressBar = createLoadingBar(container, featureOptions.strings);
 
   try {
     // Load PDF
@@ -343,7 +363,7 @@ async function initializeContainer(container, options = {}) {
 
     return instance;
   } catch (err) {
-    showError("Failed to load PDF: " + err, container);
+    showError("Failed to load PDF: " + err, container, featureOptions.strings);
     throw err;
   }
 }

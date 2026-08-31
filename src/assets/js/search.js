@@ -9,6 +9,8 @@
  * user intent (typing, Enter/Shift+Enter, button clicks, Escape) to the controller.
  */
 
+import { defaultStrings, format } from './strings.js';
+
 /**
  * Create and wire up search controls, driving the instance's SearchController.
  *
@@ -25,6 +27,9 @@ export function setupSearchControls(container, featureOptions, viewer, book, pdf
   if (!featureOptions || featureOptions.showSearch === false) {
     return;
   }
+
+  // Resolved UI string table (English defaults filled upstream).
+  const t = (featureOptions && featureOptions.strings) || defaultStrings;
 
   // Find the toolbar center section to insert search controls
   const toolbarCenter = container.querySelector('.pdfagogo-toolbar-center');
@@ -62,6 +67,21 @@ export function setupSearchControls(container, featureOptions, viewer, book, pdf
   const prevMatchBtn = searchControls.querySelector('.pdfagogo-prev-match-btn');
   const nextMatchBtn = searchControls.querySelector('.pdfagogo-next-match-btn');
 
+  // Apply translatable labels via DOM APIs (avoids injecting them into the
+  // innerHTML above); the literals there are placeholders overridden here.
+  if (searchBox) {
+    searchBox.setAttribute('placeholder', t.searchPlaceholder);
+    searchBox.setAttribute('aria-label', t.searchLabel);
+  }
+  if (prevMatchBtn) {
+    prevMatchBtn.setAttribute('aria-label', t.prevMatch);
+    prevMatchBtn.setAttribute('title', t.prevMatchTitle);
+  }
+  if (nextMatchBtn) {
+    nextMatchBtn.setAttribute('aria-label', t.nextMatch);
+    nextMatchBtn.setAttribute('title', t.nextMatchTitle);
+  }
+
   // The result span stays in the DOM as a live region so updates are announced to
   // screen readers. It is left visually empty (rather than display:none) while
   // there is nothing to report. Nav buttons are hidden until there are matches.
@@ -88,7 +108,7 @@ export function setupSearchControls(container, featureOptions, viewer, book, pdf
   function showMatch(idx) {
     const result = searchController.goToMatch(idx);
     if (!result) {
-      setResultText('No matches');
+      setResultText(t.noMatches);
       showNavButtons(false);
       return;
     }
@@ -96,7 +116,10 @@ export function setupSearchControls(container, featureOptions, viewer, book, pdf
     // Reflect controller state into the UI first, so the match counter and nav
     // buttons update synchronously even if the page scroll below is slow or
     // throws (scrolling is a side-effect, not part of the navigation contract).
-    setResultText(`${searchController.getCurrentMatchNumber()} / ${searchController.getMatchCount()}`);
+    setResultText(format(t.searchCounter, {
+      current: searchController.getCurrentMatchNumber(),
+      total: searchController.getMatchCount()
+    }));
     showNavButtons(true);
 
     try {
@@ -115,7 +138,7 @@ export function setupSearchControls(container, featureOptions, viewer, book, pdf
     if (searchController.hasMatches()) {
       showMatch(0);
     } else {
-      setResultText('No matches');
+      setResultText(t.noMatches);
       showNavButtons(false);
     }
   }

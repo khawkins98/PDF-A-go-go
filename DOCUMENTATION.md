@@ -358,6 +358,35 @@ Set via `data-*` attributes on the container element. No JavaScript initializati
 | `data-worker-url` | string | (bundled) | Custom PDF.js worker URL |
 | `data-download-timeout` | number | `30000` | HTML download handler timeout in ms |
 
+### Internationalization (i18n)
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `data-strings` | JSON string | -- | Object of UI string overrides; omitted keys fall back to English |
+
+Every user-facing label — toolbar tooltips/aria-labels, page and zoom
+announcements, search UI, error and loading text, the keyboard-shortcuts panel,
+and the outline panel — is translatable. Supply overrides two ways:
+
+- **Attribute:** `data-strings='{"nextPage":"Page suivante"}'` (a JSON object).
+  Invalid JSON is ignored (with a console warning) and the UI stays English.
+- **JS API:** `pdfagogo.initializeContainer(el, { strings: { nextPage: 'Page suivante' } })`.
+  When both are present, the `strings` option wins over `data-strings`.
+
+Some strings interpolate values via `{token}` placeholders — keep the tokens in
+your translation:
+
+| Key | English default | Tokens |
+|-----|-----------------|--------|
+| `pageAnnouncement` | `Page {current} of {total}` | `{current}`, `{total}` |
+| `searchCounter` | `{current} / {total}` | `{current}`, `{total}` |
+| `zoomLevel` | `{percent}%` | `{percent}` |
+| `loading` | `Loading {percent}` | `{percent}` (renders the live percentage) |
+
+The complete key list with English defaults lives in
+[`src/assets/js/strings.js`](src/assets/js/strings.js). Key glyphs (Tab, arrow
+keys, Ctrl, etc.) and PDF document content are not part of the string table.
+
 ### Example
 
 ```html

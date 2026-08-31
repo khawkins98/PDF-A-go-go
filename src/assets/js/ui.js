@@ -41,15 +41,20 @@
  * //   <progress class="pdfagogo-progress-bar" value="0" max="1"></progress>
  * // </div>
  */
-export function createLoadingBar(container) {
+export function createLoadingBar(container, strings = defaultStrings) {
   let loadingDiv = document.createElement("div");
   loadingDiv.className = "pdfagogo-loading";
   loadingDiv.style.maxWidth = "600px";
   loadingDiv.style.margin = "2rem auto";
   loadingDiv.style.textAlign = "center";
   loadingDiv.style.padding = "1.5rem 0";
+  // {percent} expands to the live percentage span, which updateLoadingBar keeps
+  // in sync; the label around it comes from the (translatable) `loading` string.
+  const loadingText = format(strings.loading, {
+    percent: '<span class="pdfagogo-loading-percent">0%</span>'
+  });
   loadingDiv.innerHTML = `
-    <div class="pdfagogo-loading-text">Loading <span class="pdfagogo-loading-percent">0%</span></div>
+    <div class="pdfagogo-loading-text">${loadingText}</div>
     <progress class="pdfagogo-progress-bar" value="0" max="1" style="width:80%;height:1.2em;"></progress>
   `;
   container.appendChild(loadingDiv);
@@ -177,7 +182,7 @@ export function removeLoadingBar(container) {
  * // Handle timeout error
  * showError('Loading timeout. Please check your connection and try again.');
  */
-export function showError(message, targetContainer) {
+export function showError(message, targetContainer, strings = defaultStrings) {
   // Try to reuse the existing loading overlay; create one if missing
   let loadingDiv;
   const container = targetContainer || document.querySelector('.pdfagogo-container');
@@ -200,19 +205,21 @@ export function showError(message, targetContainer) {
 
   const pdfUrl = (container && container.getAttribute('data-pdf-url')) || '#';
 
-  // Escape message to avoid HTML injection
-  const safeMessage = String(message)
+  // Escape any string interpolated into the error markup (the dev message and
+  // the translatable labels) to avoid HTML injection.
+  const esc = (s) => String(s)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+  const safeMessage = esc(message);
 
   loadingDiv.innerHTML = `
-    <div class="pdfagogo-loading-text" style="margin-bottom:0.5rem;">Could not load this PDF</div>
-    <div class="pdfagogo-loading-error">This may be due to CORS restrictions, a network issue, or the file being unavailable.</div>
+    <div class="pdfagogo-loading-text" style="margin-bottom:0.5rem;">${esc(strings.errorTitle)}</div>
+    <div class="pdfagogo-loading-error">${esc(strings.errorBody)}</div>
     <div class="pdfagogo-error-actions">
-      <a class="primary" href="${pdfUrl}" target="_blank" rel="noopener noreferrer">Attempt to open directly</a>
+      <a class="primary" href="${pdfUrl}" target="_blank" rel="noopener noreferrer">${esc(strings.errorOpenDirect)}</a>
     </div>
-    <details class="pdfagogo-error-details"><summary>Technical details</summary><pre>${safeMessage}</pre></details>
+    <details class="pdfagogo-error-details"><summary>${esc(strings.errorTechnicalDetails)}</summary><pre>${safeMessage}</pre></details>
   `;
 }
 
@@ -278,8 +285,12 @@ export function showError(message, targetContainer) {
  *
  */
 import { setupSearchControls } from './search.js';
+import { defaultStrings, format } from './strings.js';
 
 export function setupControls(container, featureOptions, viewer, book, pdf, instance) {
+  // Resolved UI string table (English defaults filled upstream); `t` is the
+  // translatable label source used throughout this function.
+  const t = featureOptions.strings || defaultStrings;
   // Remove any existing controls to prevent duplicates
   // Scope to wrapper if available, otherwise scope to the container itself
   // (avoids removing another instance's controls in multi-instance setups)
@@ -385,7 +396,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
   // (see the outline panel section below) if the PDF actually carries bookmarks,
   // so documents without an outline show no affordance at all.
   if (featureOptions.showOutline !== false) {
-    const outlineBtn = iconButton('pdfagogo-outline', 'Table of contents', 'Table of contents', 'outline');
+    const outlineBtn = iconButton('pdfagogo-outline', t.outline, t.outline, 'outline');
     outlineBtn.setAttribute('aria-expanded', 'false');
     outlineBtn.hidden = true;
     leftSection.appendChild(outlineBtn);
@@ -393,7 +404,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
   if (featureOptions.showPageSelector !== false || featureOptions.showCurrentPage !== false) {
     const pageNav = document.createElement('div');
     pageNav.className = 'pdfagogo-page-nav';
-    pageNav.appendChild(iconButton('pdfagogo-prev-page', 'Previous page', 'Previous page', 'prevPage'));
+    pageNav.appendChild(iconButton('pdfagogo-prev-page', t.prevPage, t.prevPage, 'prevPage'));
 
     const gotoInput = document.createElement('input');
     gotoInput.className = 'pdfagogo-goto-page';
@@ -401,15 +412,15 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
     gotoInput.setAttribute('inputmode', 'numeric');
     gotoInput.setAttribute('pattern', '\\d*');
     gotoInput.setAttribute('min', '1');
-    gotoInput.setAttribute('aria-label', 'Current page');
-    gotoInput.setAttribute('title', 'Go to page');
+    gotoInput.setAttribute('aria-label', t.currentPageLabel);
+    gotoInput.setAttribute('title', t.goToPage);
     pageNav.appendChild(gotoInput);
 
     const pageTotal = document.createElement('span');
     pageTotal.className = 'pdfagogo-page-total';
     pageNav.appendChild(pageTotal);
 
-    pageNav.appendChild(iconButton('pdfagogo-next-page', 'Next page', 'Next page', 'nextPage'));
+    pageNav.appendChild(iconButton('pdfagogo-next-page', t.nextPage, t.nextPage, 'nextPage'));
     leftSection.appendChild(pageNav);
   }
 
@@ -423,13 +434,13 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
   zoomIndicator.setAttribute('aria-live', 'polite');
   rightSection.appendChild(zoomIndicator);
   if (featureOptions.showDownload) {
-    rightSection.appendChild(iconButton('pdfagogo-download', 'Download PDF', 'Download PDF', 'download'));
+    rightSection.appendChild(iconButton('pdfagogo-download', t.download, t.download, 'download'));
   }
   if (featureOptions.showFullscreen !== false) {
-    rightSection.appendChild(iconButton('pdfagogo-fullscreen', 'Fullscreen', 'Fullscreen', 'fullscreen'));
+    rightSection.appendChild(iconButton('pdfagogo-fullscreen', t.enterFullscreen, t.enterFullscreen, 'fullscreen'));
   }
   if (featureOptions.showShare !== false) {
-    rightSection.appendChild(iconButton('pdfagogo-share', 'Share link', 'Copy link to this page', 'share'));
+    rightSection.appendChild(iconButton('pdfagogo-share', t.shareLabel, t.shareTitle, 'share'));
   }
 
   toolbar.appendChild(leftSection);
@@ -473,16 +484,16 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
     };
 
     const summary = document.createElement('summary');
-    summary.textContent = 'Keyboard shortcuts';
+    summary.textContent = t.keyboardShortcuts;
     a11yInstructions.appendChild(summary);
 
     const list = document.createElement('ul');
-    list.appendChild(li(kbd('Tab'), ' to focus the viewer'));
-    list.appendChild(li(kbd('↑'), ' / ', kbd('←'), ' previous page'));
-    list.appendChild(li(kbd('↓'), ' / ', kbd('→'), ' next page'));
-    list.appendChild(li(kbd('Ctrl'), '+', kbd('+'), ' / ', kbd('-'), ' zoom in/out'));
-    list.appendChild(li(kbd('Ctrl'), '+', kbd('0'), ' reset zoom'));
-    list.appendChild(li(kbd('Ctrl'), '+', kbd('F'), ' search'));
+    list.appendChild(li(kbd('Tab'), ' ', t.shortcutFocus));
+    list.appendChild(li(kbd('↑'), ' / ', kbd('←'), ' ', t.shortcutPrevPage));
+    list.appendChild(li(kbd('↓'), ' / ', kbd('→'), ' ', t.shortcutNextPage));
+    list.appendChild(li(kbd('Ctrl'), '+', kbd('+'), ' / ', kbd('-'), ' ', t.shortcutZoom));
+    list.appendChild(li(kbd('Ctrl'), '+', kbd('0'), ' ', t.shortcutResetZoom));
+    list.appendChild(li(kbd('Ctrl'), '+', kbd('F'), ' ', t.shortcutSearch));
     a11yInstructions.appendChild(list);
 
     // Place a11y instructions below the container
@@ -527,7 +538,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
       // Announce to screen readers (button swap is not otherwise announced).
       // Clear then set so repeated copies re-announce.
       statusRegion.textContent = "";
-      setTimeout(() => { statusRegion.textContent = "Link copied"; }, 50);
+      setTimeout(() => { statusRegion.textContent = t.linkCopied; }, 50);
       setTimeout(() => {
         shareBtn.innerHTML = originalHTML;
         shareBtn.classList.remove("copied");
@@ -557,8 +568,8 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
     const updateFsButton = () => {
       const isFs = !!document.fullscreenElement && wrapper === document.fullscreenElement;
       fullscreenBtn.innerHTML = isFs ? fsIconExit : fsIconEnter;
-      fullscreenBtn.setAttribute('aria-label', isFs ? 'Exit fullscreen' : 'Enter fullscreen');
-      fullscreenBtn.title = isFs ? 'Exit fullscreen' : 'Enter fullscreen';
+      fullscreenBtn.setAttribute('aria-label', isFs ? t.exitFullscreen : t.enterFullscreen);
+      fullscreenBtn.title = isFs ? t.exitFullscreen : t.enterFullscreen;
       fullscreenBtn.classList.toggle('active', isFs);
     };
     fullscreenBtn.onclick = () => {
@@ -680,7 +691,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
 
     // Screen reader announcement
     if (pageAnnouncement) {
-      pageAnnouncement.textContent = `Page ${currentPage} of ${totalPages}`;
+      pageAnnouncement.textContent = format(t.pageAnnouncement, { current: currentPage, total: totalPages });
     }
   }
   viewer.on("seen", updatePage);
@@ -696,7 +707,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
         zoomIndicator.style.display = "none";
       } else {
         zoomIndicator.style.display = "";
-        zoomIndicator.textContent = `${percentage}%`;
+        zoomIndicator.textContent = format(t.zoomLevel, { percent: percentage });
       }
     }
   });
@@ -832,8 +843,8 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
     resizeGrip.setAttribute("tabindex", "0");
     resizeGrip.setAttribute("role", "separator");
     resizeGrip.setAttribute("aria-orientation", "vertical");
-    resizeGrip.setAttribute("aria-label", "Resize PDF viewer");
-    resizeGrip.setAttribute("title", "Drag or use arrow keys to resize PDF viewer height");
+    resizeGrip.setAttribute("aria-label", t.resizeGrip);
+    resizeGrip.setAttribute("title", t.resizeGripTitle);
     container.appendChild(resizeGrip);
 
     const MIN_HEIGHT = 200;
@@ -990,7 +1001,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'pdfagogo-outline-entry';
-        btn.textContent = item.title || '(untitled)';
+        btn.textContent = item.title || t.outlineUntitled;
         if (page == null) {
           btn.disabled = true;
         } else {
@@ -1029,12 +1040,12 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
 
       panel = document.createElement('nav');
       panel.className = 'pdfagogo-outline-panel';
-      panel.setAttribute('aria-label', 'Table of contents');
+      panel.setAttribute('aria-label', t.outline);
       panel.hidden = true;
 
       const heading = document.createElement('div');
       heading.className = 'pdfagogo-outline-heading';
-      heading.textContent = 'Contents';
+      heading.textContent = t.outlineHeading;
       panel.appendChild(heading);
       panel.appendChild(await buildList(outline));
       // Appended to the container (position: relative) so the panel overlays the

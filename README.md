@@ -53,7 +53,7 @@ PDF-A-go-go is a read-only viewer. Editing features like **annotations** (highli
 A few viewer features aren't supported yet but are on the radar:
 
 - **Password-protected PDFs** -- PDF.js handles this under the hood, but the UI doesn't expose a password prompt yet.
-- **i18n** -- the UI is English-only for now. Labels like "Search," "Download," and "Next page" are hardcoded.
+- **Bundled translations** -- the UI ships in English, but every label is translatable (see [Translating the interface](#translating-the-interface)); there are just no built-in locale packs, so you supply the strings.
 - **Thumbnails** -- no sidebar of page previews. (Table-of-contents / outline navigation *is* supported: a toolbar toggle opens the PDF's outline when it has bookmarks.)
 - **Page rotation and print** -- pages display as-is. For printing, users can download the PDF directly.
 
@@ -93,6 +93,30 @@ Paste this into your HTML:
   data-theme="dark"
   data-show-toolbar="true"></div>
 ```
+
+### Translating the interface
+
+Every UI label (button tooltips, screen-reader announcements, search and error
+text) is overridable. Pass a JSON object of overrides via `data-strings`; any
+keys you omit fall back to English. Interpolated strings use `{token}`
+placeholders — keep them.
+
+```html
+<div class="pdfagogo-container"
+  data-pdf-url="./document.pdf"
+  data-strings='{"nextPage":"Page suivante","prevPage":"Page précédente","searchPlaceholder":"Rechercher…","noMatches":"Aucun résultat","pageAnnouncement":"Page {current} sur {total}"}'></div>
+```
+
+Or, when initializing from JavaScript, pass a `strings` object:
+
+```js
+pdfagogo.initializeContainer(el, {
+  strings: { nextPage: 'Page suivante', noMatches: 'Aucun résultat' }
+});
+```
+
+The full list of keys and their English defaults is in
+[`src/assets/js/strings.js`](src/assets/js/strings.js).
 
 ### Multiple PDFs on the same page
 
@@ -135,6 +159,7 @@ Set options via `data-*` attributes on the container element:
 | `data-margin-left` | `0.5` | Left margin override (rem) |
 | `data-momentum` | `1.5` | Scroll momentum multiplier |
 | `data-theme` | -- | Color theme (`dark` built-in, or custom) |
+| `data-strings` | -- | JSON object of UI string overrides for i18n (see [Translating the interface](#translating-the-interface)) |
 | `data-worker-url` | -- | Custom PDF.js worker URL |
 | `data-fullpage-cache-size` | `10` | Full-page render cache size |
 | `data-text-layer-cache-size` | `10` | Text layer cache size |
