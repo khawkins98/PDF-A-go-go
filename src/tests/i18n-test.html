@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- @@HEAD@@ -->
+  <title>i18n Test - PDF-A-go-go</title>
+</head>
+<body>
+  <header>
+    <!-- @@NAV@@ -->
+  </header>
+  <main>
+    <h1>i18n Test</h1>
+    <script defer="defer" src="../pdf-a-go-go.js"></script>
+
+    <!-- Instance A: a few strings overridden in French; the rest fall back to
+         English. example.pdf has an outline, so the outline label can be checked. -->
+    <div class="pdfagogo-container" id="pdfagogo-container"
+         data-pdf-url="../example.pdf"
+         data-show-search="true"
+         data-show-outline="true"
+         data-strings='{"nextPage":"Page suivante","prevPage":"Page précédente","searchPlaceholder":"Rechercher…","noMatches":"Aucun résultat","outline":"Table des matières","download":"Télécharger le PDF"}'>
+    </div>
+
+    <h2>Second locale (German) — for isolation + interpolation coverage</h2>
+    <!-- Instance B: a different valid locale on the same page, used to prove
+         per-instance isolation (A stays French while B is German). It also
+         overrides interpolated keys with reordered {tokens} and includes one
+         wrong-typed value (download: 42) that must be dropped (English fallback). -->
+    <div class="pdfagogo-container" id="pdfagogo-de"
+         data-pdf-url="../example.pdf"
+         data-show-search="true"
+         data-strings='{"nextPage":"Nächste Seite","prevPage":"Vorherige Seite","searchPlaceholder":"Suchen","noMatches":"Keine Treffer","pageAnnouncement":"Seite {current} von {total}","searchCounter":"Treffer {current} von {total}","download":42}'>
+    </div>
+
+    <h2>Invalid data-strings (should degrade to English)</h2>
+    <!-- Instance C: malformed JSON must not break init; every label falls back
+         to the English defaults. -->
+    <div class="pdfagogo-container" id="pdfagogo-invalid"
+         data-pdf-url="../pdf-a-go-go-showcase.pdf"
+         data-show-search="true"
+         data-strings='{ not valid json, }'>
+    </div>
+  </main>
+</body>
+</html>

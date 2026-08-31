@@ -7,6 +7,28 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 Releases are tagged in git (`v1.5`, `v1.6`, …); the `package.json` version is
 realigned with the tag as of 1.6.0.
 
+## [1.8.0] - 2026-08-31
+
+### Added
+
+- Internationalization (i18n) of the interface. Every user-facing label —
+  toolbar tooltips/aria-labels, page and zoom announcements, search UI, loading
+  and error text, the keyboard-shortcuts panel, and the outline panel — is now
+  translatable. Supply overrides via a `data-strings` JSON attribute or the
+  `strings` option to `initializeContainer()`; omitted keys fall back to the
+  English defaults, and invalid `data-strings` JSON degrades gracefully (with a
+  console warning). Interpolated strings use `{token}` placeholders. The full
+  key list lives in `src/assets/js/strings.js`. No bundled locale packs — you
+  supply the translations.
+
+### Security
+
+- The loading and error UIs are now built with DOM APIs instead of `innerHTML`,
+  so a translated `loading`/error string cannot inject markup. The error
+  screen's "open directly" link sanitizes `data-pdf-url` (http/https only),
+  preventing a `javascript:`-scheme or attribute-breakout link. `resolveStrings`
+  ignores inherited and non-string override values.
+
 ## [1.7.0] - 2026-08-31
 
 ### Added
