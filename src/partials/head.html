@@ -9,7 +9,8 @@
     --sidebar-border: #e2e8f0;
     --text-primary: #1e293b;
     --text-secondary: #64748b;
-    --text-muted: #94a3b8;
+    /* Darkened from #94a3b8 (~2.6:1) to pass WCAG AA on white (issue L4-demo) */
+    --text-muted: #64748b;
     --accent: #6366f1;
     --accent-hover: #4f46e5;
     --accent-light: #eef2ff;
@@ -220,9 +221,32 @@
     line-height: 1.5;
   }
 
+  /* Theme toggle is a <button> for a11y (issue L3); match the nav link look */
+  .theme-toggle {
+    display: inline-block;
+    width: 100%;
+    text-align: left;
+    padding: 0.4rem 0.75rem;
+    border: none;
+    border-radius: var(--border-radius);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: none;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .theme-toggle:hover,
   .theme-toggle.active {
     background: var(--accent-light);
     color: var(--accent);
+  }
+
+  .theme-toggle:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 </style>
 <script>
@@ -232,11 +256,14 @@
     var btn = document.querySelector('.theme-toggle');
     var isDark = container.getAttribute('data-theme') === 'dark';
     if (isDark) {
-      container.removeAttribute('data-theme');
-      if (btn) { btn.classList.remove('active'); btn.textContent = '\u263D Dark mode'; }
+      // Set an explicit "light" theme rather than removing the attribute, so the
+      // viewer's prefers-color-scheme auto-dark rule (which targets
+      // :not([data-theme])) can't re-apply dark on a dark-OS machine.
+      container.setAttribute('data-theme', 'light');
+      if (btn) { btn.classList.remove('active'); btn.setAttribute('aria-pressed', 'false'); btn.textContent = '\u263D Dark mode'; }
     } else {
       container.setAttribute('data-theme', 'dark');
-      if (btn) { btn.classList.add('active'); btn.textContent = '\u263C Light mode'; }
+      if (btn) { btn.classList.add('active'); btn.setAttribute('aria-pressed', 'true'); btn.textContent = '\u263C Light mode'; }
     }
   }
 </script>

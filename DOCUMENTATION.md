@@ -99,7 +99,7 @@ All modules are located in `src/assets/js/`.
 
 Entry point. Contains `ViewerRegistry` for managing multiple viewer instances. Auto-initializes all `.pdfagogo-container` elements on DOM load. Parses `data-*` attributes into typed config via `getOptionsFromDataAttrs()`.
 
-**Exports**: `init()`, `registry`, `initializeContainer()`, `ViewerInstance`, `SearchController`
+**Exports**: `registry`, `initializeContainer()`, `ViewerInstance`, `SearchController`
 
 ### 2. `scrollablePdfViewer.js` -- Core Viewer
 
@@ -137,11 +137,11 @@ Loads PDFs via PDF.js with progress callbacks. Checks the response content-type 
 
 ### 7. `search.js` -- Search UI Setup
 
-Sets up the search UI controls in the toolbar (input field, navigation buttons, result count). Pairs with `SearchController` for actual search logic.
+Sets up the search UI controls in the toolbar (input field, navigation buttons, result count) and wires them to the viewer instance's `SearchController`. This module contains no search logic of its own — it only reflects controller state into the DOM and forwards user intent (typing, Enter/Shift+Enter, button clicks, Escape) to the controller. The result count is an ARIA live region (`role="status"`) that stays in the DOM so updates are announced to screen readers.
 
 ### 8. `searchController.js` -- Instance-Scoped Search
 
-Manages search for a single viewer instance. Case-insensitive full-text search across all pages, with parallel batch processing (10 pages per batch). Calculates per-page highlight bounding boxes, handles match navigation with wrap-around, and passes highlights to `TileManager` for rendering.
+The single canonical search implementation. Manages search for one viewer instance. Case-insensitive full-text search across all pages, with parallel batch processing (10 pages per batch). Calculates per-page highlight bounding boxes, handles match navigation with wrap-around, and passes highlights to the instance's `TileManager` for rendering. Highlights are instance-scoped (no global state), so multiple viewers on one page never share search results or highlights.
 
 ### 9. `viewerInstance.js` -- Per-Viewer State
 

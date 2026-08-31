@@ -144,38 +144,65 @@ export class ViewerInstance {
 
     this.destroyed = true;
 
+    // Run UI-layer cleanup (removes document/window listeners added by setupControls)
+    if (typeof this._uiCleanup === 'function') {
+      try {
+        this._uiCleanup();
+      } catch (e) {
+        // ignore cleanup errors during teardown
+      }
+      this._uiCleanup = null;
+    }
+
     // Clear search highlights
     if (this.searchController) {
       this.searchController.clearHighlights();
       this.searchController = null;
     }
 
-    // Clean up viewer resources
+    // Clean up viewer resources. Prefer the viewer's own destroy() so its
+    // global (window/document) listeners are removed; fall back to the
+    // piecemeal cleanup if destroy() is unavailable.
     if (this.viewer) {
-      // Clear render queue
-      if (this.viewer.renderQueue && typeof this.viewer.renderQueue.clear === 'function') {
-        this.viewer.renderQueue.clear();
-      }
-      // Clear tile renderer if present
-      if (this.viewer.tileRenderer) {
-        if (typeof this.viewer.tileRenderer.clearQueue === 'function') {
-          this.viewer.tileRenderer.clearQueue();
+      if (typeof this.viewer.destroy === 'function') {
+        try {
+          this.viewer.destroy();
+        } catch (e) {
+          // ignore teardown errors
         }
-        if (this.viewer.tileRenderer.cache && typeof this.viewer.tileRenderer.cache.clear === 'function') {
-          this.viewer.tileRenderer.cache.clear();
+      } else {
+        // Clear render queue
+        if (this.viewer.renderQueue && typeof this.viewer.renderQueue.clear === 'function') {
+          this.viewer.renderQueue.clear();
         }
-        if (this.viewer.tileRenderer.fullPageCache && typeof this.viewer.tileRenderer.fullPageCache.clear === 'function') {
-          this.viewer.tileRenderer.fullPageCache.clear();
+        // Clear tile renderer if present
+        if (this.viewer.tileRenderer) {
+          if (typeof this.viewer.tileRenderer.clearQueue === 'function') {
+            this.viewer.tileRenderer.clearQueue();
+          }
+          if (this.viewer.tileRenderer.cache && typeof this.viewer.tileRenderer.cache.clear === 'function') {
+            this.viewer.tileRenderer.cache.clear();
+          }
+          if (this.viewer.tileRenderer.fullPageCache && typeof this.viewer.tileRenderer.fullPageCache.clear === 'function') {
+            this.viewer.tileRenderer.fullPageCache.clear();
+          }
         }
       }
       this.viewer = null;
     }
 
-    // Clear PDF document
+    // Clear PDF document. The viewer's destroy() may already have destroyed
+    // the underlying PDF.js document, so guard against a double-destroy.
     if (this.pdf) {
-      // PDF.js documents can be destroyed
       if (typeof this.pdf.destroy === 'function') {
-        this.pdf.destroy();
+        try {
+          // destroy() returns a promise; the viewer may already have destroyed
+          // this document, so swallow both synchronous throws and async
+          // rejections rather than leaking an unhandled rejection.
+          Promise.resolve(this.pdf.destroy()).catch(() => {});
+        } catch (e) {
+          // already destroyed by the viewer — safe to ignore
+        }
       }
       this.pdf = null;
     }

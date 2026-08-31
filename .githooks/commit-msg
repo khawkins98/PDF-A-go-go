@@ -1,0 +1,66 @@
+#!/bin/sh
+#
+# commit-msg hook: reject AI/agent co-author trailers and machine-generated
+# attribution lines, while leaving legitimate human commits untouched.
+#
+# PDF-A-go-go keeps its history free of AI/agent attribution noise. Matching is
+# case-insensitive and deliberately narrow:
+#   1. Co-authored-by: trailers whose *name* is an AI tool/vendor. Only the name
+#      portion (before the <email>) is inspected, so human co-authors at .ai
+#      companies (e.g. jane@cognition.ai) are NOT blocked.
+#   2. Attribution lines pairing a verb ("generated/created/written by/with"…)
+#      with a known AI tool on the same line. A vendor is required, so prose
+#      like "the bundle is generated with webpack" is NOT blocked.
+#   3. The 🤖 robot emoji, a reliable AI-footer tell.
+#
+# Note: this checks the message at commit time only. `git commit --no-verify`
+# bypasses it, and trailers added later by other tooling are not rescanned.
+#
+# Installed automatically via `yarn install` (the "prepare" script runs
+# `git config core.hooksPath .githooks`). Contributors can also wire it up
+# manually with:  git config core.hooksPath .githooks
+# Setting core.hooksPath makes git use ONLY .githooks, so any personal hooks in
+# .git/hooks (or Husky) won't run while it's set.
+
+msg_file="$1"
+[ -z "$msg_file" ] && exit 0
+[ -f "$msg_file" ] || exit 0
+
+# Message body with git's own comment lines removed.
+scan="$(grep -v '^#' "$msg_file" 2>/dev/null)"
+
+fail() {
+  echo "-----------------------------------------------------------------" >&2
+  echo "commit-msg hook: disallowed AI/agent attribution in commit message" >&2
+  echo "" >&2
+  echo "  Offending line: $1" >&2
+  echo "" >&2
+  echo "  This repo does not accept AI/agent co-author trailers or" >&2
+  echo "  machine-generated attribution lines. Please remove it and" >&2
+  echo "  commit again. (Genuine human co-authors are fine.)" >&2
+  echo "-----------------------------------------------------------------" >&2
+  exit 1
+}
+
+# Known AI coding tools / vendors. Word boundaries keep short tokens from
+# matching inside ordinary words.
+AI_VENDOR='claude|anthropic|openai|chat[ -]?gpt|\bgpt\b|\bcodex\b|copilot|\bcursor\b|gemini|\bbard\b|\bllama\b|windsurf|\baider\b|\bdevin\b|tabnine|amazon q|artificial intelligence|\bai[ -](assistant|agent|model|pair|bot)\b'
+
+# Rule 1: Co-authored-by trailer naming an AI tool. Scoped to the NAME portion
+# (text before the <email>) so humans with .ai email domains aren't blocked.
+names="$(printf '%s\n' "$scan" | grep -iE '^[[:space:]]*co-authored-by:' | sed 's/<.*//')"
+offending="$(printf '%s\n' "$names" | grep -iE "$AI_VENDOR" | head -n 1)"
+[ -n "$offending" ] && fail "$offending"
+
+# Rule 2: an attribution verb AND an AI tool on the same line. Requiring a
+# vendor means "generated with webpack" / "written by hand" pass cleanly.
+offending="$(printf '%s\n' "$scan" \
+  | grep -iE '(generat(ed|ing)|creat(ed|ing)|written|authored|produced|assisted|built|made|powered) +(with|by)' \
+  | grep -iE "$AI_VENDOR" | head -n 1)"
+[ -n "$offending" ] && fail "$offending"
+
+# Rule 3: the robot emoji is an AI-footer tell.
+offending="$(printf '%s\n' "$scan" | grep -F '🤖' | head -n 1)"
+[ -n "$offending" ] && fail "$offending"
+
+exit 0

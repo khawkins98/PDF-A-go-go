@@ -14,7 +14,8 @@
   --pdfagogo-text-primary: #333;
   --pdfagogo-text-secondary: #555;
   --pdfagogo-text-muted: #666;
-  --pdfagogo-text-hint: #999;
+  /* Darkened from #999 (~2.85:1) to meet WCAG AA 4.5:1 on white (issue Acc-H4) */
+  --pdfagogo-text-hint: #6b6b6b;
   --pdfagogo-text-light: #fff;
 
   /* Background colors */
@@ -84,7 +85,8 @@
   --pdfagogo-text-primary: #e0e0e0;
   --pdfagogo-text-secondary: #bdbdbd;
   --pdfagogo-text-muted: #9e9e9e;
-  --pdfagogo-text-hint: #757575;
+  /* Lightened from #757575 (~2.3:1 on dark inputs) to pass AA on #2d2d2d/#3d3d3d (issue Acc-H4) */
+  --pdfagogo-text-hint: #b0b0b0;
   --pdfagogo-text-light: #fff;
 
   --pdfagogo-bg-page: #2d2d2d;
@@ -238,7 +240,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  /* WCAG 2.5.8: ensure >=28x28 target for toolbar controls (issue Acc-M4) */
   height: 28px;
+  min-width: 28px;
   box-sizing: border-box;
   margin: 0
 }
@@ -292,7 +296,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  /* WCAG 2.5.8: ensure >=26x26 target within the 32px nav group (issue Acc-M4) */
   height: 26px;
+  min-width: 26px;
   box-sizing: border-box;
 }
 .pdfagogo-page-nav button:hover:not(:disabled) {
@@ -389,7 +395,9 @@
   font-size: 12px;
   color: var(--pdfagogo-text-muted);
   border-radius: 3px;
-  height: 22px;
+  /* WCAG 2.5.8: min 24x24 CSS px target (issue Acc-M4) */
+  height: 24px;
+  min-width: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -609,6 +617,12 @@
   z-index: 1;
   pointer-events: none;
 }
+/* Visible keyboard focus for the page canvas / its wrapper (issue Acc: never invisible focus) */
+.pdfagogo-page-canvas:focus-visible,
+.pdfagogo-page-wrapper:focus-visible {
+  outline: 3px solid var(--pdfagogo-primary);
+  outline-offset: 2px;
+}
 /* Text layer for text selection */
 .pdfagogo-text-layer {
   position: absolute;
@@ -811,4 +825,85 @@
 @keyframes pdfagogo-spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/*
+ * Reduced motion (issue Acc-M3)
+ * Honor prefers-reduced-motion by removing non-essential animation and
+ * transitions while keeping the visual feedback itself (colors, borders).
+ */
+@media (prefers-reduced-motion: reduce) {
+  /* Invalid page input: keep the red border/background, drop the shake */
+  .pdfagogo-goto-page.invalid {
+    animation: none;
+  }
+  /* Loading / HTML-proxy spinner: stop spinning (feedback stays via text) */
+  .pdfagogo-html-loading-spinner {
+    animation: none;
+  }
+  /* Resize grip: no traveling-bar animation while dragging */
+  .pdfagogo-resize-grip.resizing::before {
+    animation: none;
+  }
+  /* No smooth scroll — jump instantly to targets */
+  .pdfagogo-scroll-container {
+    scroll-behavior: auto;
+  }
+  /* Zoom / hover transforms and other decorative transitions become instant */
+  .pdfagogo-pages-container,
+  .pdfagogo-page-wrapper,
+  .pdfagogo-toolbar button,
+  .pdfagogo-page-nav button,
+  .pdfagogo-edge-overlay,
+  .pdfagogo-resize-grip,
+  .pdfagogo-progress-bar::-webkit-progress-value,
+  .pdfagogo-progress-bar::-moz-progress-bar {
+    transition: none;
+  }
+}
+
+/*
+ * Automatic dark theme (issue L5)
+ * When the viewer has no explicit data-theme, follow the OS/browser dark
+ * preference by reusing the same palette as [data-theme="dark"].
+ */
+@media (prefers-color-scheme: dark) {
+  .pdfagogo-container:not([data-theme]) {
+    --pdfagogo-primary: #64b5f6;
+    --pdfagogo-primary-light: #1e3a5f;
+    --pdfagogo-primary-rgb: 100, 181, 246;
+
+    --pdfagogo-text-primary: #e0e0e0;
+    --pdfagogo-text-secondary: #bdbdbd;
+    --pdfagogo-text-muted: #9e9e9e;
+    --pdfagogo-text-hint: #b0b0b0;
+    --pdfagogo-text-light: #fff;
+
+    --pdfagogo-bg-page: #2d2d2d;
+    --pdfagogo-bg-container: #1a1a1a;
+    --pdfagogo-bg-toolbar: #2d2d2d;
+    --pdfagogo-bg-hover: #3d3d3d;
+    --pdfagogo-bg-active: #4d4d4d;
+    --pdfagogo-bg-subtle: #252525;
+    --pdfagogo-bg-input: #3d3d3d;
+    --pdfagogo-bg-overlay: rgba(0, 0, 0, 0.85);
+    --pdfagogo-bg-overlay-light: rgba(45, 45, 45, 0.95);
+
+    --pdfagogo-border: #4d4d4d;
+    --pdfagogo-border-light: #3d3d3d;
+    --pdfagogo-border-active: #5d5d5d;
+    --pdfagogo-border-input: #5d5d5d;
+
+    --pdfagogo-shadow: rgba(0, 0, 0, 0.4);
+    --pdfagogo-shadow-strong: rgba(0, 0, 0, 0.5);
+
+    --pdfagogo-grip-bg-start: #3d3d3d;
+    --pdfagogo-grip-bg-end: #2d2d2d;
+    --pdfagogo-grip-handle: #666;
+
+    --pdfagogo-debug-border: #666;
+    --pdfagogo-scrollbar-thumb: rgba(255, 255, 255, 0.25);
+    --pdfagogo-bg-fullscreen: #000;
+    --pdfagogo-error-text: #ffa8a8;
+  }
 }

@@ -326,6 +326,10 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
     return typeof window !== 'undefined' ? window.__pdfagogo__pageSetBy : null;
   }
 
+  // Track cleanup callbacks for document/window-level listeners so they can be
+  // removed on destroy (prevents leaked listeners in multi-instance / SPA use).
+  const cleanupFns = [];
+
   // Search controls are handled by the dedicated module
   let setPageByNumber = null; // will be defined below then passed into search module
 
@@ -348,7 +352,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
     toolbarHTML += '<div class="pdfagogo-page-nav">';
     toolbarHTML += '<button class="pdfagogo-prev-page" aria-label="Previous page" title="Previous page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>';
     toolbarHTML += '<input class="pdfagogo-goto-page" type="text" inputmode="numeric" pattern="\\d*" min="1" aria-label="Current page" title="Go to page" />';
-    toolbarHTML += '<span class="pdfagogo-page-total" aria-live="polite"></span>';
+    toolbarHTML += '<span class="pdfagogo-page-total"></span>';
     toolbarHTML += '<button class="pdfagogo-next-page" aria-label="Next page" title="Next page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>';
     toolbarHTML += '</div>';
   }
@@ -414,8 +418,23 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
     if (a11yInstructions.parentNode) a11yInstructions.parentNode.removeChild(a11yInstructions);
   }
 
-  // Track the current page number using the 'seen' event
-  let currentPage = 0;
+  // Track the current page number using the 'seen' event.
+  // NOTE: 1-based throughout this module (matches the public goToPage() and the
+  // 1-based value delivered by the viewer's 'seen' event).
+  let currentPage = 1;
+
+  // Visually-hidden live region for transient status messages (e.g. "Link copied").
+  const statusRegion = document.createElement("div");
+  statusRegion.className = "pdfagogo-status-message";
+  statusRegion.setAttribute("role", "status");
+  statusRegion.setAttribute("aria-live", "polite");
+  statusRegion.style.position = "absolute";
+  statusRegion.style.left = "-9999px";
+  statusRegion.style.top = "auto";
+  statusRegion.style.width = "1px";
+  statusRegion.style.height = "1px";
+  statusRegion.style.overflow = "hidden";
+  wrapper.appendChild(statusRegion);
 
   // --- Event wiring and logic ---
 
@@ -425,11 +444,16 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
   if (shareBtn) {
     const originalHTML = shareBtn.innerHTML;
     shareBtn.onclick = () => {
-      const page = currentPage + 1;
+      // currentPage is already 1-based; use it directly for the share fragment.
+      const page = currentPage;
       const shareUrl = `${window.location.origin}${window.location.pathname}#pdf-page-${page}`;
       navigator.clipboard.writeText(shareUrl);
       shareBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
       shareBtn.classList.add("copied");
+      // Announce to screen readers (button swap is not otherwise announced).
+      // Clear then set so repeated copies re-announce.
+      statusRegion.textContent = "";
+      setTimeout(() => { statusRegion.textContent = "Link copied"; }, 50);
       setTimeout(() => {
         shareBtn.innerHTML = originalHTML;
         shareBtn.classList.remove("copied");
@@ -470,7 +494,30 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
         if (wrapper.requestFullscreen) wrapper.requestFullscreen();
       }
     };
-    document.addEventListener('fullscreenchange', updateFsButton);
+    // Fullscreen change: update the toggle button and manage focus.
+    // On enter, move focus into the container (so keyboard nav works and focus
+    // isn't trapped outside the fullscreen element); on exit, restore focus to
+    // the fullscreen button that triggered it.
+    const onFullscreenChange = () => {
+      updateFsButton();
+      const isFs = !!document.fullscreenElement && wrapper === document.fullscreenElement;
+      if (isFs) {
+        if (typeof container.focus === 'function') {
+          if (!container.hasAttribute('tabindex')) {
+            container.setAttribute('tabindex', '-1');
+          }
+          container.focus();
+        }
+      } else {
+        // Only restore focus if focus is not already on a meaningful control
+        // (avoids yanking focus away if the user tabbed elsewhere).
+        if (typeof fullscreenBtn.focus === 'function') {
+          fullscreenBtn.focus();
+        }
+      }
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    cleanupFns.push(() => document.removeEventListener('fullscreenchange', onFullscreenChange));
     updateFsButton();
   }
 
@@ -585,6 +632,18 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
 
   // Keyboard navigation for accessibility
   container.addEventListener("keydown", function (event) {
+    // Ctrl/Cmd+F: focus the in-viewer search input (advertised in the shortcuts
+    // panel). Only intercept when a search input is present; otherwise let the
+    // browser's native find run.
+    if ((event.ctrlKey || event.metaKey) && (event.key === "f" || event.key === "F")) {
+      const searchInput = container.querySelector(".pdfagogo-search-input");
+      if (searchInput) {
+        event.preventDefault();
+        searchInput.focus();
+        if (typeof searchInput.select === "function") searchInput.select();
+      }
+      return;
+    }
     if (event.key === "ArrowLeft") {
       viewer.flip_back();
       event.preventDefault();
@@ -648,6 +707,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
 
   // Listen for hash changes
   window.addEventListener("hashchange", goToHashPage);
+  cleanupFns.push(() => window.removeEventListener("hashchange", goToHashPage));
   // Default page is now handled after initial render to ensure pages are ready
   // When navigating to a page, update the hash as well
   const originalSetPageByNumber = setPageByNumber;
@@ -699,8 +759,57 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
     resizeGrip.setAttribute("role", "separator");
     resizeGrip.setAttribute("aria-orientation", "vertical");
     resizeGrip.setAttribute("aria-label", "Resize PDF viewer");
-    resizeGrip.setAttribute("title", "Drag to resize PDF viewer height");
+    resizeGrip.setAttribute("title", "Drag or use arrow keys to resize PDF viewer height");
     container.appendChild(resizeGrip);
+
+    const MIN_HEIGHT = 200;
+    const KEY_STEP = 24; // px per Arrow key press
+    // Upper bound: viewport height, falling back to a generous cap.
+    function getMaxHeight() {
+      const vh = typeof window !== 'undefined' && window.innerHeight ? window.innerHeight : 2000;
+      return Math.max(MIN_HEIGHT, vh);
+    }
+
+    // Keep the ARIA slider values in sync with the actual container height so
+    // assistive tech announces the current/possible sizes.
+    function syncGripAria() {
+      resizeGrip.setAttribute("aria-valuemin", String(MIN_HEIGHT));
+      resizeGrip.setAttribute("aria-valuemax", String(Math.round(getMaxHeight())));
+      resizeGrip.setAttribute("aria-valuenow", String(Math.round(container.offsetHeight)));
+    }
+
+    // Apply a new container height, clamped to the allowed range, and update ARIA.
+    function setContainerHeight(px) {
+      const clamped = Math.min(getMaxHeight(), Math.max(MIN_HEIGHT, px));
+      container.style.height = clamped + 'px';
+      syncGripAria();
+    }
+
+    syncGripAria();
+
+    // Keyboard operability: ArrowDown/ArrowUp adjust height by a step,
+    // Home/End jump to min/max. (Down = taller, matching the drag direction.)
+    resizeGrip.addEventListener('keydown', function (e) {
+      let handled = true;
+      const current = container.offsetHeight;
+      switch (e.key) {
+        case 'ArrowDown':
+          setContainerHeight(current + KEY_STEP);
+          break;
+        case 'ArrowUp':
+          setContainerHeight(current - KEY_STEP);
+          break;
+        case 'Home':
+          setContainerHeight(MIN_HEIGHT);
+          break;
+        case 'End':
+          setContainerHeight(getMaxHeight());
+          break;
+        default:
+          handled = false;
+      }
+      if (handled) e.preventDefault();
+    });
 
     let isResizing = false;
     let startY = 0;
@@ -730,8 +839,7 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
       if (!isResizing) return;
       let clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
       let newHeight = startHeight + (clientY - startY);
-      newHeight = Math.max(200, newHeight); // Minimum height
-      container.style.height = newHeight + 'px';
+      setContainerHeight(newHeight); // clamps to min/max and updates ARIA
       e.preventDefault();
     }
 
@@ -753,4 +861,21 @@ export function setupControls(container, featureOptions, viewer, book, pdf, inst
     resizeGrip.addEventListener('mousedown', onMouseDown);
     resizeGrip.addEventListener('touchstart', onMouseDown, { passive: false });
   }
+
+  // Expose a cleanup routine so the owning instance can remove document/window
+  // level listeners on destroy (element-scoped listeners are freed when the
+  // container's innerHTML is cleared, but these outlive the DOM otherwise).
+  const uiCleanup = () => {
+    while (cleanupFns.length) {
+      const fn = cleanupFns.pop();
+      try { fn(); } catch (e) { /* ignore */ }
+    }
+  };
+  if (instance) {
+    instance._uiCleanup = uiCleanup;
+  }
+  // Also expose on the container as a fallback for callers without an instance.
+  container._pdfagogoUiCleanup = uiCleanup;
+
+  return uiCleanup;
 }

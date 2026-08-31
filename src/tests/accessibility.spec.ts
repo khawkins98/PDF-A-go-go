@@ -31,9 +31,12 @@ test.describe('Accessibility Features', () => {
     await expect(pageInput).toHaveAttribute('aria-label', 'Current page');
   });
 
-  test('Page total has aria-live', async ({ page }) => {
+  test('Page total is not a redundant live region', async ({ page }) => {
+    // Page changes are announced by the dedicated .pdfagogo-page-announcement
+    // element (asserted in the next test). The page-total span must NOT also be
+    // a live region, or screen readers get competing/duplicate announcements.
     const pageTotal = page.locator('#pdfagogo-container .pdfagogo-page-total');
-    await expect(pageTotal).toHaveAttribute('aria-live', 'polite');
+    await expect(pageTotal).not.toHaveAttribute('aria-live', /.+/);
   });
 
   test('Screen reader page announcement updates on navigation', async ({ page }) => {

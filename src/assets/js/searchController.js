@@ -281,11 +281,6 @@ export class SearchController {
     if (tm) {
       tm.setHighlights(highlightMap);
     }
-    // Also maintain backward compatibility with window global
-    // (will be removed in future version)
-    if (typeof window !== 'undefined') {
-      window.__pdfagogo__highlights = highlightMap;
-    }
   }
 
   /**
@@ -294,13 +289,9 @@ export class SearchController {
    * @private
    */
   _rerenderPage(pageIdx) {
-    if (this.viewer) {
-      // rerenderPage clears caches and re-renders with updated highlights
-      if (typeof this.viewer.rerenderPage === 'function') {
-        this.viewer.rerenderPage(pageIdx);
-      } else if (typeof this.viewer._renderAllPages === 'function') {
-        this.viewer._renderAllPages();
-      }
+    // rerenderPage clears caches and re-renders the page with updated highlights.
+    if (this.viewer && typeof this.viewer.rerenderPage === 'function') {
+      this.viewer.rerenderPage(pageIdx);
     }
   }
 

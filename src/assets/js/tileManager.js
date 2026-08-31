@@ -265,7 +265,7 @@ export class TileManager {
     this.renderQueue = [];
     this.isProcessingQueue = false;
 
-    // Instance-scoped highlights (replaces window.__pdfagogo__highlights)
+    // Instance-scoped search highlights (no global state; isolated per viewer)
     this._highlights = {};
 
     // Callbacks
@@ -293,15 +293,9 @@ export class TileManager {
    * @returns {Array} Array of highlight boxes or empty array
    */
   getHighlights(pageIndex) {
-    // Check instance-scoped highlights first
-    if (this._highlights[pageIndex] && this._highlights[pageIndex].length > 0) {
-      return this._highlights[pageIndex];
-    }
-    // Fallback to window global for backward compatibility with search.js
-    if (typeof window !== 'undefined' && window.__pdfagogo__highlights) {
-      return window.__pdfagogo__highlights[pageIndex] || [];
-    }
-    return [];
+    // Instance-scoped highlights only (no global state, so multiple viewers on
+    // one page never share highlights).
+    return this._highlights[pageIndex] || [];
   }
 
   /**
