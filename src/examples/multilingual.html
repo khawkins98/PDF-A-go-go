@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- @@HEAD@@ -->
+  <title>Multilingual - PDF-A-go-go</title>
+  <style>
+    .ml-intro { max-width: 70ch; }
+    .ml-lang-switch {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+      margin: 1rem 0;
+      padding: 0;
+      border: 0;
+    }
+    .ml-lang-switch legend {
+      font-weight: 600;
+      padding: 0;
+      margin-right: 0.5rem;
+    }
+    .ml-lang-btn {
+      font: inherit;
+      padding: 0.4rem 0.9rem;
+      border: 1px solid var(--pdfagogo-border, #ccc);
+      border-radius: 6px;
+      background: var(--pdfagogo-bg-toolbar, #fff);
+      color: inherit;
+      cursor: pointer;
+    }
+    .ml-lang-btn:hover { background: var(--pdfagogo-bg-hover, #eee); }
+    .ml-lang-btn[aria-pressed="true"] {
+      background: var(--pdfagogo-primary, #1976d2);
+      border-color: var(--pdfagogo-primary, #1976d2);
+      color: #fff;
+    }
+    .ml-lang-btn:focus-visible {
+      outline: 3px solid var(--pdfagogo-primary, #1976d2);
+      outline-offset: 2px;
+    }
+    .ml-snippet {
+      background: var(--pdfagogo-bg-subtle, #f5f5f5);
+      border: 1px solid var(--pdfagogo-border-light, #ddd);
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+      overflow-x: auto;
+      font-size: 0.85rem;
+      margin: 0.5rem 0 1.5rem;
+    }
+    .ml-note { color: var(--pdfagogo-text-muted, #666); font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <!-- @@NAV@@ -->
+  </header>
+  <main>
+    <h1>Multilingual</h1>
+    <p class="ml-intro">
+      Every label in the viewer &mdash; button tooltips, screen-reader
+      announcements, search and error text &mdash; can be translated. Pick a
+      language below and the whole interface switches. German ships as a bundled
+      pack (<code>data-locale="de"</code>); French here is supplied as a custom
+      set of strings, so any language works without waiting for a bundled pack.
+    </p>
+
+    <fieldset class="ml-lang-switch" aria-label="Interface language">
+      <legend>Language</legend>
+      <button type="button" class="ml-lang-btn" data-lang="en" aria-pressed="true">English</button>
+      <button type="button" class="ml-lang-btn" data-lang="de" aria-pressed="false">Deutsch</button>
+      <button type="button" class="ml-lang-btn" data-lang="fr" aria-pressed="false">Français</button>
+    </fieldset>
+
+    <p class="ml-note" id="ml-hint">
+      Tip: open the toolbar tooltips, run a search, or expand the keyboard-shortcuts
+      panel to see the labels change.
+    </p>
+
+    <pre class="ml-snippet"><code id="ml-code"></code></pre>
+
+    <div class="pdfagogo-container" id="pdfagogo-container" data-pdf-url="./example.pdf"></div>
+
+    <script defer="defer" src="./pdf-a-go-go.js"></script>
+    <script>
+      (function () {
+        // French is provided as a custom string set (not a bundled locale) to
+        // show that any language works via the `strings` option. Passing it in
+        // JS also sidesteps the apostrophe-in-attribute pitfall of data-strings
+        // (see "Redimensionner l'affichage PDF").
+        var FR_STRINGS = {
+          prevPage: 'Page précédente',
+          nextPage: 'Page suivante',
+          currentPageLabel: 'Page actuelle',
+          goToPage: 'Aller à la page',
+          download: 'Télécharger le PDF',
+          enterFullscreen: 'Passer en plein écran',
+          exitFullscreen: 'Quitter le plein écran',
+          shareLabel: 'Partager le lien',
+          shareTitle: 'Copier le lien vers cette page',
+          outline: 'Table des matières',
+          linkCopied: 'Lien copié',
+          searchPlaceholder: 'Rechercher…',
+          searchLabel: 'Rechercher dans le document',
+          prevMatch: 'Résultat précédent',
+          prevMatchTitle: 'Précédent (Maj+Entrée)',
+          nextMatch: 'Résultat suivant',
+          nextMatchTitle: 'Suivant (Entrée)',
+          noMatches: 'Aucun résultat',
+          pageAnnouncement: 'Page {current} sur {total}',
+          loading: 'Chargement {percent}',
+          errorTitle: 'Impossible de charger ce PDF',
+          errorOpenDirect: 'Essayer d’ouvrir directement',
+          errorTechnicalDetails: 'Détails techniques',
+          keyboardShortcuts: 'Raccourcis clavier',
+          shortcutFocus: 'pour activer la visionneuse',
+          shortcutPrevPage: 'page précédente',
+          shortcutNextPage: 'page suivante',
+          shortcutZoom: 'zoom avant/arrière',
+          shortcutResetZoom: 'réinitialiser le zoom',
+          shortcutSearch: 'rechercher',
+          outlineHeading: 'Sommaire',
+          outlineUntitled: '(sans titre)',
+          resizeGrip: 'Redimensionner l’affichage PDF'
+        };
+
+        // Per-language: viewer init options, the document lang attribute, and a
+        // copy-pasteable embed snippet.
+        var LANGS = {
+          en: {
+            docLang: 'en',
+            options: {},
+            snippet: '<div class="pdfagogo-container" data-pdf-url="./example.pdf"></div>'
+          },
+          de: {
+            docLang: 'de',
+            options: { locale: 'de' },
+            snippet: '<div class="pdfagogo-container" data-pdf-url="./example.pdf"\n     data-locale="de"></div>'
+          },
+          fr: {
+            docLang: 'fr',
+            options: { strings: FR_STRINGS },
+            snippet: '// Custom strings (any language) via the JS API:\n'
+              + 'pdfagogo.default.initializeContainer(el, {\n'
+              + '  strings: { nextPage: \'Page suivante\', noMatches: \'Aucun résultat\', /* … */ }\n'
+              + '});'
+          }
+        };
+
+        var container = document.getElementById('pdfagogo-container');
+        var codeEl = document.getElementById('ml-code');
+        var buttons = document.querySelectorAll('.ml-lang-btn');
+        var current = 'en';
+
+        function api() {
+          return (typeof pdfagogo !== 'undefined' && pdfagogo.default) ? pdfagogo.default : null;
+        }
+
+        function applyLang(lang) {
+          var conf = LANGS[lang];
+          if (!conf || !api()) return;
+          current = lang;
+
+          // Reflect selection in the buttons and the document language.
+          buttons.forEach(function (b) {
+            b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === lang));
+          });
+          document.documentElement.setAttribute('lang', conf.docLang);
+          codeEl.textContent = conf.snippet;
+
+          // Tear down the existing instance and its generated wrapper, then
+          // rebuild the container fresh (mirrors the kitchen-sink lifecycle).
+          api().registry.destroyInstance(container);
+          var wrapper = container.closest('.pdfagogo-viewer-wrapper');
+          if (wrapper && wrapper.parentNode && wrapper.getAttribute('data-pdfagogo-created') === 'true') {
+            wrapper.parentNode.insertBefore(container, wrapper);
+            wrapper.parentNode.removeChild(wrapper);
+          }
+          container.innerHTML = '';
+          container.className = 'pdfagogo-container';
+          container.id = 'pdfagogo-container';
+          container.setAttribute('data-pdf-url', './example.pdf');
+          container.setAttribute('data-show-outline', 'true');
+
+          api().initializeContainer(container, conf.options).catch(function (err) {
+            console.error('[Multilingual] init error:', err);
+          });
+        }
+
+        buttons.forEach(function (b) {
+          b.addEventListener('click', function () {
+            var lang = b.getAttribute('data-lang');
+            if (lang !== current) applyLang(lang);
+          });
+        });
+
+        // Set the initial snippet (English) once the script has loaded. The
+        // auto-init already rendered the English viewer from the markup.
+        codeEl.textContent = LANGS.en.snippet;
+      })();
+    </script>
+  </main>
+</body>
+</html>

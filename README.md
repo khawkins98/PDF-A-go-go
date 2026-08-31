@@ -96,10 +96,25 @@ Paste this into your HTML:
 
 ### Translating the interface
 
-Every UI label (button tooltips, screen-reader announcements, search and error
-text) is overridable. Pass a JSON object of overrides via `data-strings`; any
-keys you omit fall back to English. Interpolated strings use `{token}`
-placeholders — keep them.
+**Bundled locales.** For a supported language, set `data-locale` and the whole
+UI switches in one attribute:
+
+```html
+<div class="pdfagogo-container" data-pdf-url="./document.pdf" data-locale="de"></div>
+```
+
+Bundled locales: **`de`** (German). Contributions of more are welcome — add a
+code to [`src/assets/js/locales.js`](src/assets/js/locales.js). See the
+[multilingual demo](https://www.allaboutken.com/PDF-A-go-go/multilingual.html)
+for a live language switcher.
+
+**Per-string overrides.** Every UI label (button tooltips, screen-reader
+announcements, search and error text) is also individually overridable. Pass a
+JSON object of overrides via `data-strings`; any keys you omit fall back to the
+locale pack (if any) and then English. Interpolated strings use `{token}`
+placeholders — keep them. Overrides layer as **English → `data-locale` pack →
+`data-strings` → the JS `strings` option** (later wins), so you can start from a
+bundled locale and tweak individual strings.
 
 ```html
 <div class="pdfagogo-container"
@@ -165,6 +180,7 @@ Set options via `data-*` attributes on the container element:
 | `data-margin-left` | `0.5` | Left margin override (rem) |
 | `data-momentum` | `1.5` | Scroll momentum multiplier |
 | `data-theme` | -- | Color theme (`dark` built-in, or custom) |
+| `data-locale` | -- | Bundled UI language pack, e.g. `de` (see [Translating the interface](#translating-the-interface)) |
 | `data-strings` | -- | JSON object of UI string overrides for i18n (see [Translating the interface](#translating-the-interface)) |
 | `data-worker-url` | -- | Custom PDF.js worker URL |
 | `data-fullpage-cache-size` | `10` | Full-page render cache size |

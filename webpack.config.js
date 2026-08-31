@@ -71,6 +71,7 @@ const base = {
         { from: 'src/examples/remote-pdf-allowed.html', to: 'remote-pdf-allowed.html', transform: (content) => injectPartials(content, '.') },
         { from: 'src/examples/remote-pdf-cors-fail.html', to: 'remote-pdf-cors-fail.html', transform: (content) => injectPartials(content, '.') },
         { from: 'src/examples/kitchen-sink.html', to: 'kitchen-sink.html', transform: (content) => injectPartials(content, '.') },
+        { from: 'src/examples/multilingual.html', to: 'multilingual.html', transform: (content) => injectPartials(content, '.') },
         { from: 'src/examples/pdf-a-go-go-showcase.pdf', to: 'pdf-a-go-go-showcase.pdf' },
         { from: 'src/examples/example.pdf', to: 'example.pdf' },
         { from: 'src/examples/example_large.pdf', to: 'example_large.pdf' },
@@ -80,7 +81,8 @@ const base = {
         { from: 'src/tests/error-404.html', to: 'tests/error-404.html', transform: (content) => injectPartials(content, '..') },
         { from: 'src/tests/accessibility-test.html', to: 'tests/accessibility-test.html', transform: (content) => injectPartials(content, '..') },
         { from: 'src/tests/i18n-test.html', to: 'tests/i18n-test.html', transform: (content) => injectPartials(content, '..') },
-        { from: 'src/tests', to: 'tests', globOptions: { ignore: ['**/test-small.html', '**/multi-instance.html', '**/error-404.html', '**/accessibility-test.html', '**/i18n-test.html'] } },
+        { from: 'src/tests/locale-test.html', to: 'tests/locale-test.html', transform: (content) => injectPartials(content, '..') },
+        { from: 'src/tests', to: 'tests', globOptions: { ignore: ['**/test-small.html', '**/multi-instance.html', '**/error-404.html', '**/accessibility-test.html', '**/i18n-test.html', '**/locale-test.html'] } },
       ]
     })
   ]

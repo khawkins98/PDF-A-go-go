@@ -16,6 +16,7 @@ import { ScrollablePdfViewer } from "./scrollablePdfViewer.js";
 import { ViewerInstance } from "./viewerInstance.js";
 import { SearchController } from "./searchController.js";
 import { resolveStrings } from "./strings.js";
+import { locales } from "./locales.js";
 
 /**
  * Registry for managing multiple PDF viewer instances.
@@ -192,6 +193,10 @@ function getOptionsFromDataAttrs(container) {
   // Theme configuration
   if (map.theme) opts.theme = map.theme;
 
+  // i18n: a bundled locale pack to start from (e.g. "de"). Individual
+  // data-strings keys still override it.
+  if (map.locale) opts.locale = map.locale;
+
   // i18n: a JSON object of UI string overrides. Invalid JSON is ignored (with a
   // warning) so a malformed attribute degrades to the English defaults rather
   // than breaking initialization.
@@ -274,11 +279,22 @@ async function initializeContainer(container, options = {}) {
   const dataOptions = getOptionsFromDataAttrs(container);
   const featureOptions = Object.assign({}, defaultOptions, dataOptions, options);
 
-  // Resolve the UI string table: merge data-strings (base) with the JS
-  // `strings` option (which wins), then fill any gaps from the English
-  // defaults. featureOptions.strings is always a complete table downstream.
+  // Resolve the UI string table by layering, lowest precedence first:
+  //   English defaults  <  bundled locale pack  <  data-strings  <  strings option
+  // so `data-locale="de"` gives a full German UI in one attribute while
+  // per-key overrides still win. An unknown locale warns and contributes
+  // nothing (staying English). featureOptions.strings is always complete.
+  const localeName = options.locale || dataOptions.locale;
+  let localePack = {};
+  if (localeName) {
+    if (locales[localeName]) {
+      localePack = locales[localeName];
+    } else {
+      console.warn(`PDF-A-go-go: unknown locale "${localeName}"; using default UI strings. Available: ${Object.keys(locales).join(', ')}.`);
+    }
+  }
   featureOptions.strings = resolveStrings(
-    Object.assign({}, dataOptions.strings, options.strings)
+    Object.assign({}, localePack, dataOptions.strings, options.strings)
   );
 
   // Create viewer instance

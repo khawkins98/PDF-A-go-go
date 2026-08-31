@@ -7,6 +7,20 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 Releases are tagged in git (`v1.5`, `v1.6`, …); the `package.json` version is
 realigned with the tag as of 1.6.0.
 
+## [1.9.0] - 2026-08-31
+
+### Added
+
+- Bundled German (`de`) locale pack, plus a `data-locale` attribute / `locale`
+  option to apply a language pack in one step. The first shipped translation,
+  validated by a fluent German speaker. Overrides layer as English defaults →
+  locale pack → `data-strings` → `strings` option, so a bundled locale can be
+  adjusted per key. Unknown locale codes warn and stay English. Add more locales
+  in `src/assets/js/locales.js`.
+- Multilingual demo page (`multilingual.html`) with a language switcher
+  (English, bundled German, and a custom French string set) that re-renders the
+  viewer live.
+
 ## [1.8.0] - 2026-08-31
 
 ### Added
