@@ -1,5 +1,7 @@
 # PDF-A-go-go documentation
 
+For a first embed, use [README](README.md#embed-a-pdf); for task examples and hosting constraints, use [Embedding recipes](EMBEDDING.md). This page is the architecture, API and configuration reference.
+
 ## Table of contents
 
 1. [Overview](#overview)
@@ -381,7 +383,7 @@ still apply on top.
 Supply overrides two ways:
 
 - **Attribute:** `data-strings='{"nextPage":"Page suivante"}'` (a JSON object).
-  Invalid JSON is ignored (with a console warning) and the UI stays English.
+  Invalid JSON is ignored (with a console warning); the selected locale pack, or English defaults when no pack applies, remains in effect.
 - **JS API:** `pdfagogo.default.initializeContainer(el, { locale: 'de', strings: { nextPage: 'Page suivante' } })`.
 
 Overrides layer, later winning: **English defaults → `data-locale`/`locale`
@@ -392,7 +394,7 @@ everything.
 > **Apostrophes in `data-strings`:** the attribute holds JSON inside single
 > quotes, so a value containing an apostrophe (`L'aperçu`, `Aller à l'accueil`)
 > closes the attribute early and the whole object is ignored (the instance
-> falls back to English). Escape apostrophes as `&#39;`, or pass those strings
+> retains the selected locale pack or English defaults). Escape apostrophes as `&#39;`, or pass those strings
 > via the JavaScript `strings` option, which has no such quoting constraint.
 
 Some strings interpolate values via `{token}` placeholders — keep the tokens in
@@ -772,7 +774,7 @@ yarn test:debug
 
 # Run specific test file (requires dev server running separately)
 yarn test:serve  # Terminal 1
-npx playwright test src/tests/zoom.spec.ts  # Terminal 2
+yarn playwright test src/tests/zoom.spec.ts  # Terminal 2
 ```
 
 ## Build & deployment

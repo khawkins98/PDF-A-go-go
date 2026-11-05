@@ -33,7 +33,7 @@
     "size": "node scripts/check-bundle-size.js"
   },
   "devDependencies": {
-    "@playwright/test": "^1.62.1",
+    "@playwright/test": "1.62.1",
     "@types/node": "^25.6.0",
     "copy-webpack-plugin": "^14.0.0",
     "serve": "^14.2.6",
