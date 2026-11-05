@@ -87,10 +87,13 @@ img-src 'self' blob: data:;
 style-src 'self' 'unsafe-inline';
 ```
 
-Allow the specific external origins you use: the bundle host in `script-src` and
-`connect-src` when its worker is fetched there, the stylesheet host in `style-src`,
-and PDF hosts in `connect-src`. These directives are a recipe, not a policy that
-has been tested for every host or embedding environment.
+Allow each external origin you use: the bundle host in `script-src`, the
+stylesheet host in `style-src`, and PDF hosts in `connect-src`. If
+`data-worker-url` points to a separate origin, allow that worker/module origin
+in `script-src` too and serve the worker with CORS headers that permit your page.
+A `connect-src` allowance alone does not authorize the worker's module import.
+These directives are a recipe, not a policy tested for every host or embedding
+environment.
 
 PDF.js uses a Blob worker for a cross-origin worker script, so `worker-src` and
 `script-src` permit `blob:`. Rendered tiles and icon inlining need `blob:`/`data:`

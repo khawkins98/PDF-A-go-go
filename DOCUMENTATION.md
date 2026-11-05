@@ -383,7 +383,7 @@ still apply on top.
 Supply overrides two ways:
 
 - **Attribute:** `data-strings='{"nextPage":"Page suivante"}'` (a JSON object).
-  Invalid JSON is ignored (with a console warning) and the UI stays English.
+  Invalid JSON is ignored (with a console warning); the selected locale pack, or English defaults when no pack applies, remains in effect.
 - **JS API:** `pdfagogo.default.initializeContainer(el, { locale: 'de', strings: { nextPage: 'Page suivante' } })`.
 
 Overrides layer, later winning: **English defaults → `data-locale`/`locale`
@@ -394,7 +394,7 @@ everything.
 > **Apostrophes in `data-strings`:** the attribute holds JSON inside single
 > quotes, so a value containing an apostrophe (`L'aperçu`, `Aller à l'accueil`)
 > closes the attribute early and the whole object is ignored (the instance
-> falls back to English). Escape apostrophes as `&#39;`, or pass those strings
+> retains the selected locale pack or English defaults). Escape apostrophes as `&#39;`, or pass those strings
 > via the JavaScript `strings` option, which has no such quoting constraint.
 
 Some strings interpolate values via `{token}` placeholders — keep the tokens in
