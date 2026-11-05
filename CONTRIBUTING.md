@@ -18,6 +18,29 @@ Open an issue at https://github.com/khawkins98/PDF-A-go-go/issues. Useful detail
 3. `yarn test` runs the Playwright suite (it auto-runs `yarn build` first via the `pretest` hook).
 4. Open a draft PR while you iterate.
 
+### Git hooks
+
+`yarn install` sets `core.hooksPath` to `.githooks`, enabling the tracked commit
+message check. It rejects AI/agent co-author trailers and generated-attribution
+footers while allowing human co-authors. To enable it manually:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+This replaces Git's normal `.git/hooks` lookup; existing personal hooks or Husky
+will not run while that path is configured. Read [the hook](.githooks/commit-msg)
+for its exact matching rules.
+
+## Documentation homes
+
+Keep README focused on a working first embed, material adoption limits and useful
+next steps. `EMBEDDING.md` owns integration recipes and hosting/CSP instructions;
+`DOCUMENTATION.md` owns API/configuration defaults and architecture. Update the
+relevant home and link to it rather than repeating the full account. Preserve
+credits and historical entries in CHANGELOG/IMPROVEMENTS. Check changed examples
+against source and the built bundle; a shorter README alone is not validation.
+
 ## What to watch when editing
 
 The CLAUDE.md file is the canonical list. The most important ones:

@@ -1,5 +1,7 @@
 # PDF-A-go-go documentation
 
+For a first embed, use [README](README.md#embed-a-pdf); for task examples and hosting constraints, use [Embedding recipes](EMBEDDING.md). This page is the architecture, API and configuration reference.
+
 ## Table of contents
 
 1. [Overview](#overview)
@@ -772,7 +774,7 @@ yarn test:debug
 
 # Run specific test file (requires dev server running separately)
 yarn test:serve  # Terminal 1
-npx playwright test src/tests/zoom.spec.ts  # Terminal 2
+yarn playwright test src/tests/zoom.spec.ts  # Terminal 2
 ```
 
 ## Build & deployment
